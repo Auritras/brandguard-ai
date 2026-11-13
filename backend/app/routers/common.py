@@ -1,4 +1,6 @@
 """Small helpers shared by the routers."""
+from datetime import timezone
+
 from sqlalchemy.orm import Session
 
 from ..models import AuditLog, User
@@ -10,4 +12,9 @@ def log(db: Session, user: User, action: str, detail: str = "", draft_id: int | 
 
 
 def iso(dt):
-    return dt.isoformat() if dt else None
+    """Times are stored in UTC. SQLite drops the timezone, so put it back before sending."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()

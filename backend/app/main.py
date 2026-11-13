@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from . import models  # noqa: F401  (registers tables)
 from .auth import current_user, make_token, verify_password
-from .config import AI_API_KEY, AI_MODEL, AI_PROVIDER_NAME, CORS_ORIGINS
+from .config import AI_API_KEY, AI_MODEL, AI_PROVIDER_NAME, CORS_ORIGINS, DEMO_PASSWORD
+from .seed import USERS as DEMO_USERS
 from .db import Base, SessionLocal, engine, get_db
 from .models import User
 from .seed import seed
@@ -41,7 +42,11 @@ def user_out(u: User) -> dict:
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "ai_enabled": bool(AI_API_KEY), "ai_provider": AI_PROVIDER_NAME, "ai_model": AI_MODEL}
+    return {
+        "ok": True, "ai_enabled": bool(AI_API_KEY), "ai_provider": AI_PROVIDER_NAME, "ai_model": AI_MODEL,
+        # Public demo accounts for judges. These are seeded test users for a fictional brand.
+        "demo": {"password": DEMO_PASSWORD, "accounts": [{"name": n, "email": e, "role": r} for n, e, r in DEMO_USERS]},
+    }
 
 
 @app.post("/api/auth/login")
