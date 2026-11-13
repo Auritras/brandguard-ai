@@ -42,6 +42,9 @@ RULES = [
     ("R-008", "messaging", "Respect competitors",
      "Do not name or disparage competitors.",
      "high", ""),
+    ("R-009", "claims", "Claims need an approved fact",
+     "Any statistic, ranking, award or measurable claim must be supported by an approved fact. If no approved fact covers it, it must be removed or approved first.",
+     "high", ""),
 ]
 
 # code, statement, keywords, approved value, source, valid until
