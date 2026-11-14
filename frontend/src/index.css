@@ -21,7 +21,10 @@
 }
 
 html {
-  background: var(--color-olive);
+  /* A faint halftone dot so the olive reads as a printed desk surface, not an empty margin. */
+  background-color: var(--color-olive);
+  background-image: radial-gradient(color-mix(in srgb, var(--color-olive-deep) 55%, transparent) 1px, transparent 1.3px);
+  background-size: 12px 12px;
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
