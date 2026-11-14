@@ -145,6 +145,21 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 | Render | Web service, root `backend`, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/api/health`. Variables: see `backend/.env.example`. |
 | Vercel | Import the repo with root `frontend` (Vite). Variable `VITE_API_URL` = the Render address, type Config. Redeploy after changing it. |
 
+## Resetting the demo
+
+The live demo accounts are shared, so whatever one person does stays for the next. To put the
+live site back to a clean demo (one draft at each stage of review, history spread over the past
+nine days, the original Brand Library), run this from `backend` with the live database address in
+`backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
+AI findings):
+
+```bash
+python -m app.reset_demo --env-file .env
+```
+
+It shows which database it will change and asks you to type `reset`. Add `--no-ai` for exact
+checks only. The three demo accounts are kept. `backend/.env` is ignored by git; never commit it.
+
 ## Repository layout
 
 ```
@@ -154,6 +169,7 @@ backend/
     config.py          settings from environment variables
     models.py          users, rules, facts, terms, drafts, versions, findings, runs, comments, audit log
     seed.py            the Lumio Payroll demo brand and accounts
+    reset_demo.py      wipes drafts and rebuilds the demo set (see Resetting the demo)
     engine/            exact checks, AI checks, verification, review run, file text extraction
     routers/           Brand Library, draft/workflow and Brand health API
   tests/
