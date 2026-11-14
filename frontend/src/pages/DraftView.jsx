@@ -162,7 +162,7 @@ export default function DraftView({ user }) {
           <Card className="relative overflow-hidden p-5" ref={contentRef}>
             {busy === 'check' && <div className="scan-bar" aria-hidden="true" style={{ '--scan-h': `${contentRef.current?.offsetHeight || 300}px` }} />}
             {d.status === 'approved' && (
-              <span aria-hidden="true" className="approved-stamp pointer-events-none absolute right-6 top-14 rounded-md border-4 border-primary px-4 py-1 font-display text-3xl font-extrabold tracking-wide text-primary opacity-90">
+              <span aria-hidden="true" className="approved-stamp pointer-events-none absolute right-5 top-3 rounded-md border-[3px] border-primary bg-card px-3 py-0.5 font-display text-2xl font-extrabold tracking-wide text-primary">
                 Approved
               </span>
             )}
