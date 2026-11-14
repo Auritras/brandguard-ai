@@ -167,7 +167,7 @@ frontend/
 ## Disclosure
 
 - **External services:** Groq (AI checks), Supabase (database), Render and Vercel (hosting),
-  Google Fonts (Bricolage Grotesque, Public Sans).
+  Google Fonts (Bricolage Grotesque, Public Sans, Caveat).
 - **What the AI receives:** the draft text, its channel, audience and purpose, the selected rules,
   the approved facts and the terminology list. No names or email addresses are sent.
 - **AI tools used to build it:** the team used Claude Code (Anthropic) as a coding assistant for

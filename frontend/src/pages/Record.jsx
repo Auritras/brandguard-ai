@@ -75,6 +75,14 @@ export default function Record({ user }) {
         </Section>
       )}
 
+      <Section title="Sign-off">
+        <div className="grid gap-6 sm:grid-cols-2">
+          {escalation && <Signature entry={escalation} role="Approved and escalated" i={0} />}
+          {approval ? <Signature entry={approval} role="Approved for publishing" i={escalation ? 1 : 0} />
+            : <div className="self-end"><div className="h-12 border-b-2 border-ink" /><p className="mt-1 text-sm text-muted">Awaiting approval</p></div>}
+        </div>
+      </Section>
+
       <Section title="Timeline">
         <ol className="grid gap-1.5 text-sm">
           {timeline.map((h, i) => (
@@ -93,6 +101,23 @@ export default function Record({ user }) {
         Printed {when(new Date().toISOString())} by {user.name}. Taken from the append-only audit log. The automated check never approves; every decision above was made by a person.
       </p>
     </article>
+  )
+}
+
+// The approver's name writes itself in, then a pen stroke underlines it.
+function Signature({ entry, role, i }) {
+  const [name, title] = entry.user.split(' (')
+  return (
+    <div className="signature" style={{ '--i': i }}>
+      <p className="signature-name font-signature text-4xl leading-none text-primary-deep">{name}</p>
+      <svg viewBox="0 0 240 14" className="-mt-1 h-3.5 w-60 max-w-full" aria-hidden="true">
+        <path className="signature-stroke" d="M2 9 C 40 3, 80 12, 120 7 S 200 2, 238 6" fill="none" stroke="var(--color-primary-deep)" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      <div className="mt-1 border-t-2 border-ink pt-1 text-sm">
+        <p className="font-semibold">{name}{title ? `, ${title.replace(')', '')}` : ''}</p>
+        <p className="text-muted">{role} · {when(entry.created_at)}</p>
+      </div>
+    </div>
   )
 }
 
