@@ -50,9 +50,9 @@ def insights(db: Session = Depends(get_db), user: User = Depends(current_user)):
         c = d.channel or "Other"
         row = per_channel.setdefault(c, {"channel": c, "drafts": 0, "findings": 0})
         row["drafts"] += 1
+    channel_of = {d.id: d.channel or "Other" for d in drafts}
     for f in findings:
-        d = next(x for x in drafts if x.id == f.draft_id)
-        per_channel[d.channel or "Other"]["findings"] += 1
+        per_channel[channel_of[f.draft_id]]["findings"] += 1
     channels = sorted(per_channel.values(), key=lambda r: -r["findings"] / r["drafts"])
     for r in channels:
         r["per_draft"] = round(r["findings"] / r["drafts"], 1)
