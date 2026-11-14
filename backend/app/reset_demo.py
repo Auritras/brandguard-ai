@@ -1,5 +1,6 @@
-"""Reset the demo: delete every draft, restore the Brand Library, and build a fresh set of drafts,
-one at each stage of review, so whoever opens the site next finds a complete demo.
+"""Reset the demo brand (Lumio Payroll): delete its drafts, restore its Brand Library, and build a
+fresh set of drafts, one at each stage of review, so whoever opens the site next finds a complete
+demo. Brands that people created themselves are not touched.
 
 Run from the backend folder, pointing DATABASE_URL at the database to reset:
 
@@ -71,32 +72,41 @@ def main() -> None:
 
     # Imported only now, so the settings above are in place first.
     from fastapi.testclient import TestClient
-    from sqlalchemy import text
-
     from . import models
     from .config import AI_API_KEY, DEMO_PASSWORD
     from .db import Base, SessionLocal, engine
     from .main import app
-    from .seed import seed
+    from .migrate import migrate
+    from .seed import demo_brand, seed, seed_library
 
     target = engine.url.render_as_string(hide_password=True)
     print(f"Database: {target}")
     print(f"AI checks: {'on' if AI_API_KEY else 'off'}")
-    if not args.yes and input('This deletes every draft and restores the Brand Library. Type "reset" to go on: ').strip() != "reset":
+    if not args.yes and input('This deletes every draft in the Lumio Payroll demo brand and restores its Brand Library. '
+                              'Other brands are not touched. Type "reset" to go on: ').strip() != "reset":
         sys.exit("Nothing changed.")
 
-    # 1. Empty the drafts and the library; keep the accounts.
+    # 1. Empty the demo brand's drafts and library; keep its accounts and every other brand.
     Base.metadata.create_all(engine)
-    tables = ["comments", "findings", "review_runs", "draft_versions", "audit_log", "drafts", "rules", "facts", "terms"]
-    with engine.begin() as conn:
-        if engine.dialect.name == "postgresql":
-            conn.execute(text(f"TRUNCATE {', '.join(tables)} RESTART IDENTITY CASCADE"))
-        else:
-            for t in tables:
-                conn.execute(text(f"DELETE FROM {t}"))
+    migrate(engine)
     with SessionLocal() as db:
         seed(db)
-    print("Drafts deleted, Brand Library restored.")
+        brand_id = demo_brand(db).id
+        draft_ids = [d for (d,) in db.query(models.Draft.id).filter(models.Draft.brand_id == brand_id)]
+        if draft_ids:
+            finding_ids = [f for (f,) in db.query(models.Finding.id).filter(models.Finding.draft_id.in_(draft_ids))]
+            db.query(models.Comment).filter(models.Comment.draft_id.in_(draft_ids)).delete(synchronize_session=False)
+            if finding_ids:
+                db.query(models.Comment).filter(models.Comment.finding_id.in_(finding_ids)).delete(synchronize_session=False)
+            for model in (models.Finding, models.ReviewRun, models.DraftVersion, models.AuditLog):
+                db.query(model).filter(model.draft_id.in_(draft_ids)).delete(synchronize_session=False)
+            db.query(models.Draft).filter(models.Draft.id.in_(draft_ids)).delete(synchronize_session=False)
+        db.query(models.AuditLog).filter(models.AuditLog.brand_id == brand_id).delete(synchronize_session=False)
+        for model in (models.Rule, models.Fact, models.Term):
+            db.query(model).filter(model.brand_id == brand_id).delete(synchronize_session=False)
+        seed_library(db, brand_id)
+        db.commit()
+    print("Demo drafts deleted, demo Brand Library restored.")
 
     # 2. Build the drafts through the real API.
     with TestClient(app) as c:
@@ -226,7 +236,7 @@ def main() -> None:
         db.commit()
 
         print("\nDemo drafts:")
-        for d in db.query(models.Draft).order_by(models.Draft.updated_at.desc()):
+        for d in db.query(models.Draft).filter(models.Draft.brand_id == brand_id).order_by(models.Draft.updated_at.desc()):
             print(f"  {d.id}. {d.title}  ->  {d.status}")
 
 
