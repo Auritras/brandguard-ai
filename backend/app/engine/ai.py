@@ -21,6 +21,7 @@ Report only real conflicts between the DRAFT and those RULES or FACTS.
 - "reason" is one or two plain sentences a non-expert understands.
 - "suggestion" is replacement text for the quoted passage only. Keep the writer's purpose and voice; change as little as possible. Never rewrite the whole draft.
 - A statistic, ranking or measurable claim that no approved FACT supports is a finding against the claims rule.
+- Every suggestion and rewrite must itself follow every rule under RULES and ALSO FOLLOW, use only numbers from FACTS, and use the preferred terms. Never swap one banned word for another (for example "#1" for "leading").
 - Do not repeat anything listed under ALREADY FOUND.
 - If the draft is fine, return an empty list. At most 8 findings.
 
@@ -40,9 +41,12 @@ def select_rules(body: str, purpose: str, rules: list) -> list:
     return scored[:MAX_RULES]
 
 
-def build_prompt(draft, rules, facts, exact_findings) -> str:
+def build_prompt(draft, rules, facts, exact_findings, style=()) -> str:
     lines = ["RULES"]
     lines += [f"{r.code} [{r.category}] {r.title}: {r.text}" for r in rules]
+    if style:
+        lines += ["", "ALSO FOLLOW (checked separately in code; obey them in suggestions and rewrites)"]
+        lines += [f"- {s}" for s in style]
     lines += ["", "FACTS"]
     for f in facts:
         until = f" (valid until {f.valid_until.isoformat()})" if f.valid_until else ""
@@ -88,17 +92,21 @@ def _chat(system: str, user: str) -> dict:
     return json.loads(r.json()["choices"][0]["message"]["content"])
 
 
-def ai_review(draft, rules, facts, exact_findings) -> dict:
-    """Returns {used, note, findings, rewrites}. Never raises: a failed call is reported in `note`."""
+def ai_review(draft, rules, facts, exact_findings, style=()) -> dict:
+    """Returns {used, note, findings, rewrites}. Never raises: a failed call is reported in `note`.
+
+    `style` is a list of short lines (pattern rules and preferred terms) the model's own
+    suggestions must also obey."""
     if not config.AI_API_KEY:
         return {"used": False, "findings": [], "rewrites": [],
                 "note": "AI checks were skipped: no AI key is configured on this server. Only exact checks ran."}
     chosen = select_rules(draft.body, draft.purpose, rules)
     sent = (f"Sent to {config.AI_PROVIDER_NAME} ({config.AI_MODEL}): the draft text, its channel, audience and purpose, "
-            f"{len(chosen)} rule(s) ({', '.join(r.code for r in chosen) or 'none'}) and {len(facts)} approved fact(s). "
+            f"{len(chosen)} rule(s) ({', '.join(r.code for r in chosen) or 'none'}), {len(facts)} approved fact(s)"
+            f"{' and the writing rules and preferred terms its suggestions must follow' if style else ''}. "
             "Nothing else from the Brand Library, and no user names or emails, was sent.")
     try:
-        data = _chat(SYSTEM, build_prompt(draft, chosen, facts, exact_findings))
+        data = _chat(SYSTEM, build_prompt(draft, chosen, facts, exact_findings, style))
     except Exception as e:  # network error, rate limit, bad JSON
         return {"used": False, "findings": [], "rewrites": [],
                 "note": f"AI checks failed and were skipped ({_why(e)}). Only exact checks ran. Re-run to try again."}

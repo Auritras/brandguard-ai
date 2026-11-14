@@ -46,3 +46,32 @@ def test_ai_failure_falls_back_to_exact_checks(client, creator, monkeypatch):
     d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
     assert d["run"]["ai_used"] is False and "failed" in d["run"]["ai_note"]
     assert [f["ref_code"] for f in d["findings"]] == ["TERM"]
+
+
+def test_ai_fixes_obey_rules_and_do_not_repeat_exact_findings(client, creator, monkeypatch):
+    body = "Lumio Payroll is the #1 payroll app, trusted by 10,000 companies. Hurry, our clients love it."
+    d = client.post("/api/drafts", headers=creator, json={"title": "Rules in fixes", "body": body}).json()
+
+    def fake_chat(system, user):
+        assert "R-002" in user and 'not "clients"' in user  # pattern rules and terms are sent for the fixes
+        return {
+            "findings": [
+                # repeats the exact fact finding on the same passage, same category -> dropped
+                {"quote": "trusted by 10,000 companies", "rule_code": "R-009", "reason": "Unsupported number."},
+                # kept, and its fix gets the preferred term
+                {"quote": "Hurry, our clients love it.", "rule_code": "R-001", "reason": "Pressure.",
+                 "suggestion": "Our clients love it."},
+            ],
+            # swaps "#1" for "leading", which breaks the same rule -> no fix is shown
+            "rewrites": [{"index": i, "suggestion": "Lumio Payroll is a leading payroll app."} for i in range(6)],
+        }
+
+    monkeypatch.setattr(config, "AI_API_KEY", "test-key")
+    monkeypatch.setattr(ai, "_chat", fake_chat)
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+
+    ai_findings = [f for f in d["findings"] if f["source"] == "ai"]
+    assert [f["ref_code"] for f in ai_findings] == ["R-001"]
+    assert ai_findings[0]["suggestion"] == "Our customers love it."
+    superlative = next(f for f in d["findings"] if f["ref_code"] == "R-002")
+    assert "leading" not in (superlative["suggestion"] or "")
