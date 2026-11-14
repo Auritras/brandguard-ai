@@ -12,7 +12,7 @@
   --color-primary: #2f3bd9;
   --color-primary-deep: #2129a8;
   --color-primary-soft: #e3e5fb;
-  --color-accent: #d9552f;
+  --color-accent: #d9552f; /* attention: "this needs you" only */
   --color-muted: #5b5a45;
   --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
   --font-sans: "Public Sans", Arial, sans-serif;
@@ -96,7 +96,7 @@ mark {
 .flash { animation: flash 1.3s ease-out; }
 @keyframes flash {
   0% { outline: 3px solid transparent; outline-offset: 8px; }
-  30% { outline: 3px solid var(--color-primary); outline-offset: 4px; }
+  30% { outline: 3px solid var(--color-accent); outline-offset: 4px; }
   100% { outline: 3px solid transparent; outline-offset: 4px; }
 }
 

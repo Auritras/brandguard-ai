@@ -31,6 +31,8 @@ export default function Drafts({ user }) {
   const sort = SORTS[params.get('sort')] ? params.get('sort') : 'waiting'
 
   const mine = (d) => WAITING[user.role].includes(d.status)
+  // Orange marks what needs this person's action, and nothing else.
+  const waiting = (d) => mine(d) && d.status !== 'draft'
   const channelOf = (d) => d.channel || 'Other'
   const counts = {}
   for (const d of drafts || []) counts[channelOf(d)] = (counts[channelOf(d)] || 0) + 1
@@ -71,7 +73,8 @@ export default function Drafts({ user }) {
 
       {drafts?.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <ChannelMenu tabs={tabs} active={active} onPick={(c) => setView({ channel: c })} />
+          <ChannelMenu tabs={tabs} active={active} onPick={(c) => setView({ channel: c })}
+            waitingIn={new Set((drafts || []).filter(waiting).map(channelOf))} />
           <label className="flex items-center gap-2 text-sm font-semibold">
             Sort by
             <span className="relative">
@@ -107,7 +110,8 @@ export default function Drafts({ user }) {
         )}
         {sorted.map((d, i) => (
           <Link key={d.id} to={`/drafts/${d.id}`} className="deal-in block" style={{ '--i': i }}>
-            <Card className="flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-print-sm">
+            <Card className="relative flex h-full flex-col overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-print-sm">
+              {waiting(d) && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-accent" />}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-muted">{d.channel || 'No channel'}</span>
                 <StatusChip status={d.status} />
@@ -119,7 +123,12 @@ export default function Drafts({ user }) {
               <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3 text-sm">
                 {d.blocking > 0 && <span className="font-semibold text-red-800">{d.blocking} high-risk</span>}
                 {d.open > 0 ? <span className="text-muted">{d.open} open</span> : <span className="text-muted">No open findings</span>}
-                {mine(d) && d.status !== 'draft' && <span className="ml-auto font-semibold text-primary">Waiting for you</span>}
+                {waiting(d) && (
+                  <span className="ml-auto flex items-center gap-1.5 font-semibold">
+                    <span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />
+                    Waiting for you
+                  </span>
+                )}
               </div>
             </Card>
           </Link>
@@ -130,7 +139,7 @@ export default function Drafts({ user }) {
 }
 
 // One button per channel that has drafts, with a highlight that slides to the picked one.
-function ChannelMenu({ tabs, active, onPick }) {
+function ChannelMenu({ tabs, active, onPick, waitingIn }) {
   const refs = useRef({})
   const [pill, setPill] = useState(null)
 
@@ -160,6 +169,9 @@ function ChannelMenu({ tabs, active, onPick }) {
             }`}
           >
             {c}
+            {(c === 'All' ? waitingIn.size > 0 : waitingIn.has(c)) && (
+              <span aria-label="has drafts waiting for you" className="h-2 w-2 rounded-full bg-accent" />
+            )}
             <span className={`rounded-full px-1.5 text-xs ${active === c ? 'bg-white/20' : 'bg-black/5 text-muted'}`}>{n}</span>
           </button>
         ))}

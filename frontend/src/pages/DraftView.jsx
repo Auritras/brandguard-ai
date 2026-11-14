@@ -103,6 +103,7 @@ export default function DraftView({ user }) {
   const pieces = useMemo(() => (d ? highlight(d.body, d.findings) : []), [d])
   if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <p className="text-muted">Loading…</p>
 
+  const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
   const active = d.findings.filter((f) => ['open', 'disputed'].includes(f.status))
   const settled = d.findings.filter((f) => !['open', 'disputed'].includes(f.status))
   const focus = (fid) => {
@@ -128,7 +129,8 @@ export default function DraftView({ user }) {
         {d.channel || 'No channel'} · by {d.creator} · version {d.version}
       </p>
 
-      <Card className="mt-5 flex flex-wrap items-center gap-3 p-4">
+      <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>
+        {yourTurn && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-accent" />}
         <p className="min-w-0 flex-1 text-sm font-semibold" aria-live="polite">
           {nextStep(d, user)}
         </p>
