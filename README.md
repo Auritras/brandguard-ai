@@ -25,8 +25,8 @@ up for the demo. Sign in with one click as any of the three demo accounts:
 | Rohan | Manager | Open the draft. With a high-risk finding still open, **Approve and escalate** sends it to the brand owner. |
 | Meera | Authorised reviewer (brand owner) | Waive the high-risk finding with a reason, or decide the dispute, then **Approve**. Edit rules, facts and terms in **Brand Library**. |
 
-Manual sign-in: `creator@brandguard.test`, `manager@brandguard.test` or
-`reviewer@brandguard.test`, password `brandguard-demo`.
+There is no public sign-up: in a real workspace the brand owner adds each person with their role.
+The demo accounts are shared, so you may see drafts other visitors made.
 
 ## Features in this build
 

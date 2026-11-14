@@ -21,19 +21,28 @@ export default function App() {
     setAuthState(a)
     navigate('/')
   }
+  const [leaving, setLeaving] = useState(false)
+  const [signedOut, setSignedOut] = useState(false)
+  // Fade the workspace out, then show the sign-in page (straight away if motion is reduced).
   const signOut = () => {
-    setAuth(null)
-    setAuthState(null)
-    navigate('/')
+    setLeaving(true)
+    const wait = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280
+    setTimeout(() => {
+      setAuth(null)
+      setAuthState(null)
+      setLeaving(false)
+      setSignedOut(true)
+      navigate('/')
+    }, wait)
   }
 
-  if (!auth) return <Login onSignIn={signIn} />
+  if (!auth) return <Login onSignIn={signIn} signedOut={signedOut} />
   const user = auth.user
   const tab = ({ isActive }) =>
     `rounded-md px-3 py-1.5 text-sm font-semibold ${isActive ? 'bg-paper text-ink' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
 
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen ${leaving ? 'app-out' : ''}`}>
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-white focus:p-2">
         Skip to content
       </a>
@@ -59,7 +68,7 @@ export default function App() {
               {user.name.split(' (')[0]}
               <span className="hidden sm:inline"> ({user.name.split(' (')[1]}</span>
             </span>
-            <Button kind="secondary" onClick={signOut}>
+            <Button kind="secondary" onClick={signOut} disabled={leaving}>
               Sign out
             </Button>
           </div>
