@@ -8,6 +8,7 @@ import NewDraft from './pages/NewDraft.jsx'
 import DraftView from './pages/DraftView.jsx'
 import Library from './pages/Library.jsx'
 import Record from './pages/Record.jsx'
+import Insights from './pages/Insights.jsx'
 
 
 export default function App() {
@@ -45,6 +46,9 @@ export default function App() {
             <NavLink to="/" end className={tab}>
               Drafts
             </NavLink>
+            <NavLink to="/insights" className={tab}>
+              Brand health
+            </NavLink>
             <NavLink to="/library" className={tab}>
               Brand Library
             </NavLink>
@@ -66,6 +70,7 @@ export default function App() {
           <Route path="/new" element={<NewDraft />} />
           <Route path="/drafts/:id" element={<DraftView user={user} />} />
           <Route path="/drafts/:id/record" element={<Record user={user} />} />
+          <Route path="/insights" element={<Insights />} />
           <Route path="/library" element={<Library user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

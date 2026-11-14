@@ -144,6 +144,16 @@ mark {
   from { opacity: 0; transform: translateY(10px) rotate(-0.6deg); }
 }
 
+/* Brand health bars grow from the left, one after another. */
+.bar-grow {
+  transform-origin: left;
+  animation: bar-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 150ms);
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }

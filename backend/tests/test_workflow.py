@@ -107,3 +107,16 @@ def test_upload_text_file(client, creator):
     assert r.json()["text"] == "Hello from a file."
     r = client.post("/api/extract", headers=creator, files={"file": ("a.exe", b"x", "application/octet-stream")})
     assert r.status_code == 422
+
+
+def test_insights_counts_findings_and_scopes_creators(client, creator, manager):
+    d = make(client, creator)
+    client.post(f"/api/drafts/{d['id']}/check", headers=creator)
+    team = client.get("/api/insights", headers=manager).json()
+    mine = client.get("/api/insights", headers=creator).json()
+    assert team["scope"] == "all drafts" and mine["scope"] == "your drafts"
+    assert mine["drafts"] >= 1 and mine["findings"] >= 4
+    assert any(r["code"] == "R-002" for r in mine["top_refs"])
+    linkedin = next(r for r in mine["channels"] if r["channel"] == "LinkedIn")
+    assert linkedin["per_draft"] > 0
+    assert sum(mine["outcomes"].values()) == mine["findings"]
