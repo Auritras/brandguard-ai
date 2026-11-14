@@ -63,7 +63,7 @@ def get_draft(db: Session, draft_id: int, user: User, lock: bool = False) -> Dra
     """`lock` holds the draft's row until the request commits, so two people acting on the same
     draft at the same moment are handled one after the other (Postgres; SQLite has no row locks)."""
     draft = db.get(Draft, draft_id, with_for_update=lock)
-    if draft is None or (user.role == "creator" and draft.creator_id != user.id):
+    if draft is None or draft.brand_id != user.brand_id or (user.role == "creator" and draft.creator_id != user.id):
         raise HTTPException(404, "Draft not found.")
     return draft
 
@@ -157,7 +157,7 @@ async def extract(file: UploadFile = File(...), user: User = Depends(current_use
 
 @router.get("/drafts")
 def list_drafts(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    q = db.query(Draft)
+    q = db.query(Draft).filter(Draft.brand_id == user.brand_id)
     if user.role == "creator":
         q = q.filter(Draft.creator_id == user.id)
     return [summary(db, d) for d in q.order_by(Draft.updated_at.desc())]
@@ -165,7 +165,7 @@ def list_drafts(db: Session = Depends(get_db), user: User = Depends(current_user
 
 @router.post("/drafts")
 def create_draft(body: DraftIn, db: Session = Depends(get_db), user: User = Depends(require("creator"))):
-    draft = Draft(creator_id=user.id, **body.model_dump())
+    draft = Draft(brand_id=user.brand_id, creator_id=user.id, **body.model_dump())
     db.add(draft)
     db.flush()
     db.add(DraftVersion(draft_id=draft.id, number=1, body=draft.body, note="First version", user_id=user.id))
@@ -201,8 +201,9 @@ def spans(body: str, quote: str) -> list[list[int]]:
 def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     """Exact checks only, on unsaved text, for checking while typing. Nothing is stored or sent to AI."""
     text = body.body[:20000]
-    rules = db.query(Rule).filter(Rule.status == "approved").all()
-    found = run_exact(text, rules, db.query(Fact).all(), db.query(Term).all())
+    b = user.brand_id
+    rules = db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all()
+    found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all())
     return [{"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
              "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
 

@@ -1,4 +1,5 @@
-"""Database tables. One workspace (one brand) for the event scope."""
+"""Database tables. Each brand is its own workspace: its people, Brand Library and drafts are only
+ever visible to members of that brand."""
 from datetime import date, datetime, timezone
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
@@ -11,19 +12,34 @@ def now():
     return datetime.now(timezone.utc)
 
 
+class Brand(Base):
+    __tablename__ = "brands"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    demo: Mapped[bool] = mapped_column(Boolean, default=False)  # the shared Lumio Payroll demo
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+def brand_column():
+    return mapped_column(ForeignKey("brands.id"), index=True, nullable=True)
+
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
+    brand_id: Mapped[int] = brand_column()
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(300))
     role: Mapped[str] = mapped_column(String(20))  # creator | manager | reviewer
+    brand: Mapped[Brand] = relationship()
 
 
 class Rule(Base):
     __tablename__ = "rules"
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(20), unique=True, index=True)  # R-001
+    brand_id: Mapped[int] = brand_column()
+    code: Mapped[str] = mapped_column(String(20), index=True)  # R-001  (unique within a brand)
     category: Mapped[str] = mapped_column(String(40))  # tone | claims | messaging | accessibility
     title: Mapped[str] = mapped_column(String(200))
     text: Mapped[str] = mapped_column(Text)
@@ -37,7 +53,8 @@ class Rule(Base):
 class Fact(Base):
     __tablename__ = "facts"
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(20), unique=True, index=True)  # F-001
+    brand_id: Mapped[int] = brand_column()
+    code: Mapped[str] = mapped_column(String(20), index=True)  # F-001  (unique within a brand)
     statement: Mapped[str] = mapped_column(Text)
     keywords: Mapped[str] = mapped_column(String(300), default="")  # comma separated
     value: Mapped[str] = mapped_column(String(60), default="")  # the approved number, e.g. "8,200"
@@ -48,6 +65,7 @@ class Fact(Base):
 class Term(Base):
     __tablename__ = "terms"
     id: Mapped[int] = mapped_column(primary_key=True)
+    brand_id: Mapped[int] = brand_column()
     banned: Mapped[str] = mapped_column(String(120))
     preferred: Mapped[str] = mapped_column(String(120))
     note: Mapped[str] = mapped_column(String(300), default="")
@@ -56,6 +74,7 @@ class Term(Base):
 class Draft(Base):
     __tablename__ = "drafts"
     id: Mapped[int] = mapped_column(primary_key=True)
+    brand_id: Mapped[int] = brand_column()
     title: Mapped[str] = mapped_column(String(200))
     channel: Mapped[str] = mapped_column(String(60), default="")
     audience: Mapped[str] = mapped_column(String(200), default="")
@@ -134,6 +153,7 @@ class AuditLog(Base):
     """Append-only: the API exposes no update or delete for this table."""
     __tablename__ = "audit_log"
     id: Mapped[int] = mapped_column(primary_key=True)
+    brand_id: Mapped[int] = brand_column()
     draft_id: Mapped[int | None] = mapped_column(ForeignKey("drafts.id"), nullable=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     action: Mapped[str] = mapped_column(String(60))

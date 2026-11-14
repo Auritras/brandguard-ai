@@ -36,9 +36,11 @@ def repeats_exact(item: dict, exact: list, body: str) -> bool:
 
 
 def run_review(db: Session, draft: Draft) -> ReviewRun:
-    rules = db.query(Rule).filter(Rule.status == "approved").order_by(Rule.code).all()
-    facts = db.query(Fact).order_by(Fact.code).all()
-    terms = db.query(Term).all()
+    # Only this draft's brand: its approved rules, its facts, its terms.
+    b = draft.brand_id
+    rules = db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").order_by(Rule.code).all()
+    facts = db.query(Fact).filter(Fact.brand_id == b).order_by(Fact.code).all()
+    terms = db.query(Term).filter(Term.brand_id == b).all()
 
     exact = run_exact(draft.body, rules, facts, terms)
 

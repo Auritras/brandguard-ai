@@ -22,7 +22,7 @@ def _utc(dt):
 
 @router.get("/insights")
 def insights(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    q = db.query(Draft)
+    q = db.query(Draft).filter(Draft.brand_id == user.brand_id)
     if user.role == "creator":
         q = q.filter(Draft.creator_id == user.id)
     drafts = q.all()
@@ -30,9 +30,10 @@ def insights(db: Session = Depends(get_db), user: User = Depends(current_user)):
     findings = db.query(Finding).filter(Finding.draft_id.in_(ids)).all() if ids else []
 
     # Which rules, facts and terms are broken most often.
-    names = {r.code: r.title for r in db.query(Rule)}
-    names.update({f.code: f.statement for f in db.query(Fact)})
-    term_names = {t.banned.lower(): t.preferred for t in db.query(Term)}
+    b = user.brand_id
+    names = {r.code: r.title for r in db.query(Rule).filter(Rule.brand_id == b)}
+    names.update({f.code: f.statement for f in db.query(Fact).filter(Fact.brand_id == b)})
+    term_names = {t.banned.lower(): t.preferred for t in db.query(Term).filter(Term.brand_id == b)}
     by_ref = Counter()
     label = {}
     for f in findings:

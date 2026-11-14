@@ -1,4 +1,5 @@
-"""Brand Library: approved rules, facts and terms. Everyone reads; only the brand owner (reviewer) writes."""
+"""Brand Library: approved rules, facts and terms. Members of a brand read its library; only that brand's
+owner (reviewer) writes. Nothing here can see or touch another brand's library."""
 import re
 from datetime import date
 
@@ -61,9 +62,17 @@ def term_out(t: Term) -> dict:
     return {"id": t.id, "banned": t.banned, "preferred": t.preferred, "note": t.note}
 
 
-def next_code(db: Session, model, prefix: str) -> str:
+def own(db: Session, model, item_id: int, user: User, label: str):
+    """Fetch one row of this user's brand; another brand's row is treated as missing."""
+    item = db.get(model, item_id)
+    if item is None or item.brand_id != user.brand_id:
+        raise HTTPException(404, f"{label} not found.")
+    return item
+
+
+def next_code(db: Session, model, prefix: str, brand_id: int) -> str:
     highest = 0
-    for (code,) in db.query(model.code):
+    for (code,) in db.query(model.code).filter(model.brand_id == brand_id):
         m = re.fullmatch(prefix + r"-(\d+)", code)
         if m:
             highest = max(highest, int(m.group(1)))
@@ -87,15 +96,15 @@ def clean_rule(body: RuleIn) -> dict:
 @router.get("/library")
 def get_library(db: Session = Depends(get_db), user: User = Depends(current_user)):
     return {
-        "rules": [rule_out(r) for r in db.query(Rule).order_by(Rule.status.desc(), Rule.code)],
-        "facts": [fact_out(f) for f in db.query(Fact).order_by(Fact.code)],
-        "terms": [term_out(t) for t in db.query(Term).order_by(Term.banned)],
+        "rules": [rule_out(r) for r in db.query(Rule).filter(Rule.brand_id == user.brand_id).order_by(Rule.status.desc(), Rule.code)],
+        "facts": [fact_out(f) for f in db.query(Fact).filter(Fact.brand_id == user.brand_id).order_by(Fact.code)],
+        "terms": [term_out(t) for t in db.query(Term).filter(Term.brand_id == user.brand_id).order_by(Term.banned)],
     }
 
 
 @router.post("/rules")
 def create_rule(body: RuleIn, db: Session = Depends(get_db), user: User = Depends(owner)):
-    rule = Rule(code=next_code(db, Rule, "R"), status="approved", **clean_rule(body))
+    rule = Rule(brand_id=user.brand_id, code=next_code(db, Rule, "R", user.brand_id), status="approved", **clean_rule(body))
     db.add(rule)
     log(db, user, "rule_added", f"{rule.code} {rule.title}")
     db.commit()
@@ -104,9 +113,7 @@ def create_rule(body: RuleIn, db: Session = Depends(get_db), user: User = Depend
 
 @router.put("/rules/{rule_id}")
 def update_rule(rule_id: int, body: RuleIn, db: Session = Depends(get_db), user: User = Depends(owner)):
-    rule = db.get(Rule, rule_id)
-    if rule is None:
-        raise HTTPException(404, "Rule not found.")
+    rule = own(db, Rule, rule_id, user, "Rule")
     for key, value in clean_rule(body).items():
         setattr(rule, key, value)
     log(db, user, "rule_edited", f"{rule.code} {rule.title}")
@@ -116,9 +123,7 @@ def update_rule(rule_id: int, body: RuleIn, db: Session = Depends(get_db), user:
 
 @router.post("/rules/{rule_id}/approve")
 def approve_rule(rule_id: int, db: Session = Depends(get_db), user: User = Depends(owner)):
-    rule = db.get(Rule, rule_id)
-    if rule is None:
-        raise HTTPException(404, "Rule not found.")
+    rule = own(db, Rule, rule_id, user, "Rule")
     rule.status = "approved"
     log(db, user, "rule_approved", f"{rule.code} {rule.title}")
     db.commit()
@@ -127,9 +132,7 @@ def approve_rule(rule_id: int, db: Session = Depends(get_db), user: User = Depen
 
 @router.delete("/rules/{rule_id}")
 def delete_rule(rule_id: int, db: Session = Depends(get_db), user: User = Depends(owner)):
-    rule = db.get(Rule, rule_id)
-    if rule is None:
-        raise HTTPException(404, "Rule not found.")
+    rule = own(db, Rule, rule_id, user, "Rule")
     log(db, user, "rule_deleted", f"{rule.code} {rule.title}")
     db.delete(rule)
     db.commit()
@@ -145,7 +148,7 @@ def import_guidelines(body: ImportIn, db: Session = Depends(get_db), user: User 
         category = str(p.get("category", "tone")).lower()
         severity = str(p.get("severity", "medium")).lower()
         rule = Rule(
-            code=next_code(db, Rule, "R"), status="proposed",
+            brand_id=user.brand_id, code=next_code(db, Rule, "R", user.brand_id), status="proposed",
             category=category if category in CATEGORIES else "tone",
             severity=severity if severity in SEVERITIES else "medium",
             title=str(p.get("title") or p.get("text"))[:200], text=str(p.get("text")), patterns="",
@@ -160,7 +163,7 @@ def import_guidelines(body: ImportIn, db: Session = Depends(get_db), user: User 
 
 @router.post("/facts")
 def create_fact(body: FactIn, db: Session = Depends(get_db), user: User = Depends(owner)):
-    fact = Fact(code=next_code(db, Fact, "F"), **body.model_dump())
+    fact = Fact(brand_id=user.brand_id, code=next_code(db, Fact, "F", user.brand_id), **body.model_dump())
     db.add(fact)
     log(db, user, "fact_added", f"{fact.code} {fact.statement}")
     db.commit()
@@ -169,9 +172,7 @@ def create_fact(body: FactIn, db: Session = Depends(get_db), user: User = Depend
 
 @router.put("/facts/{fact_id}")
 def update_fact(fact_id: int, body: FactIn, db: Session = Depends(get_db), user: User = Depends(owner)):
-    fact = db.get(Fact, fact_id)
-    if fact is None:
-        raise HTTPException(404, "Fact not found.")
+    fact = own(db, Fact, fact_id, user, "Fact")
     for key, value in body.model_dump().items():
         setattr(fact, key, value)
     log(db, user, "fact_edited", f"{fact.code} {fact.statement}")
@@ -181,9 +182,7 @@ def update_fact(fact_id: int, body: FactIn, db: Session = Depends(get_db), user:
 
 @router.delete("/facts/{fact_id}")
 def delete_fact(fact_id: int, db: Session = Depends(get_db), user: User = Depends(owner)):
-    fact = db.get(Fact, fact_id)
-    if fact is None:
-        raise HTTPException(404, "Fact not found.")
+    fact = own(db, Fact, fact_id, user, "Fact")
     log(db, user, "fact_deleted", f"{fact.code} {fact.statement}")
     db.delete(fact)
     db.commit()
@@ -192,7 +191,7 @@ def delete_fact(fact_id: int, db: Session = Depends(get_db), user: User = Depend
 
 @router.post("/terms")
 def create_term(body: TermIn, db: Session = Depends(get_db), user: User = Depends(owner)):
-    term = Term(**body.model_dump())
+    term = Term(brand_id=user.brand_id, **body.model_dump())
     db.add(term)
     log(db, user, "term_added", f"{term.banned} -> {term.preferred}")
     db.commit()
@@ -201,9 +200,7 @@ def create_term(body: TermIn, db: Session = Depends(get_db), user: User = Depend
 
 @router.delete("/terms/{term_id}")
 def delete_term(term_id: int, db: Session = Depends(get_db), user: User = Depends(owner)):
-    term = db.get(Term, term_id)
-    if term is None:
-        raise HTTPException(404, "Term not found.")
+    term = own(db, Term, term_id, user, "Term")
     log(db, user, "term_deleted", f"{term.banned} -> {term.preferred}")
     db.delete(term)
     db.commit()

@@ -4,11 +4,12 @@ Written by the team for the demo. It is synthetic: not real company data.
 """
 from datetime import date
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from .auth import hash_password
 from .config import DEMO_PASSWORD
-from .models import Fact, Rule, Term, User
+from .models import AuditLog, Brand, Draft, Fact, Rule, Term, User
 
 USERS = [
     ("Asha (Creator)", "creator@brandguard.test", "creator"),
@@ -68,15 +69,37 @@ TERMS = [
 ]
 
 
+DEMO_BRAND = "Lumio Payroll"
+
+
+def demo_brand(db: Session) -> Brand:
+    brand = db.query(Brand).filter_by(demo=True).first()
+    if brand is None:
+        brand = Brand(name=DEMO_BRAND, demo=True)
+        db.add(brand)
+        db.flush()
+    return brand
+
+
+def seed_library(db: Session, brand_id: int) -> None:
+    """A starter Brand Library: the demo brand's rules, facts and terms, which the owner then edits."""
+    for code, cat, title, text, sev, patterns in RULES:
+        db.add(Rule(brand_id=brand_id, code=code, category=cat, title=title, text=text, severity=sev, patterns=patterns))
+    for code, statement, keywords, value, source, until in FACTS:
+        db.add(Fact(brand_id=brand_id, code=code, statement=statement, keywords=keywords, value=value,
+                    source=source, valid_until=until))
+    for banned, preferred, note in TERMS:
+        db.add(Term(brand_id=brand_id, banned=banned, preferred=preferred, note=note))
+
+
 def seed(db: Session) -> None:
-    if db.query(User).count() == 0:
-        for name, email, role in USERS:
-            db.add(User(name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))
-    if db.query(Rule).count() == 0:
-        for code, cat, title, text, sev, patterns in RULES:
-            db.add(Rule(code=code, category=cat, title=title, text=text, severity=sev, patterns=patterns))
-        for code, statement, keywords, value, source, until in FACTS:
-            db.add(Fact(code=code, statement=statement, keywords=keywords, value=value, source=source, valid_until=until))
-        for banned, preferred, note in TERMS:
-            db.add(Term(banned=banned, preferred=preferred, note=note))
+    brand = demo_brand(db)
+    # Anything made before brands existed belongs to the demo brand.
+    for model in (User, Rule, Fact, Term, Draft, AuditLog):
+        db.execute(update(model).where(model.brand_id.is_(None)).values(brand_id=brand.id))
+    for name, email, role in USERS:
+        if db.query(User).filter_by(email=email).first() is None:
+            db.add(User(brand_id=brand.id, name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))
+    if db.query(Rule).filter_by(brand_id=brand.id).count() == 0:
+        seed_library(db, brand.id)
     db.commit()

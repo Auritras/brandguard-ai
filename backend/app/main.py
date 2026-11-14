@@ -13,11 +13,13 @@ from .seed import USERS as DEMO_USERS
 from .db import Base, SessionLocal, engine, get_db
 from .models import User
 from .seed import seed
+from .migrate import migrate
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
+    migrate(engine)
     with SessionLocal() as db:
         seed(db)
     yield
@@ -26,8 +28,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="BrandGuard AI", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
-from .routers import drafts, insights, library  # noqa: E402
+from .routers import accounts, drafts, insights, library  # noqa: E402
+from .routers.accounts import user_out  # noqa: E402
 
+app.include_router(accounts.router)
 app.include_router(library.router)
 app.include_router(drafts.router)
 app.include_router(insights.router)
@@ -45,8 +49,6 @@ class LoginIn(BaseModel):
     password: str
 
 
-def user_out(u: User) -> dict:
-    return {"id": u.id, "name": u.name, "email": u.email, "role": u.role}
 
 
 @app.get("/api/health")
