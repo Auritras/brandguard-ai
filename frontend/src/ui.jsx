@@ -131,7 +131,9 @@ export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendi
 
 // A number that rolls in from above whenever it changes.
 export function RollNumber({ value }) {
-  return <span key={value} className="roll-in inline-block tabular-nums">{value}</span>
+  const first = useRef(true) // no roll on the first render, only on a change
+  useEffect(() => { first.current = false }, [])
+  return <span key={value} className={`${first.current ? '' : 'roll-in'} inline-block tabular-nums`}>{value}</span>
 }
 
 // A button that first asks for a written reason, then calls onSubmit(reason).

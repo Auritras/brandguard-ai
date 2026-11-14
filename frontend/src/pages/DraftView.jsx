@@ -286,7 +286,13 @@ export default function DraftView({ user }) {
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
           {d.run !== null && active.length === 0 && (
-            <Card className="p-4 text-sm"><span className="font-semibold">No open findings.</span> {d.needs_check ? 'Run the check again to confirm.' : 'The latest version passed the check.'}</Card>
+            <Card className="flex items-center gap-3 p-4 text-sm">
+              <svg viewBox="0 0 32 32" className="h-9 w-9 shrink-0" aria-hidden="true">
+                <circle className="tick-ring" cx="16" cy="16" r="14" fill="var(--color-primary-soft)" stroke="var(--color-primary)" strokeWidth="2.5" />
+                <path className="tick-mark" d="M9.5 16.5l4.5 4.5 8.5-9" fill="none" stroke="var(--color-primary-deep)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <p><span className="font-semibold">No open findings.</span> {d.needs_check ? 'Run the check again to confirm.' : 'The latest version passed the check.'}</p>
+            </Card>
           )}
           {shown.map(({ f, leaving: out }, i) => (
             <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} />

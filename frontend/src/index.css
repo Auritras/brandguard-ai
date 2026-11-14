@@ -267,6 +267,20 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   from { opacity: 0; transform: translateX(-16px); }
 }
 
+/* Nothing left to handle: the ring closes, then the tick is drawn. */
+.tick-ring {
+  stroke-dasharray: 90;
+  stroke-dashoffset: 90;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  animation: stroke 0.7s ease-out 0.15s forwards;
+}
+.tick-mark {
+  stroke-dasharray: 22;
+  stroke-dashoffset: 22;
+  animation: stroke 0.4s ease-out 0.8s forwards;
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }
@@ -292,4 +306,5 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   .scan-bar { display: none; }
   .signature-name { clip-path: none; }
   .signature-stroke { stroke-dashoffset: 0; }
+  .tick-ring, .tick-mark { stroke-dashoffset: 0; }
 }
