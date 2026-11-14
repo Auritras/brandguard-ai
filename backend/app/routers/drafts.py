@@ -59,8 +59,10 @@ class CommentIn(BaseModel):
 
 # ---------- helpers ----------
 
-def get_draft(db: Session, draft_id: int, user: User) -> Draft:
-    draft = db.get(Draft, draft_id)
+def get_draft(db: Session, draft_id: int, user: User, lock: bool = False) -> Draft:
+    """`lock` holds the draft's row until the request commits, so two people acting on the same
+    draft at the same moment are handled one after the other (Postgres; SQLite has no row locks)."""
+    draft = db.get(Draft, draft_id, with_for_update=lock)
     if draft is None or (user.role == "creator" and draft.creator_id != user.id):
         raise HTTPException(404, "Draft not found.")
     return draft
@@ -70,7 +72,7 @@ def get_finding(db: Session, finding_id: int, user: User) -> tuple[Finding, Draf
     finding = db.get(Finding, finding_id)
     if finding is None:
         raise HTTPException(404, "Finding not found.")
-    return finding, get_draft(db, finding.draft_id, user)
+    return finding, get_draft(db, finding.draft_id, user, lock=True)
 
 
 def own_editable(draft: Draft, user: User) -> None:
@@ -306,7 +308,7 @@ def waive(finding_id: int, body: ReasonIn, db: Session = Depends(get_db), user: 
 
 @router.post("/drafts/{draft_id}/submit")
 def submit(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    draft = get_draft(db, draft_id, user)
+    draft = get_draft(db, draft_id, user, lock=True)
     own_editable(draft, user)
     if draft.checked_version != draft.version:
         raise HTTPException(409, "Run the check on this version before sending it for review.")
@@ -319,7 +321,7 @@ def submit(draft_id: int, db: Session = Depends(get_db), user: User = Depends(cu
 @router.post("/drafts/{draft_id}/request-changes")
 def request_changes(draft_id: int, body: NoteIn, db: Session = Depends(get_db),
                     user: User = Depends(require("manager", "reviewer"))):
-    draft = get_draft(db, draft_id, user)
+    draft = get_draft(db, draft_id, user, lock=True)
     allowed = ("in_review",) if user.role == "manager" else ("in_review", "authorised_review")
     if draft.status not in allowed:
         raise HTTPException(409, "This draft is not waiting for your review.")
@@ -332,7 +334,7 @@ def request_changes(draft_id: int, body: NoteIn, db: Session = Depends(get_db),
 
 @router.post("/drafts/{draft_id}/approve")
 def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(require("manager", "reviewer"))):
-    draft = get_draft(db, draft_id, user)
+    draft = get_draft(db, draft_id, user, lock=True)
     blocking = blocking_findings(db, draft)
     if user.role == "manager":
         if draft.status != "in_review":
