@@ -40,7 +40,7 @@ export default function App() {
             <img src="/favicon.svg" alt="" className="h-7 w-7 rounded" />
             BrandGuard AI
           </Link>
-          <nav aria-label="Main" className="flex gap-1">
+          <nav aria-label="Main" className="order-last flex w-full gap-1 sm:order-none sm:w-auto">
             <NavLink to="/" end className={tab}>
               Drafts
             </NavLink>
@@ -49,8 +49,9 @@ export default function App() {
             </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span>
-              <span className="font-semibold">{user.name}</span>
+            <span className="font-semibold">
+              {user.name.split(' (')[0]}
+              <span className="hidden sm:inline"> ({user.name.split(' (')[1]}</span>
             </span>
             <Button kind="secondary" onClick={signOut}>
               Sign out
@@ -58,7 +59,7 @@ export default function App() {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto">
+      <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft />} />

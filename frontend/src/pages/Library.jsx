@@ -178,7 +178,7 @@ export default function Library({ user }) {
           )}
           {lib.facts.map((f) => (
             <Card key={f.id} className="flex flex-wrap items-start gap-3 p-4">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-64">
                 <p className="font-semibold">{f.code} · {f.statement}</p>
                 <p className="mt-1 text-sm text-muted">Source: {f.source || 'not given'} · Valid until {f.valid_until || 'no end date'}</p>
               </div>
@@ -239,7 +239,7 @@ export default function Library({ user }) {
 function RuleRow({ r, owner, busy, onEdit, onApprove, onDelete }) {
   return (
     <Card className="flex flex-wrap items-start gap-3 p-4">
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-64">
         <p className="font-semibold">{r.code} · {r.title}</p>
         <p className="mt-1 text-sm">{r.text}</p>
         <div className="mt-2 flex flex-wrap gap-2">

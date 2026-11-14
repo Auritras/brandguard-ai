@@ -158,9 +158,9 @@ export default function DraftView({ user }) {
         <ErrorNote>{error}</ErrorNote>
       </div>
 
-      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-        {/* Left: the content */}
-        <div className="grid content-start gap-4">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        {/* Left: the content. On a phone the findings come straight after it. */}
+        <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-1 lg:row-start-1">
           <Card className="relative overflow-hidden p-5" ref={contentRef}>
             {busy === 'check' && <div className="scan-bar" aria-hidden="true" style={{ '--scan-h': `${contentRef.current?.offsetHeight || 300}px` }} />}
             {d.status === 'approved' && (
@@ -206,12 +206,15 @@ export default function DraftView({ user }) {
               <div><dt className="font-semibold">Purpose</dt><dd className="text-muted">{d.purpose || 'Not stated'}</dd></div>
             </dl>
           </Card>
+        </div>
 
+        {/* The record: comments, history, versions. */}
+        <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-1 lg:row-start-2">
           <Card className="p-5">
-            <div role="tablist" aria-label="Draft record" className="flex gap-1">
+            <div role="tablist" aria-label="Draft record" className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
               {[['comments', `Comments (${d.comments.length})`], ['history', 'History'], ['versions', `Versions (${d.versions.length})`]].map(([k, label]) => (
                 <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === k ? 'bg-ink text-paper' : 'hover:bg-black/5'}`}>
+                  className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === k ? 'bg-ink text-paper' : 'hover:bg-black/5'}`}>
                   {label}
                 </button>
               ))}
@@ -227,7 +230,7 @@ export default function DraftView({ user }) {
                 ))}
                 <form className="flex gap-2" onSubmit={async (e) => { e.preventDefault(); if (await act('comment', `/drafts/${d.id}/comments`, { text: comment })) setComment('') }}>
                   <label className="sr-only" htmlFor="comment">Add a comment</label>
-                  <input id="comment" className={inputCls} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment…" />
+                  <input id="comment" className={`${inputCls} min-w-0`} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment…" />
                   <Button kind="dark" type="submit" disabled={!comment.trim() || !!busy}>Post</Button>
                 </form>
               </div>
@@ -259,7 +262,7 @@ export default function DraftView({ user }) {
         </div>
 
         {/* Right: findings and disclosure */}
-        <div className="grid content-start gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <h2 className="font-display text-xl font-bold">
             Findings <span className="text-base font-normal text-muted">({active.length} to handle)</span>
           </h2>
