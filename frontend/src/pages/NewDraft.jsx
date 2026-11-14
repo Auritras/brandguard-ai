@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
 import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
+import LiveText from '../LiveText.jsx'
 
 const SAMPLE = {
   title: 'LinkedIn post: new onboarding',
@@ -54,7 +55,7 @@ export default function NewDraft() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">New draft</h1>
-          <p className="mt-1 text-muted">Paste your content or upload a file. The check runs as soon as you save.</p>
+          <p className="mt-1 text-muted">Paste your content or upload a file. Problems are flagged as you type; the full check runs when you save.</p>
         </div>
         <Button onClick={() => setForm(SAMPLE)}>Load a sample post</Button>
       </div>
@@ -80,7 +81,7 @@ export default function NewDraft() {
             <input className={inputCls} value={form.purpose} onChange={set('purpose')} placeholder="What should this piece achieve?" />
           </Field>
           <Field label="Content">
-            <textarea className={`${inputCls} min-h-56`} required value={form.body} onChange={set('body')} placeholder="Paste the text here…" />
+            <LiveText id="body" required value={form.body} onChange={set('body')} placeholder="Paste the text here…" />
           </Field>
           <Field label="Or upload a file" hint="Text, Markdown, Word (.docx) or PDF, up to 5 MB.">
             <input type="file" accept=".txt,.md,.docx,.pdf" onChange={upload} className="block text-sm" />

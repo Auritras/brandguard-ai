@@ -3,6 +3,8 @@
 States: draft -> in_review -> (changes_requested | authorised_review | approved)
 Only people move a draft forward. The automated check never approves anything.
 """
+import re
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -10,8 +12,9 @@ from sqlalchemy.orm import Session
 from ..auth import current_user, require
 from ..db import get_db
 from ..engine.extract import extract_text
+from ..engine.exact import run_exact
 from ..engine.run import run_review
-from ..models import AuditLog, Comment, Draft, DraftVersion, Finding, ReviewRun, User
+from ..models import AuditLog, Comment, Draft, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
 from .common import iso, log
 
 router = APIRouter(prefix="/api", tags=["drafts"])
@@ -183,6 +186,23 @@ def edit_draft(draft_id: int, body: BodyIn, db: Session = Depends(get_db), user:
         log(db, user, "draft_edited", f"Version {draft.version}", draft.id)
         db.commit()
     return detail(db, draft, user)
+
+
+def spans(body: str, quote: str) -> list[list[int]]:
+    """Every place the quote appears, without matching inside a longer word ("Lumio Pay" in "Lumio Payroll")."""
+    left = r"(?<![\w-])" if re.match(r"\w", quote) else ""
+    right = r"(?![\w-])" if re.search(r"\w$", quote) else ""
+    return [[m.start(), m.end()] for m in re.finditer(left + re.escape(quote) + right, body)][:20]
+
+
+@router.post("/check-text")
+def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Exact checks only, on unsaved text, for checking while typing. Nothing is stored or sent to AI."""
+    text = body.body[:20000]
+    rules = db.query(Rule).filter(Rule.status == "approved").all()
+    found = run_exact(text, rules, db.query(Fact).all(), db.query(Term).all())
+    return [{"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
+             "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
 
 
 @router.post("/drafts/{draft_id}/check")

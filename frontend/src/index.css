@@ -62,6 +62,9 @@ mark {
 }
 .diff-removed + .diff-added { margin-left: 4px; }
 
+/* Highlights behind the live-checked text box: no padding, or the marks drift off the words. */
+mark.live-mark { padding: 0; border-radius: 2px; }
+
 ::selection {
   background: var(--color-primary-soft);
 }

@@ -120,3 +120,13 @@ def test_insights_counts_findings_and_scopes_creators(client, creator, manager):
     linkedin = next(r for r in mine["channels"] if r["channel"] == "LinkedIn")
     assert linkedin["per_draft"] > 0
     assert sum(mine["outcomes"].values()) == mine["findings"]
+
+
+def test_check_text_finds_issues_while_typing_and_saves_nothing(client, creator):
+    before = len(client.get("/api/drafts", headers=creator).json())
+    r = client.post("/api/check-text", headers=creator, json={"body": "Lumio Pay is the #1 app. Lumio Payroll is fine. Click here!!"})
+    assert r.status_code == 200
+    found = {f["ref_code"]: f for f in r.json()}
+    assert {"TERM", "R-002", "R-005"} <= set(found)
+    assert found["TERM"]["spans"] == [[0, 9]]  # not inside "Lumio Payroll"
+    assert len(client.get("/api/drafts", headers=creator).json()) == before

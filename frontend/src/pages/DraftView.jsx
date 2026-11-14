@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { diffWords } from '../diff.js'
+import LiveText from '../LiveText.jsx'
 import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
@@ -156,7 +157,7 @@ export default function DraftView({ user }) {
             {editing ? (
               <div className="mt-3">
                 <label className="sr-only" htmlFor="body">Content</label>
-                <textarea id="body" className={`${inputCls} min-h-64`} value={text} onChange={(e) => setText(e.target.value)} />
+                <LiveText id="body" value={text} onChange={(e) => setText(e.target.value)} minHeight="min-h-64" />
                 <div className="mt-2 flex gap-2">
                   <Button kind="dark" disabled={!!busy || !text.trim()}
                     onClick={async () => { if (await act('save', `/drafts/${d.id}`, { __method: 'PUT', data: { body: text } })) setEditing(false) }}>
