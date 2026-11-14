@@ -56,8 +56,8 @@ mark {
   background: linear-gradient(var(--m), var(--m)) no-repeat 0 0 / 100% 100%;
 }
 .sweep {
-  animation: sweep 0.45s cubic-bezier(0.3, 0.7, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+  animation: sweep 0.7s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 140ms + 200ms);
 }
 @keyframes sweep {
   from { background-size: 0% 100%; }
@@ -65,8 +65,8 @@ mark {
 
 /* Finding cards land like a stamp: lifted with a long shadow, then pressed down. */
 .stamp-in {
-  animation: stamp-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  animation: stamp-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
 }
 @keyframes stamp-in {
   from {
@@ -85,7 +85,7 @@ mark {
   pointer-events: none;
   background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent);
   border-bottom: 2px solid var(--color-primary);
-  animation: scan 1.3s ease-in-out infinite alternate;
+  animation: scan 1.8s ease-in-out infinite alternate;
 }
 @keyframes scan {
   from { transform: translateY(-4.5rem); }
@@ -93,7 +93,7 @@ mark {
 }
 
 /* Jumping from a highlight to its finding flashes the card. */
-.flash { animation: flash 0.9s ease-out; }
+.flash { animation: flash 1.3s ease-out; }
 @keyframes flash {
   0% { outline: 3px solid transparent; outline-offset: 8px; }
   30% { outline: 3px solid var(--color-primary); outline-offset: 4px; }
@@ -103,7 +103,7 @@ mark {
 /* The approval stamp. */
 .approved-stamp {
   transform: rotate(-8deg);
-  animation: stamp-drop 0.42s cubic-bezier(0.3, 1.4, 0.5, 1) both 0.15s;
+  animation: stamp-drop 0.65s cubic-bezier(0.3, 1.4, 0.5, 1) both 0.25s;
 }
 @keyframes stamp-drop {
   from { opacity: 0; transform: rotate(-14deg) scale(2.2); }
@@ -112,13 +112,13 @@ mark {
 /* Channel menu: the highlight slides to the picked channel. */
 .channel-pill {
   left: 4px;
-  transition: transform 0.32s cubic-bezier(0.3, 1.25, 0.5, 1), width 0.32s cubic-bezier(0.3, 1.25, 0.5, 1);
+  transition: transform 0.5s cubic-bezier(0.3, 1.25, 0.5, 1), width 0.5s cubic-bezier(0.3, 1.25, 0.5, 1);
 }
 
 /* Drafts deal in one after another when the list or the filter changes. */
 .deal-in {
-  animation: deal-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(min(var(--i, 0), 8) * 45ms);
+  animation: deal-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 75ms);
 }
 @keyframes deal-in {
   from { opacity: 0; transform: translateY(10px) rotate(-0.6deg); }
