@@ -6,6 +6,16 @@ import { Button, Card, ErrorNote, StatusChip, timeAgo } from '../ui.jsx'
 // Same order as the channel picker on the new draft form.
 const CHANNELS = ['LinkedIn', 'Instagram', 'Email', 'Advertisement', 'Blog', 'Website', 'Document']
 
+const time = (d) => new Date(d.updated_at).getTime()
+const SORTS = {
+  waiting: ['Waiting for me first', null],
+  newest: ['Newest first', (a, b) => time(b) - time(a)],
+  oldest: ['Oldest first', (a, b) => time(a) - time(b)],
+  risk: ['Most high-risk', (a, b) => b.blocking - a.blocking || b.open - a.open || time(b) - time(a)],
+  open: ['Most open findings', (a, b) => b.open - a.open || b.blocking - a.blocking || time(b) - time(a)],
+  title: ['Title A to Z', (a, b) => a.title.localeCompare(b.title)],
+}
+
 const WAITING = { manager: ['in_review'], reviewer: ['authorised_review', 'in_review'], creator: ['draft', 'changes_requested'] }
 
 export default function Drafts({ user }) {
@@ -18,6 +28,7 @@ export default function Drafts({ user }) {
 
   const [params, setParams] = useSearchParams()
   const channel = params.get('channel') || 'All'
+  const sort = SORTS[params.get('sort')] ? params.get('sort') : 'waiting'
 
   const mine = (d) => WAITING[user.role].includes(d.status)
   const channelOf = (d) => d.channel || 'Other'
@@ -29,8 +40,16 @@ export default function Drafts({ user }) {
   ]
   const active = tabs.some(([c]) => c === channel) ? channel : 'All'
   const shown = (drafts || []).filter((d) => active === 'All' || channelOf(d) === active)
-  const sorted = [...shown].sort((a, b) => Number(mine(b)) - Number(mine(a)))
-  const pick = (c) => setParams(c === 'All' ? {} : { channel: c }, { replace: true })
+  const byWaiting = (a, b) => Number(mine(b)) - Number(mine(a)) || time(b) - time(a)
+  const sorted = [...shown].sort(SORTS[sort][1] || byWaiting)
+  // Keep the address in step with the filters so Back returns to the same view.
+  const setView = (next) => {
+    const v = { channel: active, sort, ...next }
+    const q = {}
+    if (v.channel !== 'All') q.channel = v.channel
+    if (v.sort !== 'waiting') q.sort = v.sort
+    setParams(q, { replace: true })
+  }
 
   return (
     <div>
@@ -50,9 +69,30 @@ export default function Drafts({ user }) {
         )}
       </div>
 
-      {drafts?.length > 0 && <ChannelMenu tabs={tabs} active={active} onPick={pick} />}
+      {drafts?.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <ChannelMenu tabs={tabs} active={active} onPick={(c) => setView({ channel: c })} />
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            Sort by
+            <span className="relative">
+              <select
+                value={sort}
+                onChange={(e) => setView({ sort: e.target.value })}
+                className="cursor-pointer appearance-none rounded-md border-2 border-ink bg-card py-1.5 pl-3 pr-9 font-semibold shadow-print-sm transition hover:bg-primary-soft"
+              >
+                {Object.entries(SORTS).map(([k, [label]]) => (
+                  <option key={k} value={k}>{label}</option>
+                ))}
+              </select>
+              <svg aria-hidden="true" viewBox="0 0 12 12" className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2">
+                <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </span>
+          </label>
+        </div>
+      )}
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" key={active}>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" key={`${active}-${sort}`}>
         {error && <div className="col-span-full"><ErrorNote>{error}</ErrorNote></div>}
         {drafts === null && !error && <p className="col-span-full text-muted">Loading…</p>}
         {drafts?.length === 0 && (
@@ -100,7 +140,7 @@ function ChannelMenu({ tabs, active, onPick }) {
   }, [active, tabs.length])
 
   return (
-    <nav aria-label="Filter by channel" className="-mx-1 mt-6 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+    <nav aria-label="Filter by channel" className="-mx-1 min-w-0 max-w-full overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
       <div className="relative inline-flex gap-1 rounded-lg border-2 border-ink bg-card p-1">
         {pill && (
           <span
