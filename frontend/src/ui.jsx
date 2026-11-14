@@ -129,6 +129,11 @@ export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendi
   )
 }
 
+// A number that rolls in from above whenever it changes.
+export function RollNumber({ value }) {
+  return <span key={value} className="roll-in inline-block tabular-nums">{value}</span>
+}
+
 // A button that first asks for a written reason, then calls onSubmit(reason).
 export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLabel = 'Confirm', onSubmit, initial = '', hold = false, pendingLabel = 'Sending' }) {
   const [open, setOpen] = useState(false)

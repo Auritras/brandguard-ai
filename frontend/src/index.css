@@ -239,6 +239,24 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   animation: write 0.9s cubic-bezier(0.5, 0.1, 0.4, 1) 0.6s forwards;
 }
 
+/* A handled finding slides aside and folds shut. */
+.fold-away {
+  overflow: hidden;
+  pointer-events: none;
+  animation: fold-away 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes fold-away {
+  0% { max-height: var(--fold-h, 30rem); }
+  45% { opacity: 0; transform: translateX(24px) rotate(1deg); }
+  100% { opacity: 0; transform: translateX(24px); max-height: 0; padding-top: 0; padding-bottom: 0; border-width: 0; margin-top: -1rem; }
+}
+
+/* Counters roll in from above when they change. */
+.roll-in { animation: roll-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes roll-in {
+  from { opacity: 0; transform: translateY(-0.6em); }
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }

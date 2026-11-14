@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
-import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
+import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
@@ -26,6 +26,8 @@ function highlight(body, findings) {
   if (pos < body.length) out.push({ text: body.slice(pos) })
   return out
 }
+
+const isActive = (f) => f.status === 'open' || f.status === 'disputed'
 
 function nextStep(d, user) {
   const isOwner = d.can.edit
@@ -56,6 +58,7 @@ export default function DraftView({ user }) {
   const [tab, setTab] = useState('comments')
   const [comment, setComment] = useState('')
   const [rewrite, setRewrite] = useState(null) // word diff shown while a change animates in
+  const [leaving, setLeaving] = useState([]) // findings just handled, folding out of the list
   const contentRef = useRef(null)
   const rewriteTimer = useRef()
   useEffect(() => () => clearTimeout(rewriteTimer.current), [])
@@ -77,6 +80,15 @@ export default function DraftView({ user }) {
         setRewrite(diffWords(d.body, next.body))
         rewriteTimer.current = setTimeout(() => setRewrite(null), 2600)
       }
+      // Findings that were just handled fold away instead of vanishing.
+      if (d) {
+        const still = new Set(next.findings.filter(isActive).map((f) => f.id))
+        const gone = d.findings.filter(isActive).map((f, at) => ({ f, at })).filter(({ f }) => !still.has(f.id))
+        if (gone.length) {
+          setLeaving(gone)
+          setTimeout(() => setLeaving([]), 700)
+        }
+      }
       setD(next)
       return true
     } catch (e) {
@@ -91,7 +103,9 @@ export default function DraftView({ user }) {
   if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
-  const active = d.findings.filter((f) => ['open', 'disputed'].includes(f.status))
+  const active = d.findings.filter(isActive)
+  const shown = active.map((f) => ({ f }))
+  for (const { f, at } of leaving) if (!active.some((a) => a.id === f.id)) shown.splice(Math.min(at, shown.length), 0, { f, leaving: true })
   const settled = d.findings.filter((f) => !['open', 'disputed'].includes(f.status))
   const focus = (fid) => {
     const el = document.getElementById(`finding-${fid}`)
@@ -266,19 +280,19 @@ export default function DraftView({ user }) {
         {/* Right: findings and disclosure */}
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <h2 className="font-display text-xl font-bold">
-            Findings <span className="text-base font-normal text-muted">({active.length} to handle)</span>
+            Findings <span className="text-base font-normal text-muted">(<RollNumber value={active.length} /> to handle)</span>
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
           {d.run !== null && active.length === 0 && (
             <Card className="p-4 text-sm"><span className="font-semibold">No open findings.</span> {d.needs_check ? 'Run the check again to confirm.' : 'The latest version passed the check.'}</Card>
           )}
-          {active.map((f, i) => (
-            <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} />
+          {shown.map(({ f, leaving: out }, i) => (
+            <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} />
           ))}
 
           {settled.length > 0 && (
             <details className="rounded-2xl border border-line bg-card p-4">
-              <summary className="cursor-pointer text-sm font-semibold">Handled findings ({settled.length})</summary>
+              <summary className="cursor-pointer text-sm font-semibold">Handled findings (<RollNumber value={settled.length} />)</summary>
               <div className="mt-3 grid gap-3">
                 {settled.map((f) => (
                   <div key={f.id} className="rounded-lg border border-line bg-white p-3 text-sm">
@@ -354,12 +368,18 @@ function CompareVersions({ versions }) {
   )
 }
 
-function FindingCard({ i, f, d, user, busy, act }) {
+function FindingCard({ i, f, d, user, busy, act, leaving }) {
+  const ref = useRef(null)
+  // Fold from the card's real height so the collapse is smooth at any size.
+  useLayoutEffect(() => {
+    if (leaving && ref.current) ref.current.style.setProperty('--fold-h', `${ref.current.offsetHeight}px`)
+  }, [leaving])
   const sev = SEVERITY[f.severity]
   const disputed = f.status === 'disputed'
   const canDecide = d.can.decide_disputes && disputed && (f.severity !== 'high' || user.role === 'reviewer')
   return (
-    <Card id={`finding-${f.id}`} className="stamp-in scroll-mt-6 p-4" style={{ '--i': i }}>
+    <Card ref={ref} id={leaving ? undefined : `finding-${f.id}`} className={`stamp-in scroll-mt-6 p-4 ${leaving ? 'fold-away' : ''}`} style={{ '--i': i }}
+      inert={leaving || undefined} aria-hidden={leaving || undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip className={sev.chip}>{sev.label} risk</Chip>
         <Chip className="border-line bg-white capitalize text-ink">{f.category}</Chip>
