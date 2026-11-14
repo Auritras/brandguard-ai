@@ -219,6 +219,26 @@ mark.live-mark { padding: 0; border-radius: 2px; }
 .ticket-tear::before { left: -13px; clip-path: inset(0 0 0 calc(50% - 1px)); }
 .ticket-tear::after { right: -13px; clip-path: inset(0 calc(50% - 1px) 0 0); }
 
+/* A fix being applied: a pen line strikes the old words, then the new words write in. */
+.rewrite-out {
+  color: var(--color-muted);
+  background: linear-gradient(var(--color-ink), var(--color-ink)) no-repeat 0 55% / 100% 2px;
+  animation: strike 0.5s ease-out both, fade-old 0.6s ease-in 1.7s both;
+}
+@keyframes strike {
+  from { background-size: 0% 2px; }
+}
+@keyframes fade-old {
+  to { opacity: 0.25; }
+}
+.rewrite-in {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-deep);
+  border-radius: 2px;
+  clip-path: inset(0 100% 0 0);
+  animation: write 0.9s cubic-bezier(0.5, 0.1, 0.4, 1) 0.6s forwards;
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }

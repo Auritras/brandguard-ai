@@ -55,7 +55,10 @@ export default function DraftView({ user }) {
   const [text, setText] = useState('')
   const [tab, setTab] = useState('comments')
   const [comment, setComment] = useState('')
+  const [rewrite, setRewrite] = useState(null) // word diff shown while a change animates in
   const contentRef = useRef(null)
+  const rewriteTimer = useRef()
+  useEffect(() => () => clearTimeout(rewriteTimer.current), [])
 
   const load = useCallback(() => api(`/drafts/${id}`).then(setD).catch((e) => setError(e.message)), [id])
   useEffect(() => {
@@ -67,7 +70,14 @@ export default function DraftView({ user }) {
     setBusy(name)
     setError('')
     try {
-      setD(await api(path, { method: body === undefined ? 'POST' : body.__method || 'POST', body: body?.__method ? body.data : body }))
+      const next = await api(path, { method: body === undefined ? 'POST' : body.__method || 'POST', body: body?.__method ? body.data : body })
+      // When the text changes (a fix accepted or written), show the change being made before settling.
+      if (d && next.body !== d.body && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        clearTimeout(rewriteTimer.current)
+        setRewrite(diffWords(d.body, next.body))
+        rewriteTimer.current = setTimeout(() => setRewrite(null), 2600)
+      }
+      setD(next)
       return true
     } catch (e) {
       setError(e.message)
@@ -168,6 +178,15 @@ export default function DraftView({ user }) {
                 </div>
               </div>
             ) : (
+              rewrite ? (
+              <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8" aria-hidden="true">
+                {rewrite.map((p, i) =>
+                  p.type === 'same' ? <span key={i}>{p.text}</span>
+                    : p.type === 'removed' ? <span key={i} className="rewrite-out">{p.text}</span>
+                      : <span key={i} className="rewrite-in">{p.text}</span>,
+                )}
+              </p>
+              ) : (
               <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8">
                 {pieces.map((p, i) =>
                   p.f ? (
@@ -181,6 +200,7 @@ export default function DraftView({ user }) {
                   ),
                 )}
               </p>
+              )
             )}
             <dl className="mt-5 grid gap-x-6 gap-y-2 border-t border-line pt-4 text-sm sm:grid-cols-2">
               <div><dt className="font-semibold">Audience</dt><dd className="text-muted">{d.audience || 'Not stated'}</dd></div>
