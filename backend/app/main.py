@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from . import models  # noqa: F401  (registers tables)
@@ -29,6 +30,13 @@ from .routers import drafts, library  # noqa: E402
 
 app.include_router(library.router)
 app.include_router(drafts.router)
+
+
+@app.get("/api/ping")
+def ping(db: Session = Depends(get_db)):
+    """Keep-awake target: one tiny query so the free database also counts as in use."""
+    db.execute(text("select 1"))
+    return {"ok": True}
 
 
 class LoginIn(BaseModel):
