@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
-import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
+import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
@@ -125,9 +125,10 @@ export default function DraftView({ user }) {
           </>
         )}
         {d.can.approve && (
-          <Button kind="primary" disabled={!!busy} onClick={() => act('approve', `/drafts/${d.id}/approve`)}>
-            {user.role === 'manager' && d.blocking > 0 ? 'Approve and escalate' : 'Approve'}
-          </Button>
+          <HoldButton kind="primary" disabled={!!busy} pendingLabel={user.role === 'manager' && d.blocking > 0 ? 'Escalating' : 'Approving'}
+            onConfirm={() => act('approve', `/drafts/${d.id}/approve`)}>
+            {user.role === 'manager' && d.blocking > 0 ? 'Hold to approve and escalate' : 'Hold to approve'}
+          </HoldButton>
         )}
         {d.can.request_changes && (
           <ReasonButton label="Request changes" placeholder="What should the creator change?" confirmLabel="Send back"
@@ -383,7 +384,7 @@ function FindingCard({ i, f, d, user, busy, act }) {
           </>
         )}
         {d.can.waive && (
-          <ReasonButton label="Waive" placeholder="Why is it acceptable to publish with this?" confirmLabel="Waive with this reason"
+          <ReasonButton label="Waive" placeholder="Why is it acceptable to publish with this?" confirmLabel="Waive with this reason" hold pendingLabel="Waiving"
             onSubmit={(reason) => act('waive', `/findings/${f.id}/waive`, { reason })} />
         )}
         {disputed && d.can.decide_disputes && !canDecide && (

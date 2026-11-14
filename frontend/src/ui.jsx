@@ -1,5 +1,5 @@
 // Small shared building blocks so every screen looks the same.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Buttons sit on a small printed shadow and press down into it when clicked.
 const PRESS = 'active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:translate-x-0 disabled:translate-y-0'
@@ -71,8 +71,66 @@ export function Field({ label, hint, children }) {
 export const inputCls =
   'w-full rounded-md border-2 border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-slate-400 focus:border-primary focus:outline-none'
 
+// For decisions that matter: press and hold until the button fills, then a short countdown with
+// Undo before anything is sent. Works with a mouse, touch, or by holding Enter or Space.
+export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendingLabel = 'Sending', disabled, onConfirm, children }) {
+  const [phase, setPhase] = useState('idle') // idle | holding | pending
+  const [left, setLeft] = useState(0)
+  const hold = useRef()
+  const tick = useRef()
+  useEffect(() => () => { clearTimeout(hold.current); clearInterval(tick.current) }, [])
+
+  const start = () => {
+    if (disabled || phase !== 'idle') return
+    setPhase('holding')
+    hold.current = setTimeout(() => {
+      let n = undoSeconds
+      setLeft(n)
+      setPhase('pending')
+      tick.current = setInterval(() => {
+        n -= 1
+        setLeft(n)
+        if (n <= 0) {
+          clearInterval(tick.current)
+          setPhase('idle')
+          onConfirm()
+        }
+      }, 1000)
+    }, ms)
+  }
+  const stop = () => {
+    clearTimeout(hold.current)
+    setPhase((p) => (p === 'holding' ? 'idle' : p))
+  }
+  const undo = () => {
+    clearInterval(tick.current)
+    setPhase('idle')
+  }
+
+  if (phase === 'pending') {
+    return (
+      <span role="status" className="inline-flex items-center gap-2 rounded-md border-2 border-ink bg-ink py-1 pl-3 pr-1 text-sm font-semibold text-paper">
+        {pendingLabel} in {left}s
+        <button autoFocus onClick={undo} className="rounded bg-paper px-2.5 py-0.5 text-ink hover:bg-primary-soft">Undo</button>
+      </span>
+    )
+  }
+  return (
+    <Button kind={kind} disabled={disabled}
+      aria-label={`${typeof children === 'string' ? children : 'Confirm'}: press and hold`}
+      className="hold relative touch-none select-none overflow-hidden"
+      onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
+      onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); start() } }}
+      onKeyUp={(e) => { if (e.key === 'Enter' || e.key === ' ') stop() }}>
+      <span aria-hidden="true" className={`hold-fill ${phase === 'holding' ? 'is-holding' : ''}`} style={{ '--hold': `${ms}ms` }} />
+      <span className="relative">{phase === 'holding' ? 'Keep holding…' : children}</span>
+    </Button>
+  )
+}
+
 // A button that first asks for a written reason, then calls onSubmit(reason).
-export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLabel = 'Confirm', onSubmit, initial = '' }) {
+export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLabel = 'Confirm', onSubmit, initial = '', hold = false, pendingLabel = 'Sending' }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(initial)
   const [busy, setBusy] = useState(false)
@@ -96,7 +154,21 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
           className={`${inputCls} mt-1 font-normal`}
         />
       </label>
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {hold ? (
+          <HoldButton kind="dark" disabled={busy || text.trim().length < 3} pendingLabel={pendingLabel}
+            onConfirm={async () => {
+              setBusy(true)
+              try {
+                await onSubmit(text.trim())
+                setOpen(false)
+              } finally {
+                setBusy(false)
+              }
+            }}>
+            {`Hold to ${confirmLabel.charAt(0).toLowerCase()}${confirmLabel.slice(1)}`}
+          </HoldButton>
+        ) : (
         <Button
           kind="dark"
           disabled={busy || text.trim().length < 3}
@@ -112,6 +184,7 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
         >
           {confirmLabel}
         </Button>
+        )}
         <Button kind="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>
