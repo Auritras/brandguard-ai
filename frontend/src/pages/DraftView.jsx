@@ -59,6 +59,7 @@ export default function DraftView({ user }) {
   const [comment, setComment] = useState('')
   const [rewrite, setRewrite] = useState(null) // word diff shown while a change animates in
   const [leaving, setLeaving] = useState([]) // findings just handled, folding out of the list
+  const [acted, setActed] = useState(false) // status and next-step only animate after an action here
   const contentRef = useRef(null)
   const rewriteTimer = useRef()
   useEffect(() => () => clearTimeout(rewriteTimer.current), [])
@@ -89,6 +90,7 @@ export default function DraftView({ user }) {
           setTimeout(() => setLeaving([]), 700)
         }
       }
+      setActed(true)
       setD(next)
       return true
     } catch (e) {
@@ -124,7 +126,7 @@ export default function DraftView({ user }) {
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <h1 className="font-display text-3xl font-bold">{d.title}</h1>
-        <StatusChip status={d.status} />
+        <span key={d.status} className={acted ? 'status-stamp inline-block' : 'inline-block'}><StatusChip status={d.status} /></span>
       </div>
       <p className="mt-1 text-sm text-muted">
         {d.channel || 'No channel'} · by {d.creator} · version {d.version} ·{' '}
@@ -135,8 +137,8 @@ export default function DraftView({ user }) {
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>
         {yourTurn && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-accent" />}
-        <p className="min-w-0 flex-1 text-sm font-semibold" aria-live="polite">
-          {nextStep(d, user)}
+        <p className="min-w-0 flex-1 overflow-hidden text-sm font-semibold" aria-live="polite">
+          <span key={nextStep(d, user)} className={acted ? 'step-in block' : 'block'}>{nextStep(d, user)}</span>
         </p>
         {d.can.edit && (
           <>

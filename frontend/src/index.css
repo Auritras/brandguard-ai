@@ -257,6 +257,16 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   from { opacity: 0; transform: translateY(-0.6em); }
 }
 
+/* When a draft changes state, its status chip is stamped and the next step slides in. */
+.status-stamp { animation: status-stamp 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+@keyframes status-stamp {
+  from { opacity: 0; transform: scale(1.8) rotate(-6deg); }
+}
+.step-in { animation: step-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes step-in {
+  from { opacity: 0; transform: translateX(-16px); }
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }
