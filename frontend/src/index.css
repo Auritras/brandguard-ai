@@ -47,6 +47,21 @@ mark {
   cursor: pointer;
 }
 
+/* Comparing versions: removed words struck out, new words in the action blue. */
+.diff-added {
+  text-decoration: none;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-deep);
+  border-bottom: 2px solid var(--color-primary);
+}
+.diff-removed {
+  color: var(--color-muted);
+  text-decoration: line-through 2px;
+  text-decoration-color: var(--color-ink);
+  background: rgb(0 0 0 / 0.05);
+}
+.diff-removed + .diff-added { margin-left: 4px; }
+
 ::selection {
   background: var(--color-primary-soft);
 }

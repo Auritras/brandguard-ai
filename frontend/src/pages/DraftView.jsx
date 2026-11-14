@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
+import { diffWords } from '../diff.js'
 import { Button, Card, Chip, ErrorNote, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 const FINDING_STATUS = {
@@ -248,6 +249,7 @@ export default function DraftView({ user }) {
             )}
             {tab === 'versions' && (
               <div className="mt-4 grid gap-2 text-sm">
+                {d.versions.length > 1 && <CompareVersions versions={d.versions} />}
                 {d.versions.map((v) => (
                   <details key={v.number} className="rounded-lg border border-line bg-white p-3">
                     <summary className="cursor-pointer font-semibold">
@@ -307,6 +309,47 @@ export default function DraftView({ user }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Two versions side by side as one text: removed words struck out, new words highlighted.
+function CompareVersions({ versions }) {
+  // versions arrive newest first
+  const [to, setTo] = useState(versions[0].number)
+  const [from, setFrom] = useState(versions[1].number)
+  const pieces = useMemo(() => {
+    const body = (n) => versions.find((v) => v.number === n)?.body || ''
+    return diffWords(body(from), body(to))
+  }, [versions, from, to])
+  const added = pieces.filter((p) => p.type === 'added' && p.text.trim()).length
+  const removed = pieces.filter((p) => p.type === 'removed' && p.text.trim()).length
+  const pick = (value, set, label) => (
+    <select aria-label={label} value={value} onChange={(e) => set(Number(e.target.value))}
+      className="cursor-pointer rounded-md border-2 border-line bg-card px-2 py-1 font-semibold hover:border-ink">
+      {versions.map((v) => <option key={v.number} value={v.number}>Version {v.number}</option>)}
+    </select>
+  )
+  return (
+    <div className="mb-2 rounded-lg border-2 border-line bg-white p-3">
+      <div className="flex flex-wrap items-center gap-2 font-semibold">
+        Compare {pick(from, setFrom, 'Older version')} with {pick(to, setTo, 'Newer version')}
+      </div>
+      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <span><span className="diff-removed">struck out</span> = removed ({removed})</span>
+        <span><span className="diff-added">highlighted</span> = added ({added})</span>
+      </p>
+      {from === to ? (
+        <p className="mt-3 text-muted">Pick two different versions.</p>
+      ) : (
+        <p className="mt-3 whitespace-pre-wrap leading-7" aria-live="polite">
+          {pieces.map((p, i) =>
+            p.type === 'same' ? <span key={i}>{p.text}</span>
+              : p.type === 'added' ? <ins key={i} className="diff-added">{p.text}</ins>
+                : <del key={i} className="diff-removed">{p.text}</del>,
+          )}
+        </p>
+      )}
     </div>
   )
 }
