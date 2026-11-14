@@ -16,8 +16,10 @@ export function Button({ kind = 'secondary', className = '', ...props }) {
   )
 }
 
-export function Card({ className = '', ...props }) {
-  return <div {...props} className={`rounded-lg border-2 border-ink bg-card shadow-print-sm ${className}`} />
+// Cards inside the page sheet are quiet; `heavy` is for surfaces that stand alone (the login card).
+export function Card({ heavy = false, className = '', ...props }) {
+  const look = heavy ? 'border-2 border-ink shadow-print' : 'border-2 border-line'
+  return <div {...props} className={`rounded-lg bg-card ${look} ${className}`} />
 }
 
 const STATUS = {

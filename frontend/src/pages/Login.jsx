@@ -48,7 +48,7 @@ export default function Login({ onSignIn }) {
         </p>
       </div>
 
-      <Card className="p-6">
+      <Card heavy className="p-6">
         <h2 className="font-display text-2xl font-bold">Try it as…</h2>
         <p className="mt-1 text-sm text-muted">Three demo accounts, one per role. Pick one to sign in.</p>
         <div className="mt-4 grid gap-2">

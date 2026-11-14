@@ -78,7 +78,7 @@ export default function Drafts({ user }) {
               <select
                 value={sort}
                 onChange={(e) => setView({ sort: e.target.value })}
-                className="cursor-pointer appearance-none rounded-md border-2 border-ink bg-card py-1.5 pl-3 pr-9 font-semibold shadow-print-sm transition hover:bg-primary-soft"
+                className="cursor-pointer appearance-none rounded-md border-2 border-line bg-card py-1.5 pl-3 pr-9 font-semibold transition hover:border-ink"
               >
                 {Object.entries(SORTS).map(([k, [label]]) => (
                   <option key={k} value={k}>{label}</option>
@@ -107,7 +107,7 @@ export default function Drafts({ user }) {
         )}
         {sorted.map((d, i) => (
           <Link key={d.id} to={`/drafts/${d.id}`} className="deal-in block" style={{ '--i': i }}>
-            <Card className="flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-primary">
+            <Card className="flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-print-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-muted">{d.channel || 'No channel'}</span>
                 <StatusChip status={d.status} />
@@ -141,7 +141,7 @@ function ChannelMenu({ tabs, active, onPick }) {
 
   return (
     <nav aria-label="Filter by channel" className="-mx-1 min-w-0 max-w-full overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-      <div className="relative inline-flex gap-1 rounded-lg border-2 border-ink bg-card p-1">
+      <div className="relative inline-flex gap-1 rounded-lg border-2 border-line bg-card p-1">
         {pill && (
           <span
             aria-hidden="true"
