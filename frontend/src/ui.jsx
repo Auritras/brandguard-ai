@@ -3,26 +3,26 @@ import { useState } from 'react'
 
 export function Button({ kind = 'secondary', className = '', ...props }) {
   const kinds = {
-    primary: 'bg-accent text-white hover:bg-[#9a3915] border-accent',
-    secondary: 'bg-card text-ink hover:bg-white border-line',
-    dark: 'bg-ink text-paper hover:bg-[#243246] border-ink',
+    primary: 'bg-primary text-white border-ink shadow-print-sm hover:bg-primary-deep active:translate-x-[2px] active:translate-y-[2px] active:shadow-none',
+    secondary: 'bg-card text-ink border-ink hover:bg-primary-soft',
+    dark: 'bg-ink text-paper border-ink hover:bg-primary-deep',
     ghost: 'bg-transparent text-ink hover:bg-black/5 border-transparent',
   }
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${kinds[kind]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md border-2 px-3.5 py-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${kinds[kind]} ${className}`}
     />
   )
 }
 
 export function Card({ className = '', ...props }) {
-  return <div {...props} className={`rounded-2xl border border-line bg-card ${className}`} />
+  return <div {...props} className={`rounded-lg border-2 border-ink bg-card shadow-print-sm ${className}`} />
 }
 
 const STATUS = {
   draft: ['Draft', 'bg-slate-100 text-slate-700'],
-  in_review: ['In review', 'bg-blue-50 text-blue-800'],
+  in_review: ['In review', 'bg-primary-soft text-primary-deep'],
   changes_requested: ['Changes requested', 'bg-amber-50 text-amber-900'],
   authorised_review: ['Authorised review', 'bg-purple-50 text-purple-900'],
   approved: ['Approved', 'bg-emerald-50 text-emerald-900'],
@@ -30,12 +30,12 @@ const STATUS = {
 
 export function StatusChip({ status }) {
   const [label, cls] = STATUS[status] || [status, 'bg-slate-100 text-slate-700']
-  return <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>
+  return <span className={`inline-block rounded-full border border-current/25 px-2.5 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
 }
 
 export const SEVERITY = {
   high: { label: 'High', chip: 'bg-red-50 text-red-800 border-red-200', mark: 'bg-red-100' },
-  medium: { label: 'Medium', chip: 'bg-amber-50 text-amber-900 border-amber-200', mark: 'bg-amber-100' },
+  medium: { label: 'Medium', chip: 'bg-yellow-100 text-yellow-900 border-yellow-300', mark: 'bg-yellow-200' },
   low: { label: 'Low', chip: 'bg-slate-100 text-slate-700 border-slate-200', mark: 'bg-slate-200' },
 }
 
@@ -63,7 +63,7 @@ export function Field({ label, hint, children }) {
 }
 
 export const inputCls =
-  'w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-slate-400'
+  'w-full rounded-md border-2 border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-slate-400 focus:border-primary focus:outline-none'
 
 // A button that first asks for a written reason, then calls onSubmit(reason).
 export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLabel = 'Confirm', onSubmit, initial = '' }) {
@@ -78,7 +78,7 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
     )
   }
   return (
-    <div className="w-full rounded-lg border border-line bg-white p-3">
+    <div className="w-full rounded-md border-2 border-ink bg-white p-3">
       <label className="block text-sm font-semibold">
         {label}
         <textarea

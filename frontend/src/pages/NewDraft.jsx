@@ -53,7 +53,7 @@ export default function NewDraft() {
     <div className="mx-auto max-w-3xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold">New draft</h1>
+          <h1 className="font-display text-3xl font-bold">New draft</h1>
           <p className="mt-1 text-muted">Paste your content or upload a file. The check runs as soon as you save.</p>
         </div>
         <Button onClick={() => setForm(SAMPLE)}>Load a sample post</Button>

@@ -20,7 +20,7 @@ export default function Drafts({ user }) {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Drafts</h1>
+          <h1 className="font-display text-3xl font-bold">Drafts</h1>
           <p className="mt-1 text-muted">
             {user.role === 'creator'
               ? 'Your content. Check it, fix what is flagged, then send it for review.'
@@ -49,14 +49,14 @@ export default function Drafts({ user }) {
         )}
         {sorted.map((d) => (
           <Link key={d.id} to={`/drafts/${d.id}`} className="block">
-            <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition hover:border-accent">
+            <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition hover:border-primary">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{d.title}</p>
                 <p className="text-sm text-muted">
                   {d.channel || 'No channel'} · by {d.creator} · version {d.version} · {timeAgo(d.updated_at)}
                 </p>
               </div>
-              {mine(d) && d.status !== 'draft' && <span className="text-sm font-semibold text-accent">Waiting for you</span>}
+              {mine(d) && d.status !== 'draft' && <span className="text-sm font-semibold text-primary">Waiting for you</span>}
               {d.open > 0 && <span className="text-sm text-muted">{d.open} open</span>}
               {d.blocking > 0 && <span className="text-sm font-semibold text-red-800">{d.blocking} high-risk</span>}
               <StatusChip status={d.status} />

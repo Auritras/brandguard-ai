@@ -1,31 +1,47 @@
 @import "tailwindcss";
 
+/* Olive desk, cream sheets, ultramarine for actions, burnt orange for the brand mark only.
+   Red / mustard / slate stay reserved for finding severity. */
 @theme {
-  --color-ink: #16202e;
-  --color-paper: #f7f4ec;
-  --color-card: #fffdf8;
-  --color-line: #ddd6c8;
-  --color-accent: #b4431a;
-  --color-accent-soft: #f6e3d8;
-  --color-muted: #5f6773;
-  --font-display: "Fraunces", Georgia, serif;
-  --font-sans: "DM Sans", Arial, sans-serif;
+  --color-olive: #a6a162;
+  --color-olive-deep: #6f6b3a;
+  --color-ink: #14161f;
+  --color-paper: #f3f0e2;
+  --color-card: #fbfaf4;
+  --color-line: #d8d3ba;
+  --color-primary: #2f3bd9;
+  --color-primary-deep: #2129a8;
+  --color-primary-soft: #e3e5fb;
+  --color-accent: #d9552f;
+  --color-muted: #5b5a45;
+  --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
+  --font-sans: "Public Sans", Arial, sans-serif;
+  --shadow-print: 5px 5px 0 0 #14161f;
+  --shadow-print-sm: 3px 3px 0 0 #14161f;
 }
 
 html {
-  background: var(--color-paper);
+  background: var(--color-olive);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
 
+h1, h2, h3 {
+  letter-spacing: -0.01em;
+}
+
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 3px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 mark {
   color: inherit;
-  border-radius: 3px;
+  border-radius: 2px;
   padding: 1px 2px;
   cursor: pointer;
+}
+
+::selection {
+  background: var(--color-primary-soft);
 }

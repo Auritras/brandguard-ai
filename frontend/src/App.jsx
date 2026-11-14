@@ -8,7 +8,6 @@ import NewDraft from './pages/NewDraft.jsx'
 import DraftView from './pages/DraftView.jsx'
 import Library from './pages/Library.jsx'
 
-const ROLE_LABEL = { creator: 'Creator', manager: 'Manager', reviewer: 'Authorised reviewer' }
 
 export default function App() {
   const [auth, setAuthState] = useState(getAuth())
@@ -28,17 +27,18 @@ export default function App() {
   if (!auth) return <Login onSignIn={signIn} />
   const user = auth.user
   const tab = ({ isActive }) =>
-    `rounded-lg px-3 py-2 text-sm font-semibold ${isActive ? 'bg-ink text-paper' : 'text-ink hover:bg-black/5'}`
+    `rounded-md px-3 py-1.5 text-sm font-semibold ${isActive ? 'bg-paper text-ink' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
 
   return (
     <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-white focus:p-2">
         Skip to content
       </a>
-      <header className="border-b border-line bg-card">
+      <header className="border-b-2 border-ink bg-primary text-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
-          <Link to="/" className="font-display text-xl font-semibold">
-            BrandGuard <span className="text-accent">AI</span>
+          <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold">
+            <img src="/favicon.svg" alt="" className="h-7 w-7 rounded border-2 border-ink" />
+            BrandGuard AI
           </Link>
           <nav aria-label="Main" className="flex gap-1">
             <NavLink to="/" end className={tab}>
@@ -51,7 +51,6 @@ export default function App() {
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span>
               <span className="font-semibold">{user.name}</span>
-              <span className="text-muted"> · {ROLE_LABEL[user.role]}</span>
             </span>
             <Button kind="secondary" onClick={signOut}>
               Sign out
@@ -59,7 +58,7 @@ export default function App() {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto max-w-7xl px-5 py-8">
+      <main id="main" className="mx-auto my-6 max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft />} />

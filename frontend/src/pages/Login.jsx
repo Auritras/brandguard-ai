@@ -36,22 +36,20 @@ export default function Login({ onSignIn }) {
   return (
     <main className="mx-auto grid min-h-screen max-w-5xl items-center gap-10 px-5 py-10 md:grid-cols-2">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">Nova Blasters</p>
-        <h1 className="mt-2 font-display text-5xl font-semibold">
-          BrandGuard <span className="text-accent">AI</span>
-        </h1>
-        <p className="mt-4 text-lg text-muted">
+        <img src="/favicon.svg" alt="" className="h-14 w-14 rounded-md border-2 border-ink shadow-print-sm" />
+        <h1 className="mt-5 font-display text-6xl font-extrabold leading-none">BrandGuard AI</h1>
+        <p className="mt-5 max-w-md text-lg">
           Check a post, email or document against your approved brand rules and facts before it is published. Every
           issue names the rule it breaks and suggests a fix. People make the final approval.
         </p>
-        <p className="mt-6 text-sm text-muted">
+        <p className="mt-6 max-w-md text-sm text-ink/80">
           The demo uses a fictional brand, Lumio Payroll. All rules, facts and sample content are made up for this
           demo.
         </p>
       </div>
 
       <Card className="p-6">
-        <h2 className="font-display text-2xl font-semibold">Try it as…</h2>
+        <h2 className="font-display text-2xl font-bold">Try it as…</h2>
         <p className="mt-1 text-sm text-muted">Three demo accounts, one per role. Pick one to sign in.</p>
         <div className="mt-4 grid gap-2">
           {(demo?.accounts || []).map((a) => (
@@ -59,7 +57,7 @@ export default function Login({ onSignIn }) {
               key={a.email}
               disabled={busy}
               onClick={() => signIn(a.email, demo.password)}
-              className="rounded-xl border border-line bg-white p-3 text-left transition hover:border-accent disabled:opacity-50"
+              className="rounded-md border-2 border-line bg-white p-3 text-left transition hover:border-primary hover:bg-primary-soft disabled:opacity-50"
             >
               <span className="block font-semibold">{a.name}</span>
               <span className="block text-sm text-muted">{ROLE_HELP[a.role]}</span>
@@ -83,7 +81,7 @@ export default function Login({ onSignIn }) {
             <input className={inputCls} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <ErrorNote>{error}</ErrorNote>
-          <Button kind="dark" type="submit" disabled={busy}>
+          <Button kind="primary" type="submit" disabled={busy}>
             Sign in
           </Button>
         </form>

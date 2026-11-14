@@ -108,11 +108,11 @@ export default function DraftView({ user }) {
 
   return (
     <div>
-      <Link to="/" className="text-sm font-semibold text-accent hover:underline">
+      <Link to="/" className="text-sm font-semibold text-primary hover:underline">
         ← All drafts
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-3xl font-semibold">{d.title}</h1>
+        <h1 className="font-display text-3xl font-bold">{d.title}</h1>
         <StatusChip status={d.status} />
       </div>
       <p className="mt-1 text-sm text-muted">
@@ -152,7 +152,7 @@ export default function DraftView({ user }) {
         <div className="grid content-start gap-4">
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-xl font-semibold">Content</h2>
+              <h2 className="font-display text-xl font-bold">Content</h2>
               {d.can.edit && !editing && (
                 <Button onClick={() => { setText(d.body); setEditing(true) }}>Edit text</Button>
               )}
@@ -243,7 +243,7 @@ export default function DraftView({ user }) {
 
         {/* Right: findings and disclosure */}
         <div className="grid content-start gap-4">
-          <h2 className="font-display text-xl font-semibold">
+          <h2 className="font-display text-xl font-bold">
             Findings <span className="text-base font-normal text-muted">({active.length} to handle)</span>
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
