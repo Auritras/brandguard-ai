@@ -34,10 +34,10 @@ export default function App() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-white focus:p-2">
         Skip to content
       </a>
-      <header className="border-b-2 border-ink bg-primary text-white">
+      <header className="bg-ink text-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
           <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold">
-            <img src="/favicon.svg" alt="" className="h-7 w-7 rounded border-2 border-ink" />
+            <img src="/favicon.svg" alt="" className="h-7 w-7 rounded" />
             BrandGuard AI
           </Link>
           <nav aria-label="Main" className="flex gap-1">
