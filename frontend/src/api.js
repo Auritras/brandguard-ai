@@ -1,5 +1,5 @@
 // One small wrapper around fetch. In production VITE_API_URL points at the backend.
-const BASE = import.meta.env.VITE_API_URL || ''
+const BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '')
 
 export function getAuth() {
   try {
@@ -35,6 +35,11 @@ export async function api(path, { method = 'GET', body, file } = {}) {
   if (res.status === 401 && auth) {
     setAuth(null)
     window.location.assign('/')
+  }
+  // Every API reply is JSON. Anything else (such as the site's own HTML page) means the
+  // site is not pointed at the backend, so say so instead of waiting forever.
+  if (!(res.headers.get('content-type') || '').includes('application/json')) {
+    throw new Error('The site could not reach its server. Check that VITE_API_URL is set and the site was redeployed.')
   }
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
