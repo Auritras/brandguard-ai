@@ -64,6 +64,8 @@ export default function DraftView({ user }) {
   const rewriteTimer = useRef()
   useEffect(() => () => clearTimeout(rewriteTimer.current), [])
 
+  const latest = useRef(null) // the draft as shown now; actions started earlier still compare against it
+  latest.current = d
   const load = useCallback(() => api(`/drafts/${id}`).then(setD).catch((e) => setError(e.message)), [id])
   useEffect(() => {
     load()
@@ -74,6 +76,7 @@ export default function DraftView({ user }) {
     setBusy(name)
     setError('')
     try {
+      const d = latest.current
       const next = await api(path, { method: body === undefined ? 'POST' : body.__method || 'POST', body: body?.__method ? body.data : body })
       // When the text changes (a fix accepted or written), show the change being made before settling.
       if (d && next.body !== d.body && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -153,7 +156,7 @@ export default function DraftView({ user }) {
         {d.can.approve && (
           <HoldButton kind="primary" disabled={!!busy} pendingLabel={user.role === 'manager' && d.blocking > 0 ? 'Escalating' : 'Approving'}
             onConfirm={() => act('approve', `/drafts/${d.id}/approve`)}>
-            {user.role === 'manager' && d.blocking > 0 ? 'Hold to approve and escalate' : 'Hold to approve'}
+            {busy === 'approve' ? 'Approving…' : user.role === 'manager' && d.blocking > 0 ? 'Hold to approve and escalate' : 'Hold to approve'}
           </HoldButton>
         )}
         {d.can.request_changes && (
@@ -265,7 +268,7 @@ export default function DraftView({ user }) {
             )}
             {tab === 'versions' && (
               <div className="mt-4 grid gap-2 text-sm">
-                {d.versions.length > 1 && <CompareVersions versions={d.versions} />}
+                {d.versions.length > 1 && <CompareVersions key={d.versions.length} versions={d.versions} />}
                 {d.versions.map((v) => (
                   <details key={v.number} className="rounded-lg border border-line bg-white p-3">
                     <summary className="cursor-pointer font-semibold">
