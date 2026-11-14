@@ -9,7 +9,10 @@ import DraftView from './pages/DraftView.jsx'
 import Library from './pages/Library.jsx'
 import Record from './pages/Record.jsx'
 import Insights from './pages/Insights.jsx'
+import Team from './pages/Team.jsx'
 
+
+const ROLE_LABEL = { creator: 'Creator', manager: 'Manager', reviewer: 'Brand owner' }
 
 export default function App() {
   const [auth, setAuthState] = useState(getAuth())
@@ -62,11 +65,16 @@ export default function App() {
             <NavLink to="/library" className={tab}>
               Brand Library
             </NavLink>
+            <NavLink to="/team" className={tab}>
+              Team
+            </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="font-semibold">
               {user.name.split(' (')[0]}
-              <span className="hidden sm:inline"> ({user.name.split(' (')[1]}</span>
+              <span className="hidden font-normal text-white/70 sm:inline">
+                {' · '}{ROLE_LABEL[user.role]}{user.brand ? `, ${user.brand}` : ''}
+              </span>
             </span>
             <Button kind="secondary" onClick={signOut} disabled={leaving}>
               Sign out
@@ -84,6 +92,7 @@ export default function App() {
           <Route path="/drafts/:id/record" element={<Record user={user} />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/library" element={<Library user={user} />} />
+          <Route path="/team" element={<Team user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </div>

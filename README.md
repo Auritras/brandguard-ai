@@ -25,12 +25,23 @@ up for the demo. Sign in with one click as any of the three demo accounts:
 | Rohan | Manager | Open the draft. With a high-risk finding still open, **Approve and escalate** sends it to the brand owner. |
 | Meera | Authorised reviewer (brand owner) | Waive the high-risk finding with a reason, or decide the dispute, then **Approve**. Edit rules, facts and terms in **Brand Library**. |
 
-There is no public sign-up: in a real workspace the brand owner adds each person with their role.
 The demo accounts are shared, so you may see drafts other visitors made.
+
+**Or create your own brand:** on the sign-in page choose **Create a brand**. You become its brand owner,
+its Brand Library starts with sample rules you can change, and on **Team** you add teammates as
+Creator, Manager or Brand owner. A brand is private: nobody outside it can see its drafts, library
+or reports. The demo brand's team is fixed, since every visitor shares it.
 
 ## Features in this build
 
-**Brand Library** (editable by the authorised reviewer only)
+**Brands and teams**
+- Each brand is a private workspace with its own people, Brand Library, drafts and Brand health.
+  Every API route checks the signed-in person's brand; another brand's records behave as if they
+  do not exist.
+- Sign-up creates a brand with you as its owner and a starter library. Owners add teammates and
+  change roles; nobody joins a brand without its owner.
+
+**Brand Library** (editable by the brand owner only)
 - Rules with a code, category, severity and optional exact patterns. New rules start as
   *proposed* and only count once approved.
 - Approved facts with a source and a valid-until date.
@@ -107,7 +118,7 @@ AI step was skipped and why. The AI never approves, waives or publishes.
 | Database | PostgreSQL on Supabase (SQLite locally) |
 | AI | Groq API, `openai/gpt-oss-120b`, JSON mode, temperature 0 |
 | Documents | python-docx, pypdf |
-| Tests | pytest (22 tests: auth, exact engine, AI path with a fake model, full workflow, insights, live check) |
+| Tests | pytest (27 tests: auth, exact engine, AI path with a fake model, full workflow, insights, live check, brand isolation and teams) |
 | Hosting | Vercel (frontend), Render (backend), Supabase (database), all on free plans |
 
 Passwords are hashed with PBKDF2 (200,000 rounds). Sessions are signed tokens that last 12 hours.
@@ -148,8 +159,8 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 ## Resetting the demo
 
 The live demo accounts are shared, so whatever one person does stays for the next. To put the
-live site back to a clean demo (one draft at each stage of review, history spread over the past
-nine days, the original Brand Library), run this from `backend` with the live database address in
+Lumio Payroll demo brand back to a clean state (one draft at each stage of review, history spread
+over the past nine days, the original Brand Library), run this from `backend` with the live database address in
 `backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
 AI findings):
 
@@ -158,7 +169,8 @@ python -m app.reset_demo --env-file .env
 ```
 
 It shows which database it will change and asks you to type `reset`. Add `--no-ai` for exact
-checks only. The three demo accounts are kept. `backend/.env` is ignored by git; never commit it.
+checks only. The three demo accounts and every brand that people created are kept.
+`backend/.env` is ignored by git; never commit it.
 
 ## Repository layout
 
@@ -167,14 +179,15 @@ backend/
   app/
     main.py            app, health, login
     config.py          settings from environment variables
-    models.py          users, rules, facts, terms, drafts, versions, findings, runs, comments, audit log
+    models.py          brands, users, rules, facts, terms, drafts, versions, findings, runs, comments, audit log
+    migrate.py         upgrades older databases in place on start
     seed.py            the Lumio Payroll demo brand and accounts
     reset_demo.py      wipes drafts and rebuilds the demo set (see Resetting the demo)
     engine/            exact checks, AI checks, verification, review run, file text extraction
-    routers/           Brand Library, draft/workflow and Brand health API
+    routers/           accounts and teams, Brand Library, draft/workflow and Brand health API
   tests/
 frontend/
-  src/pages/           Login, Drafts, NewDraft, DraftView, Record, Insights, Library
+  src/pages/           Login, Drafts, NewDraft, DraftView, Record, Insights, Library, Team
   src/LiveText.jsx     the editor that checks while you type
   src/diff.js          word-level version comparison
   src/ui.jsx           shared components
