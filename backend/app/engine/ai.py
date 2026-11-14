@@ -61,6 +61,17 @@ def build_prompt(draft, rules, facts, exact_findings) -> str:
     return "\n".join(lines)
 
 
+def _why(e: Exception) -> str:
+    """A short, safe reason for a failed AI call: the HTTP status and the provider's own message."""
+    if isinstance(e, httpx.HTTPStatusError):
+        try:
+            msg = e.response.json().get("error", {}).get("message", "")
+        except Exception:
+            msg = ""
+        return f"HTTP {e.response.status_code}{': ' + msg[:160] if msg else ''}"
+    return type(e).__name__
+
+
 def _chat(system: str, user: str) -> dict:
     r = httpx.post(
         config.AI_BASE_URL.rstrip("/") + "/chat/completions",
@@ -90,7 +101,7 @@ def ai_review(draft, rules, facts, exact_findings) -> dict:
         data = _chat(SYSTEM, build_prompt(draft, chosen, facts, exact_findings))
     except Exception as e:  # network error, rate limit, bad JSON
         return {"used": False, "findings": [], "rewrites": [],
-                "note": f"AI checks failed and were skipped ({type(e).__name__}). Only exact checks ran. Re-run to try again."}
+                "note": f"AI checks failed and were skipped ({_why(e)}). Only exact checks ran. Re-run to try again."}
     findings = data.get("findings") if isinstance(data, dict) else []
     rewrites = data.get("rewrites") if isinstance(data, dict) else []
     return {"used": True, "note": sent,
