@@ -10,8 +10,9 @@ reason and a suggested fix. People make every approval decision.
 - **Live app:** https://brandguard-ai-lac.vercel.app
 - **API:** https://brandguard-api-qtj3.onrender.com/api/health
 
-The free server sleeps after 15 minutes without visits. The first page load after that can take
-30 to 60 seconds while it wakes; the login page says so while it waits.
+The free server sleeps after 15 minutes without visits. A scheduled GitHub Action
+(`.github/workflows/keep-awake.yml`) pings it from about 08:30 to 23:30 IST; outside those hours
+the first page load can take 30 to 60 seconds while it wakes.
 
 ## Try it in two minutes
 
@@ -38,6 +39,8 @@ Manual sign-in: `creator@brandguard.test`, `manager@brandguard.test` or
 
 **Review**
 - Content in by pasting, or by uploading `.txt`, `.md`, `.docx` or `.pdf` (up to 5 MB).
+- **Checks while typing:** the instant exact checks run a moment after the writer stops typing and
+  highlight problems in the editor before anything is saved. Nothing is stored or sent to AI.
 - Each draft records its channel, audience and purpose; the AI keeps that purpose in its fixes.
 - **Exact checks in code**, the same answer every time: banned terms, rule patterns
   (superlatives, promised outcomes, "click here", shouting, repeated exclamation marks),
@@ -62,6 +65,15 @@ Manual sign-in: `creator@brandguard.test`, `manager@brandguard.test` or
   the dispute, or request changes. High-risk disputes are decided only by the reviewer.
 - A finding a person has already ruled on is not raised again for the same passage.
 - Comments, full version history, and an append-only audit log of who did what and when.
+- **Compare versions:** any two versions side by side, removed words struck out and new words
+  highlighted.
+- **Review record:** a printable page (or PDF) with the approved text, who approved or escalated
+  it, every finding and how it was handled, how the check ran, and the full timeline.
+
+**Brand health**
+- Most broken rules, facts and terms; findings per draft by channel; the split by risk; what
+  happened to each finding; and the average time from first draft to approval. Creators see their
+  own drafts, managers and reviewers see the team.
 
 ## How it works
 
@@ -95,7 +107,7 @@ AI step was skipped and why. The AI never approves, waives or publishes.
 | Database | PostgreSQL on Supabase (SQLite locally) |
 | AI | Groq API, `openai/gpt-oss-120b`, JSON mode, temperature 0 |
 | Documents | python-docx, pypdf |
-| Tests | pytest (20 tests: auth, exact engine, AI path with a fake model, full workflow) |
+| Tests | pytest (22 tests: auth, exact engine, AI path with a fake model, full workflow, insights, live check) |
 | Hosting | Vercel (frontend), Render (backend), Supabase (database), all on free plans |
 
 Passwords are hashed with PBKDF2 (200,000 rounds). Sessions are signed tokens that last 12 hours.
@@ -143,10 +155,12 @@ backend/
     models.py          users, rules, facts, terms, drafts, versions, findings, runs, comments, audit log
     seed.py            the Lumio Payroll demo brand and accounts
     engine/            exact checks, AI checks, verification, review run, file text extraction
-    routers/           Brand Library and draft/workflow API
+    routers/           Brand Library, draft/workflow and Brand health API
   tests/
 frontend/
-  src/pages/           Login, Drafts, NewDraft, DraftView, Library
+  src/pages/           Login, Drafts, NewDraft, DraftView, Record, Insights, Library
+  src/LiveText.jsx     the editor that checks while you type
+  src/diff.js          word-level version comparison
   src/ui.jsx           shared components
 ```
 
