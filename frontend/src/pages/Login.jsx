@@ -36,7 +36,10 @@ export default function Login({ onSignIn }) {
   return (
     <main className="mx-auto grid min-h-screen max-w-5xl items-center gap-10 px-5 py-10 md:grid-cols-2">
       <div>
-        <img src="/favicon.svg" alt="" className="h-14 w-14 rounded-md border-2 border-ink shadow-print-sm" />
+        <svg viewBox="0 0 32 32" aria-hidden="true" className="logo-draw h-14 w-14 rounded-md border-2 border-ink shadow-print-sm">
+          <rect width="32" height="32" fill="#2f3bd9" />
+          <path className="logo-shield" pathLength="1" d="M16 5l9 4v7c0 6-4 9-9 11-5-2-9-5-9-11V9z" fill="#d9552f" stroke="#f3f0e2" strokeWidth="1.2" strokeLinejoin="round" />
+        </svg>
         <h1 className="mt-5 font-display text-6xl font-extrabold leading-none">BrandGuard AI</h1>
         <p className="mt-5 max-w-md text-lg">
           Check a post, email or document against your approved brand rules and facts before it is published. Every

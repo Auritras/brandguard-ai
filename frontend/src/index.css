@@ -64,7 +64,8 @@ mark {
 .diff-removed + .diff-added { margin-left: 4px; }
 
 /* Highlights behind the live-checked text box: no padding, or the marks drift off the words. */
-mark.live-mark { padding: 0; border-radius: 2px; }
+mark.live-mark { padding: 0; border-radius: 2px; animation: live-in 0.5s ease-out both; }
+@keyframes live-in { from { opacity: 0; } }
 
 ::selection {
   background: var(--color-primary-soft);
@@ -287,6 +288,17 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   from { opacity: 0; transform: translateY(8px); }
 }
 
+/* Login: the shield outline is traced, then filled. */
+.logo-shield {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  fill-opacity: 0;
+  animation: stroke 1.1s ease-in-out 0.2s forwards, logo-fill 0.5s ease-out 1.1s forwards;
+}
+@keyframes logo-fill {
+  to { fill-opacity: 1; stroke-opacity: 0; }
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }
@@ -313,4 +325,5 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   .signature-name { clip-path: none; }
   .signature-stroke { stroke-dashoffset: 0; }
   .tick-ring, .tick-mark { stroke-dashoffset: 0; }
+  .logo-shield { stroke-dashoffset: 0; fill-opacity: 1; stroke-opacity: 0; }
 }

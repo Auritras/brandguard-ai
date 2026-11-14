@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api } from './api.js'
-import { Chip, SEVERITY } from './ui.jsx'
+import { Chip, RollNumber, SEVERITY } from './ui.jsx'
 
 // The same box metrics for the textarea and the highlight layer behind it, so the marks line up.
 const BOX = 'w-full rounded-md border-2 px-3 py-2 text-sm leading-6 whitespace-pre-wrap break-words [overflow-wrap:anywhere]'
@@ -44,7 +44,7 @@ export default function LiveText({ id, value, onChange, required, placeholder, m
   for (const m of marks) {
     if (m.start < pos) continue
     pieces.push(value.slice(pos, m.start))
-    pieces.push(<mark key={m.start} className={`${SEVERITY[m.f.severity].mark} live-mark`}>{value.slice(m.start, m.end)}</mark>)
+    pieces.push(<mark key={`${m.start}:${m.f.quote}`} className={`${SEVERITY[m.f.severity].mark} live-mark`}>{value.slice(m.start, m.end)}</mark>)
     pos = m.end
   }
   pieces.push(value.slice(pos) + '\n')
@@ -68,7 +68,7 @@ export default function LiveText({ id, value, onChange, required, placeholder, m
         {state === 'done' && found.length > 0 && (
           <details className="rounded-md border-2 border-line bg-card p-3" open={found.length <= 4}>
             <summary className="cursor-pointer font-semibold">
-              {found.length} issue(s) found while typing{high > 0 && <span className="text-red-800"> · {high} high-risk</span>}
+              <RollNumber value={found.length} /> issue(s) found while typing{high > 0 && <span className="text-red-800"> · <RollNumber value={high} /> high-risk</span>}
             </summary>
             <ul className="mt-2 grid gap-1.5">
               {found.map((f, i) => (
