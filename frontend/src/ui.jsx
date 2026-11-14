@@ -1,17 +1,19 @@
 // Small shared building blocks so every screen looks the same.
 import { useEffect, useState } from 'react'
 
+// Buttons sit on a small printed shadow and press down into it when clicked.
+const PRESS = 'active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:translate-x-0 disabled:translate-y-0'
 export function Button({ kind = 'secondary', className = '', ...props }) {
   const kinds = {
-    primary: 'bg-primary text-white border-ink shadow-print-sm hover:bg-primary-deep active:translate-x-[2px] active:translate-y-[2px] active:shadow-none',
-    secondary: 'bg-card text-ink border-ink hover:bg-primary-soft',
-    dark: 'bg-ink text-paper border-ink hover:bg-primary-deep',
-    ghost: 'bg-transparent text-ink hover:bg-black/5 border-transparent',
+    primary: `bg-primary text-white border-ink shadow-print-sm hover:bg-primary-deep ${PRESS}`,
+    secondary: `bg-card text-ink border-ink shadow-[2px_2px_0_0_var(--color-ink)] hover:bg-primary-soft ${PRESS}`,
+    dark: `bg-ink text-paper border-ink shadow-[2px_2px_0_0_var(--color-primary)] hover:bg-primary-deep ${PRESS}`,
+    ghost: 'bg-transparent text-ink hover:bg-black/5 border-transparent active:bg-black/10',
   }
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-md border-2 px-3.5 py-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${kinds[kind]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md border-2 px-3.5 py-1.5 text-sm font-semibold transition duration-100 disabled:cursor-not-allowed disabled:opacity-50 ${kinds[kind]} ${className}`}
     />
   )
 }
