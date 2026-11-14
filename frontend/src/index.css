@@ -281,6 +281,12 @@ mark.live-mark { padding: 0; border-radius: 2px; }
   animation: stroke 0.4s ease-out 0.8s forwards;
 }
 
+/* Moving between screens: the new one fades up a few pixels. */
+.page-in { animation: page-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
 /* Loading placeholders: fade in, then a slow shimmer. */
 .fade-in { animation: fade-in 0.3s ease-out both; }
 @keyframes fade-in { from { opacity: 0; } }

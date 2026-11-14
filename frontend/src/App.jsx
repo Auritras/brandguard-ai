@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { getAuth, setAuth } from './api.js'
 import { Button } from './ui.jsx'
 import Login from './pages/Login.jsx'
@@ -14,6 +14,7 @@ import Insights from './pages/Insights.jsx'
 export default function App() {
   const [auth, setAuthState] = useState(getAuth())
   const navigate = useNavigate()
+  const location = useLocation()
 
   const signIn = (a) => {
     setAuth(a)
@@ -65,6 +66,8 @@ export default function App() {
         </div>
       </header>
       <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none">
+        {/* Each screen fades up when you move to it; filters on the same screen do not count. */}
+        <div key={location.pathname} className="page-in">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft />} />
@@ -74,6 +77,7 @@ export default function App() {
           <Route path="/library" element={<Library user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </div>
       </main>
     </div>
   )
