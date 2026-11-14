@@ -150,6 +150,12 @@ mark {
 .skeleton { animation: skeleton 1.6s ease-in-out infinite; }
 @keyframes skeleton { 50% { opacity: 0.45; } }
 
+/* Printing the review record: plain white paper, no desk texture. */
+@media print {
+  html { background: white; }
+  @page { margin: 16mm; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;

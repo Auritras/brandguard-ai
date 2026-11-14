@@ -2,32 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { diffWords } from '../diff.js'
-import { Button, Card, Chip, ErrorNote, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
-
-const FINDING_STATUS = {
-  accepted: 'Fix accepted',
-  edited: 'Fixed by the creator',
-  disputed: 'Disputed by the creator',
-  dismissed: 'Dismissed by a reviewer',
-  waived: 'Waived by the authorised reviewer',
-}
-
-const ACTION_LABEL = {
-  draft_created: 'created the draft',
-  draft_edited: 'edited the text',
-  check_run: 'ran the check',
-  finding_accepted: 'accepted a suggested fix',
-  finding_edited: 'wrote their own fix',
-  finding_disputed: 'disputed a finding',
-  dispute_rejected: 'rejected a dispute',
-  dispute_accepted: 'dismissed a finding',
-  finding_waived: 'waived a finding',
-  submitted_for_review: 'sent it for review',
-  changes_requested: 'requested changes',
-  sent_to_authorised_review: 'approved and escalated',
-  approved: 'approved',
-  comment_added: 'commented',
-}
+import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
@@ -127,7 +102,10 @@ export default function DraftView({ user }) {
         <StatusChip status={d.status} />
       </div>
       <p className="mt-1 text-sm text-muted">
-        {d.channel || 'No channel'} · by {d.creator} · version {d.version}
+        {d.channel || 'No channel'} · by {d.creator} · version {d.version} ·{' '}
+        <Link to={`/drafts/${d.id}/record`} className="font-semibold text-primary hover:underline">
+          {d.status === 'approved' ? 'Approval record' : 'Review record'}
+        </Link>
       </p>
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>

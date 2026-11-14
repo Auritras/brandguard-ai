@@ -157,3 +157,29 @@ export function PageLoading({ kind = 'page' }) {
     </div>
   )
 }
+
+// Shared by the draft page and the printable record.
+export const FINDING_STATUS = {
+  accepted: 'Fix accepted',
+  edited: 'Fixed by the creator',
+  disputed: 'Disputed by the creator',
+  dismissed: 'Dismissed by a reviewer',
+  waived: 'Waived by the authorised reviewer',
+}
+
+export const ACTION_LABEL = {
+  draft_created: 'created the draft',
+  draft_edited: 'edited the text',
+  check_run: 'ran the check',
+  finding_accepted: 'accepted a suggested fix',
+  finding_edited: 'wrote their own fix',
+  finding_disputed: 'disputed a finding',
+  dispute_rejected: 'rejected a dispute',
+  dispute_accepted: 'dismissed a finding',
+  finding_waived: 'waived a finding',
+  submitted_for_review: 'sent it for review',
+  changes_requested: 'requested changes',
+  sent_to_authorised_review: 'approved and escalated',
+  approved: 'approved',
+  comment_added: 'commented',
+}

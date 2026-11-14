@@ -7,6 +7,7 @@ import Drafts from './pages/Drafts.jsx'
 import NewDraft from './pages/NewDraft.jsx'
 import DraftView from './pages/DraftView.jsx'
 import Library from './pages/Library.jsx'
+import Record from './pages/Record.jsx'
 
 
 export default function App() {
@@ -34,7 +35,7 @@ export default function App() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-white focus:p-2">
         Skip to content
       </a>
-      <header className="bg-ink text-white">
+      <header className="bg-ink text-white print:hidden">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
           <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold">
             <img src="/favicon.svg" alt="" className="h-7 w-7 rounded" />
@@ -59,11 +60,12 @@ export default function App() {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto">
+      <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft />} />
           <Route path="/drafts/:id" element={<DraftView user={user} />} />
+          <Route path="/drafts/:id/record" element={<Record user={user} />} />
           <Route path="/library" element={<Library user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
