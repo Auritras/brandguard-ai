@@ -45,3 +45,75 @@ mark {
 ::selection {
   background: var(--color-primary-soft);
 }
+
+/* ---------- Motion: only where something happens ---------- */
+
+/* Highlight colours as variables so the marker can sweep across the text. */
+.mark-high { --m: #fecaca; }
+.mark-medium { --m: #fef08a; }
+.mark-low { --m: #e2e8f0; }
+.mark-high, .mark-medium, .mark-low {
+  background: linear-gradient(var(--m), var(--m)) no-repeat 0 0 / 100% 100%;
+}
+.sweep {
+  animation: sweep 0.45s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+}
+@keyframes sweep {
+  from { background-size: 0% 100%; }
+}
+
+/* Finding cards land like a stamp: lifted with a long shadow, then pressed down. */
+.stamp-in {
+  animation: stamp-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: translate(-6px, -6px);
+    box-shadow: 9px 9px 0 0 var(--color-ink);
+  }
+}
+
+/* While the check runs, a bar scans down the content. */
+.scan-bar {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 4.5rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent);
+  border-bottom: 2px solid var(--color-primary);
+  animation: scan 1.3s ease-in-out infinite alternate;
+}
+@keyframes scan {
+  from { transform: translateY(-4.5rem); }
+  to { transform: translateY(calc(var(--scan-h, 300px))); }
+}
+
+/* Jumping from a highlight to its finding flashes the card. */
+.flash { animation: flash 0.9s ease-out; }
+@keyframes flash {
+  0% { outline: 3px solid transparent; outline-offset: 8px; }
+  30% { outline: 3px solid var(--color-primary); outline-offset: 4px; }
+  100% { outline: 3px solid transparent; outline-offset: 4px; }
+}
+
+/* The approval stamp. */
+.approved-stamp {
+  transform: rotate(-8deg);
+  animation: stamp-drop 0.42s cubic-bezier(0.3, 1.4, 0.5, 1) both 0.15s;
+}
+@keyframes stamp-drop {
+  from { opacity: 0; transform: rotate(-14deg) scale(2.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .scan-bar { display: none; }
+}

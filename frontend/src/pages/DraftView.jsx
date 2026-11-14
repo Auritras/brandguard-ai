@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { Button, Card, Chip, ErrorNote, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
@@ -78,6 +78,7 @@ export default function DraftView({ user }) {
   const [text, setText] = useState('')
   const [tab, setTab] = useState('comments')
   const [comment, setComment] = useState('')
+  const contentRef = useRef(null)
 
   const load = useCallback(() => api(`/drafts/${id}`).then(setD).catch((e) => setError(e.message)), [id])
   useEffect(() => {
@@ -104,7 +105,15 @@ export default function DraftView({ user }) {
 
   const active = d.findings.filter((f) => ['open', 'disputed'].includes(f.status))
   const settled = d.findings.filter((f) => !['open', 'disputed'].includes(f.status))
-  const focus = (fid) => document.getElementById(`finding-${fid}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const focus = (fid) => {
+    const el = document.getElementById(`finding-${fid}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.remove('flash')
+    void el.offsetWidth // restart the animation if it is clicked twice
+    el.classList.add('flash')
+  }
+  let markIndex = 0
 
   return (
     <div>
@@ -150,7 +159,13 @@ export default function DraftView({ user }) {
       <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
         {/* Left: the content */}
         <div className="grid content-start gap-4">
-          <Card className="p-5">
+          <Card className="relative overflow-hidden p-5" ref={contentRef}>
+            {busy === 'check' && <div className="scan-bar" aria-hidden="true" style={{ '--scan-h': `${contentRef.current?.offsetHeight || 300}px` }} />}
+            {d.status === 'approved' && (
+              <span aria-hidden="true" className="approved-stamp pointer-events-none absolute right-6 top-14 rounded-md border-4 border-primary px-4 py-1 font-display text-3xl font-extrabold tracking-wide text-primary opacity-90">
+                Approved
+              </span>
+            )}
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display text-xl font-bold">Content</h2>
               {d.can.edit && !editing && (
@@ -173,7 +188,7 @@ export default function DraftView({ user }) {
               <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8">
                 {pieces.map((p, i) =>
                   p.f ? (
-                    <mark key={i} tabIndex={0} role="button" className={SEVERITY[p.f.severity].mark}
+                    <mark key={`f${p.f.id}`} tabIndex={0} role="button" className={`${SEVERITY[p.f.severity].mark} sweep`} style={{ '--i': markIndex++ }}
                       aria-label={`${SEVERITY[p.f.severity].label} risk finding: ${p.text}`}
                       onClick={() => focus(p.f.id)} onKeyDown={(e) => e.key === 'Enter' && focus(p.f.id)}>
                       {p.text}
@@ -250,8 +265,8 @@ export default function DraftView({ user }) {
           {d.run !== null && active.length === 0 && (
             <Card className="p-4 text-sm"><span className="font-semibold">No open findings.</span> {d.needs_check ? 'Run the check again to confirm.' : 'The latest version passed the check.'}</Card>
           )}
-          {active.map((f) => (
-            <FindingCard key={f.id} f={f} d={d} user={user} busy={!!busy} act={act} />
+          {active.map((f, i) => (
+            <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} />
           ))}
 
           {settled.length > 0 && (
@@ -291,12 +306,12 @@ export default function DraftView({ user }) {
   )
 }
 
-function FindingCard({ f, d, user, busy, act }) {
+function FindingCard({ i, f, d, user, busy, act }) {
   const sev = SEVERITY[f.severity]
   const disputed = f.status === 'disputed'
   const canDecide = d.can.decide_disputes && disputed && (f.severity !== 'high' || user.role === 'reviewer')
   return (
-    <Card id={`finding-${f.id}`} className="scroll-mt-6 p-4">
+    <Card id={`finding-${f.id}`} className="stamp-in scroll-mt-6 p-4" style={{ '--i': i }}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip className={sev.chip}>{sev.label} risk</Chip>
         <Chip className="border-line bg-white capitalize text-ink">{f.category}</Chip>
