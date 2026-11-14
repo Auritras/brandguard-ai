@@ -42,6 +42,11 @@ def user_out(u: User) -> dict:
             "brand": u.brand.name if u.brand else "", "demo_brand": bool(u.brand and u.brand.demo)}
 
 
+def not_demo(user: User) -> None:
+    if user.brand and user.brand.demo:
+        raise HTTPException(403, "The demo brand's team is shared by every visitor and cannot be changed. Create your own brand to add people.")
+
+
 def clean_email(db: Session, email: str) -> str:
     email = email.strip().lower()
     if not EMAIL.match(email):
@@ -75,6 +80,7 @@ def team(db: Session = Depends(get_db), user: User = Depends(current_user)):
 
 @router.post("/team")
 def add_member(body: MemberIn, db: Session = Depends(get_db), user: User = Depends(owner)):
+    not_demo(user)
     if body.role not in ROLES:
         raise HTTPException(422, "Role must be creator, manager or reviewer.")
     member = User(brand_id=user.brand_id, name=body.name.strip(), email=clean_email(db, body.email),
@@ -87,6 +93,7 @@ def add_member(body: MemberIn, db: Session = Depends(get_db), user: User = Depen
 
 @router.put("/team/{member_id}")
 def change_role(member_id: int, body: RoleIn, db: Session = Depends(get_db), user: User = Depends(owner)):
+    not_demo(user)
     member = db.get(User, member_id)
     if member is None or member.brand_id != user.brand_id:
         raise HTTPException(404, "Team member not found.")

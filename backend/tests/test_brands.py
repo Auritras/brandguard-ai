@@ -59,3 +59,10 @@ def test_sign_up_rejects_taken_email_and_weak_password(client):
     assert r.status_code == 409
     r = client.post("/api/auth/signup", json={"brand": "X Co", "name": "Sam", "email": "sam@x.test", "password": "short"})
     assert r.status_code == 422
+
+
+def test_demo_team_cannot_be_changed(client, reviewer):
+    r = client.post("/api/team", headers=reviewer, json={"name": "Zara", "email": "z@x.test", "role": "creator", "password": "long-enough-1"})
+    assert r.status_code == 403
+    rohan = next(m for m in client.get("/api/team", headers=reviewer).json() if m["role"] == "manager")
+    assert client.put(f"/api/team/{rohan['id']}", headers=reviewer, json={"role": "creator"}).status_code == 403
