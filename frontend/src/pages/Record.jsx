@@ -29,7 +29,8 @@ export default function Record({ user }) {
         <Button kind="primary" onClick={() => window.print()}>Print or save as PDF</Button>
       </div>
 
-      <header className="mt-6 border-b-2 border-ink pb-4">
+      <div className="ticket mt-6">
+      <header className="pb-5">
         <p className="text-sm font-semibold uppercase tracking-wider text-muted">
           BrandGuard AI · {approved ? 'Approval record' : 'Review record (not approved yet)'}
         </p>
@@ -44,6 +45,7 @@ export default function Record({ user }) {
           {escalation && <Row label="Escalated by">{escalation.user}, {when(escalation.created_at)}</Row>}
         </dl>
       </header>
+      <Tear />
 
       <Section title={approved ? 'Approved text' : 'Current text'}>
         <p className="whitespace-pre-wrap rounded-lg border-2 border-line bg-white p-4 leading-7">{d.body}</p>
@@ -75,6 +77,7 @@ export default function Record({ user }) {
         </Section>
       )}
 
+      <Tear />
       <Section title="Sign-off">
         <div className="grid gap-6 sm:grid-cols-2">
           {escalation && <Signature entry={escalation} role="Approved and escalated" i={0} />}
@@ -100,6 +103,7 @@ export default function Record({ user }) {
       <p className="mt-8 border-t border-line pt-3 text-xs text-muted">
         Printed {when(new Date().toISOString())} by {user.name}. Taken from the append-only audit log. The automated check never approves; every decision above was made by a person.
       </p>
+      </div>
     </article>
   )
 }
@@ -119,6 +123,11 @@ function Signature({ entry, role, i }) {
       </div>
     </div>
   )
+}
+
+// A perforated tear line across the ticket, notched at both edges.
+function Tear() {
+  return <div className="ticket-tear" role="separator" aria-hidden="true" />
 }
 
 function Row({ label, children }) {
@@ -141,7 +150,19 @@ function Section({ title, children }) {
 
 function FindingTable({ rows }) {
   return (
-    <div className="overflow-x-auto rounded-lg border-2 border-line bg-white">
+    <>
+    {/* Phones: one block per finding. */}
+    <ul className="grid gap-2 sm:hidden">
+      {rows.map((f) => (
+        <li key={f.id} className="break-inside-avoid rounded-lg border-2 border-line p-3 text-sm">
+          <p className="font-semibold">{f.ref_code} · {SEVERITY[f.severity].label} risk</p>
+          <p className="mt-1">“{f.quote}”</p>
+          <p className="mt-1 font-semibold">{FINDING_STATUS[f.status] || 'Open'}</p>
+          {f.note && <p className="text-muted">{f.note}</p>}
+        </li>
+      ))}
+    </ul>
+    <div className="hidden overflow-x-auto rounded-lg border-2 border-line bg-white sm:block">
       <table className="w-full text-left text-sm">
         <thead className="border-b-2 border-line bg-paper">
           <tr>
@@ -154,7 +175,7 @@ function FindingTable({ rows }) {
         <tbody>
           {rows.map((f) => (
             <tr key={f.id} className="break-inside-avoid border-b border-line align-top last:border-0">
-              <td className="px-3 py-2 font-semibold">{f.ref_code}</td>
+              <td className="whitespace-nowrap px-3 py-2 font-semibold">{f.ref_code}</td>
               <td className="px-3 py-2">{SEVERITY[f.severity].label}</td>
               <td className="px-3 py-2">“{f.quote}”</td>
               <td className="px-3 py-2">
@@ -166,5 +187,6 @@ function FindingTable({ rows }) {
         </tbody>
       </table>
     </div>
+    </>
   )
 }
