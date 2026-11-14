@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
-import { Button, Card, ErrorNote, StatusChip, timeAgo } from '../ui.jsx'
+import { Button, Card, ErrorNote, PageLoading, StatusChip, timeAgo } from '../ui.jsx'
 
 // Same order as the channel picker on the new draft form.
 const CHANNELS = ['LinkedIn', 'Instagram', 'Email', 'Advertisement', 'Blog', 'Website', 'Document']
@@ -97,7 +97,7 @@ export default function Drafts({ user }) {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" key={`${active}-${sort}`}>
         {error && <div className="col-span-full"><ErrorNote>{error}</ErrorNote></div>}
-        {drafts === null && !error && <p className="col-span-full text-muted">Loading…</p>}
+        {drafts === null && !error && <div className="col-span-full"><PageLoading kind="cards" /></div>}
         {drafts?.length === 0 && (
           <Card className="col-span-full p-8 text-center">
             <p className="font-semibold">No drafts yet.</p>

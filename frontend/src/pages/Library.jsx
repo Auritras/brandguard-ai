@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls } from '../ui.jsx'
+import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading } from '../ui.jsx'
 
 const EMPTY_RULE = { category: 'tone', title: '', text: '', severity: 'medium', patterns: '' }
 const EMPTY_FACT = { statement: '', keywords: '', value: '', source: '', valid_until: '' }
@@ -38,7 +38,7 @@ export default function Library({ user }) {
     }
   }
 
-  if (!lib) return error ? <ErrorNote>{error}</ErrorNote> : <p className="text-muted">Loading…</p>
+  if (!lib) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading kind="grid" />
   const proposed = lib.rules.filter((r) => r.status === 'proposed')
   const approved = lib.rules.filter((r) => r.status === 'approved')
 

@@ -1,5 +1,5 @@
 // Small shared building blocks so every screen looks the same.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export function Button({ kind = 'secondary', className = '', ...props }) {
   const kinds = {
@@ -125,4 +125,35 @@ export function timeAgo(iso) {
   if (s < 3600) return `${Math.floor(s / 60)} min ago`
   if (s < 86400) return `${Math.floor(s / 3600)} h ago`
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+}
+
+// Shown while a page's data loads. Nothing for the first 350 ms, so fast loads never flash;
+// after that, grey blocks in the page's rough shape. `kind` picks the shape.
+export function PageLoading({ kind = 'page' }) {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 350)
+    return () => clearTimeout(t)
+  }, [])
+  if (!show) return <div aria-busy="true" />
+  const block = 'skeleton rounded-lg bg-black/[0.06]'
+  return (
+    <div aria-busy="true" aria-label="Loading" className="fade-in">
+      {kind !== 'cards' && <div className={`${block} h-8 w-64`} />}
+      {kind !== 'cards' && <div className={`${block} mt-3 mb-8 h-4 w-96 max-w-full`} />}
+      {kind !== 'page' ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => <div key={i} className={`${block} h-36`} />)}
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+          <div className={`${block} h-72`} />
+          <div className="grid content-start gap-4">
+            <div className={`${block} h-32`} />
+            <div className={`${block} h-32`} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

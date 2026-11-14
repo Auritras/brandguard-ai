@@ -129,6 +129,12 @@ mark {
   from { opacity: 0; transform: translateY(10px) rotate(-0.6deg); }
 }
 
+/* Loading placeholders: fade in, then a slow shimmer. */
+.fade-in { animation: fade-in 0.3s ease-out both; }
+@keyframes fade-in { from { opacity: 0; } }
+.skeleton { animation: skeleton 1.6s ease-in-out infinite; }
+@keyframes skeleton { 50% { opacity: 0.45; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;

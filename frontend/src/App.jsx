@@ -58,7 +58,7 @@ export default function App() {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto my-6 max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto">
+      <main id="main" className="mx-auto my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft />} />

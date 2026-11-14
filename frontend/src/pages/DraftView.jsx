@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
-import { Button, Card, Chip, ErrorNote, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
+import { Button, Card, Chip, ErrorNote, PageLoading, ReasonButton, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 const FINDING_STATUS = {
   accepted: 'Fix accepted',
@@ -101,7 +101,7 @@ export default function DraftView({ user }) {
   }
 
   const pieces = useMemo(() => (d ? highlight(d.body, d.findings) : []), [d])
-  if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <p className="text-muted">Loading…</p>
+  if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
   const active = d.findings.filter((f) => ['open', 'disputed'].includes(f.status))
