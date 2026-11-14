@@ -326,12 +326,12 @@ function FindingCard({ i, f, d, user, busy, act }) {
         {f.ref_text}
       </p>
       {f.suggestion && !disputed && (
-        <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-sm">
+        <p className="mt-2 rounded-lg border border-primary/25 bg-primary-soft p-2 text-sm">
           <span className="font-semibold">Suggested fix:</span> {f.suggestion}
         </p>
       )}
       {disputed && (
-        <p className="mt-2 rounded-lg border border-purple-200 bg-purple-50 p-2 text-sm">
+        <p className="mt-2 rounded-lg border border-accent/40 bg-accent-soft p-2 text-sm">
           <span className="font-semibold">Disputed by the creator:</span> {f.note}
         </p>
       )}

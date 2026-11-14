@@ -13,6 +13,8 @@
   --color-primary-deep: #2129a8;
   --color-primary-soft: #e3e5fb;
   --color-accent: #d9552f; /* attention: "this needs you" only */
+  --color-accent-soft: #fbe5dc;
+  --color-accent-deep: #8f3315;
   --color-muted: #5b5a45;
   --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
   --font-sans: "Public Sans", Arial, sans-serif;

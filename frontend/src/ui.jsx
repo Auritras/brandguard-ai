@@ -22,16 +22,18 @@ export function Card({ heavy = false, className = '', ...props }) {
   return <div {...props} className={`rounded-lg bg-card ${look} ${className}`} />
 }
 
+// Status uses the palette only: blue tints while it moves through review, orange when it is
+// back with the creator, ink once approved. Red, yellow and grey stay reserved for severity.
 const STATUS = {
-  draft: ['Draft', 'bg-slate-100 text-slate-700'],
+  draft: ['Draft', 'bg-black/5 text-ink'],
   in_review: ['In review', 'bg-primary-soft text-primary-deep'],
-  changes_requested: ['Changes requested', 'bg-amber-50 text-amber-900'],
-  authorised_review: ['Authorised review', 'bg-purple-50 text-purple-900'],
-  approved: ['Approved', 'bg-emerald-50 text-emerald-900'],
+  changes_requested: ['Changes requested', 'bg-accent-soft text-accent-deep'],
+  authorised_review: ['Authorised review', 'bg-primary text-white'],
+  approved: ['Approved', 'bg-ink text-paper'],
 }
 
 export function StatusChip({ status }) {
-  const [label, cls] = STATUS[status] || [status, 'bg-slate-100 text-slate-700']
+  const [label, cls] = STATUS[status] || [status, 'bg-black/5 text-ink']
   return <span className={`inline-block rounded-full border border-current/25 px-2.5 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
 }
 

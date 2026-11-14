@@ -127,7 +127,7 @@ export default function Library({ user }) {
           )}
 
           {proposed.length > 0 && (
-            <Card className="border-yellow-300 bg-yellow-100 p-4">
+            <Card className="!border-accent/50 bg-accent-soft p-4">
               <h2 className="font-semibold">Proposed rules waiting for approval ({proposed.length})</h2>
               <p className="text-sm text-muted">These are not used in any check yet.</p>
               <div className="mt-3 grid gap-2">
