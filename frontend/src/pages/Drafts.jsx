@@ -52,11 +52,11 @@ export default function Drafts({ user }) {
 
       {drafts?.length > 0 && <ChannelMenu tabs={tabs} active={active} onPick={pick} />}
 
-      <div className="mt-4 grid gap-3" key={active}>
-        <ErrorNote>{error}</ErrorNote>
-        {drafts === null && !error && <p className="text-muted">Loading…</p>}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" key={active}>
+        {error && <div className="col-span-full"><ErrorNote>{error}</ErrorNote></div>}
+        {drafts === null && !error && <p className="col-span-full text-muted">Loading…</p>}
         {drafts?.length === 0 && (
-          <Card className="p-8 text-center">
+          <Card className="col-span-full p-8 text-center">
             <p className="font-semibold">No drafts yet.</p>
             <p className="mt-1 text-muted">
               {user.role === 'creator'
@@ -67,17 +67,20 @@ export default function Drafts({ user }) {
         )}
         {sorted.map((d, i) => (
           <Link key={d.id} to={`/drafts/${d.id}`} className="deal-in block" style={{ '--i': i }}>
-            <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition hover:-translate-y-0.5 hover:border-primary">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{d.title}</p>
-                <p className="text-sm text-muted">
-                  {d.channel || 'No channel'} · by {d.creator} · version {d.version} · {timeAgo(d.updated_at)}
-                </p>
+            <Card className="flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-primary">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted">{d.channel || 'No channel'}</span>
+                <StatusChip status={d.status} />
               </div>
-              {mine(d) && d.status !== 'draft' && <span className="text-sm font-semibold text-primary">Waiting for you</span>}
-              {d.open > 0 && <span className="text-sm text-muted">{d.open} open</span>}
-              {d.blocking > 0 && <span className="text-sm font-semibold text-red-800">{d.blocking} high-risk</span>}
-              <StatusChip status={d.status} />
+              <p className="mt-3 line-clamp-2 font-display text-lg font-bold leading-snug">{d.title}</p>
+              <p className="mb-4 mt-1 text-sm text-muted">
+                by {d.creator} · version {d.version} · {timeAgo(d.updated_at)}
+              </p>
+              <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3 text-sm">
+                {d.blocking > 0 && <span className="font-semibold text-red-800">{d.blocking} high-risk</span>}
+                {d.open > 0 ? <span className="text-muted">{d.open} open</span> : <span className="text-muted">No open findings</span>}
+                {mine(d) && d.status !== 'draft' && <span className="ml-auto font-semibold text-primary">Waiting for you</span>}
+              </div>
             </Card>
           </Link>
         ))}
