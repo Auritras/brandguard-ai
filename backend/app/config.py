@@ -14,7 +14,7 @@ JWT_HOURS = int(os.getenv("JWT_HOURS", "12"))
 # Empty key = AI checks are skipped, and the review says so.
 AI_API_KEY = os.getenv("GROQ_API_KEY", "")
 AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.groq.com/openai/v1")
-AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile")
+AI_MODEL = os.getenv("AI_MODEL", "openai/gpt-oss-120b")  # Groq retired llama-3.3-70b-versatile on 2026-08-16
 AI_PROVIDER_NAME = os.getenv("AI_PROVIDER_NAME", "Groq")
 
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
