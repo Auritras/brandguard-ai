@@ -109,6 +109,21 @@ mark {
   from { opacity: 0; transform: rotate(-14deg) scale(2.2); }
 }
 
+/* Channel menu: the highlight slides to the picked channel. */
+.channel-pill {
+  left: 4px;
+  transition: transform 0.32s cubic-bezier(0.3, 1.25, 0.5, 1), width 0.32s cubic-bezier(0.3, 1.25, 0.5, 1);
+}
+
+/* Drafts deal in one after another when the list or the filter changes. */
+.deal-in {
+  animation: deal-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 45ms);
+}
+@keyframes deal-in {
+  from { opacity: 0; transform: translateY(10px) rotate(-0.6deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
