@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { Card, ErrorNote, PageLoading, SEVERITY } from '../ui.jsx'
+import { Card, CountUp, ErrorNote, PageLoading, SEVERITY } from '../ui.jsx'
 
 const OUTCOME_LABEL = {
   open: 'Still open', accepted: 'Fix accepted', edited: 'Own fix written', disputed: 'Disputed, waiting',
@@ -74,7 +74,7 @@ function Tile({ label, value, note }) {
   return (
     <Card className="deal-in p-5">
       <p className="text-sm font-semibold text-muted">{label}</p>
-      <p className="mt-1 font-display text-4xl font-bold tabular-nums">{value}</p>
+      <p className="mt-1 font-display text-4xl font-bold tabular-nums"><CountUp value={value} /></p>
       <p className="mt-1 text-sm text-muted">{note}</p>
     </Card>
   )

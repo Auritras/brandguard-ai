@@ -129,6 +129,29 @@ export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendi
   )
 }
 
+// Counts up from zero to a value like 15, "7%" or "3.5 h". Anything that is not a number shows as is.
+export function CountUp({ value, ms = 900 }) {
+  const m = String(value).match(/^(\d+(?:\.\d+)?)(.*)$/)
+  const target = m ? Number(m[1]) : 0
+  const decimals = m && m[1].includes('.') ? 1 : 0
+  const [shown, setShown] = useState(m ? 0 : value)
+  useEffect(() => {
+    if (!m || matchMedia('(prefers-reduced-motion: reduce)').matches) return setShown(value)
+    let frame
+    const start = performance.now()
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / ms)
+      const eased = 1 - (1 - t) ** 3
+      setShown(`${(target * eased).toFixed(decimals)}${m[2]}`)
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    const done = setTimeout(() => setShown(value), ms + 150) // in case frames are paused (background tab)
+    return () => { cancelAnimationFrame(frame); clearTimeout(done) }
+  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  return <>{shown}</>
+}
+
 // A number that rolls in from above whenever it changes.
 export function RollNumber({ value }) {
   const first = useRef(true) // no roll on the first render, only on a change
