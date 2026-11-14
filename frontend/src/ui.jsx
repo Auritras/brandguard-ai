@@ -73,12 +73,13 @@ export const inputCls =
 
 // For decisions that matter: press and hold until the button fills, then a short countdown with
 // Undo before anything is sent. Works with a mouse, touch, or by holding Enter or Space.
-export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendingLabel = 'Sending', disabled, onConfirm, children }) {
+export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendingLabel = 'Sending', disabled, onConfirm, onPhase, children }) {
   const [phase, setPhase] = useState('idle') // idle | holding | pending
   const [left, setLeft] = useState(0)
   const hold = useRef()
   const tick = useRef()
   useEffect(() => () => { clearTimeout(hold.current); clearInterval(tick.current) }, [])
+  useEffect(() => { onPhase?.(phase) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = () => {
     if (disabled || phase !== 'idle') return
@@ -164,6 +165,7 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(initial)
   const [busy, setBusy] = useState(false)
+  const [locked, setLocked] = useState(false) // the reason cannot change once the hold has started
   if (!open) {
     return (
       <Button kind={kind} onClick={() => setOpen(true)}>
@@ -180,6 +182,7 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          readOnly={locked}
           placeholder={placeholder}
           className={`${inputCls} mt-1 font-normal`}
         />
@@ -187,6 +190,7 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {hold ? (
           <HoldButton kind="dark" disabled={busy || text.trim().length < 3} pendingLabel={pendingLabel}
+            onPhase={(p) => setLocked(p !== 'idle')}
             onConfirm={async () => {
               setBusy(true)
               try {
