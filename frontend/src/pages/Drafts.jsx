@@ -17,6 +17,12 @@ const SORTS = {
 }
 
 const WAITING = { manager: ['in_review'], reviewer: ['authorised_review', 'in_review'], creator: ['draft', 'changes_requested'] }
+// Default order: what most needs this person comes first. Lower number = higher up; then newest first.
+const URGENCY = {
+  reviewer: { authorised_review: 0, in_review: 1 }, // only the brand owner can decide escalated drafts
+  manager: { in_review: 0 },
+  creator: { changes_requested: 0, draft: 0 },
+}
 
 export default function Drafts({ user }) {
   const [drafts, setDrafts] = useState(null)
@@ -42,7 +48,8 @@ export default function Drafts({ user }) {
   ]
   const active = tabs.some(([c]) => c === channel) ? channel : 'All'
   const shown = (drafts || []).filter((d) => active === 'All' || channelOf(d) === active)
-  const byWaiting = (a, b) => Number(mine(b)) - Number(mine(a)) || time(b) - time(a)
+  const rank = (d) => URGENCY[user.role]?.[d.status] ?? 9
+  const byWaiting = (a, b) => rank(a) - rank(b) || time(b) - time(a)
   const sorted = [...shown].sort(SORTS[sort][1] || byWaiting)
   // Keep the address in step with the filters so Back returns to the same view.
   const setView = (next) => {
