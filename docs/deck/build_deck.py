@@ -182,10 +182,6 @@ text(s, M, 390, 820, 90, "A working review desk: every draft is checked against 
      "facts, and people make every decision.", size=26, color=ON_DARK_MUTED, spacing=1.15)
 box(s, 1014, 0, 2, 420, fill=PEACH)
 box(s, 1001, 420, 28, 28, fill=PEACH, shape=MSO_SHAPE.DIAMOND)
-text(s, M, 560, 900, 110, [
-    [("Live app   ", {"color": PEACH, "bold": True, "size": 18}), ("brandguard-ai-lac.vercel.app", {"size": 20, "color": ON_DARK})],
-    [("Code   ", {"color": PEACH, "bold": True, "size": 18}), ("github.com/Auritras/brandguard-ai", {"size": 20, "color": ON_DARK})],
-], spacing=1.3, after=6)
 text(s, M, H - 80, 600, 24, "Nova Blasters · CodeNova India 2026", size=18, color=ON_DARK_MUTED)
 
 # 2 -- What we built ------------------------------------------------------------------------------
