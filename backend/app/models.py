@@ -16,7 +16,8 @@ class Brand(Base):
     __tablename__ = "brands"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
-    demo: Mapped[bool] = mapped_column(Boolean, default=False)  # the shared Lumio Payroll demo
+    demo: Mapped[bool] = mapped_column(Boolean, default=False)  # the Lumio Payroll template that demo copies come from
+    sandbox: Mapped[bool] = mapped_column(Boolean, default=False)  # one visitor's private copy of the demo
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

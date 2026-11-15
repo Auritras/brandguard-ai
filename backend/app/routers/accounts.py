@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..auth import current_user, hash_password, make_token, require, verify_password
 from ..db import get_db
 from ..models import AuditLog, Brand, Draft, User
+from ..sandbox import clear_old_sandboxes, create_sandbox
 from ..seed import seed_library
 from .common import log
 
@@ -44,13 +45,14 @@ class PasswordIn(BaseModel):
 
 def user_out(u: User) -> dict:
     return {"id": u.id, "name": u.name, "email": u.email, "role": u.role,
-            "brand": u.brand.name if u.brand else "", "demo_brand": bool(u.brand and u.brand.demo)}
+            "brand": u.brand.name if u.brand else "",
+            "demo_brand": bool(u.brand and (u.brand.demo or u.brand.sandbox)),
+            "sandbox": bool(u.brand and u.brand.sandbox)}
 
 
 def not_demo(user: User) -> None:
-    if user.brand and user.brand.demo:
-        raise HTTPException(403, "The demo brand is shared by every visitor, so its accounts and team cannot be changed. "
-                                 "Create your own brand to do this.")
+    if user.brand and (user.brand.demo or user.brand.sandbox):
+        raise HTTPException(403, "Demo accounts and their team are fixed. Create your own brand to do this.")
 
 
 def clean_email(db: Session, email: str) -> str:
@@ -156,8 +158,36 @@ def onboarding(db: Session = Depends(get_db), user: User = Depends(current_user)
         ("rule_added", "rule_edited", "rule_approved", "rule_deleted", "fact_added", "fact_edited", "fact_deleted",
          "term_added", "term_deleted", "guidelines_imported"))).first() is not None
     return {
-        "show": bool(user.brand and not user.brand.demo and user.role == "reviewer"),
+        "show": bool(user.brand and not user.brand.demo and not user.brand.sandbox and user.role == "reviewer"),
         "library_changed": library,
         "has_draft": db.query(Draft).filter(Draft.brand_id == b).first() is not None,
         "has_team": db.query(User).filter(User.brand_id == b, User.active.isnot(False)).count() > 1,
     }
+
+
+class DemoIn(BaseModel):
+    role: str
+
+
+@router.post("/demo/start")
+def start_demo(body: DemoIn, db: Session = Depends(get_db)):
+    """A fresh private copy of the demo, signed in as the chosen role."""
+    if body.role not in ROLES:
+        raise HTTPException(422, "Role must be creator, manager or reviewer.")
+    clear_old_sandboxes(db)
+    brand = create_sandbox(db)
+    user = db.query(User).filter(User.brand_id == brand.id, User.role == body.role).first()
+    log(db, user, "demo_started")
+    db.commit()
+    return {"token": make_token(user), "user": user_out(user)}
+
+
+@router.post("/demo/switch")
+def switch_demo(body: DemoIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Become another person in the same demo copy, without signing out."""
+    if not (user.brand and user.brand.sandbox):
+        raise HTTPException(403, "Switching people only works inside a demo copy.")
+    other = db.query(User).filter(User.brand_id == user.brand_id, User.role == body.role).first()
+    if other is None:
+        raise HTTPException(404, "That person is not in this demo.")
+    return {"token": make_token(other), "user": user_out(other)}

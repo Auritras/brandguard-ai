@@ -104,13 +104,14 @@ def main() -> None:
     from .db import Base, SessionLocal, engine
     from .main import app
     from .migrate import migrate
+    from .sandbox import clear_old_sandboxes
     from .seed import demo_brand, seed, seed_library
 
     target = engine.url.render_as_string(hide_password=True)
     print(f"Database: {target}")
     print(f"AI checks: {'on' if AI_API_KEY else 'off'}")
-    if not args.yes and input('This deletes every draft in the Lumio Payroll demo brand and restores its Brand Library. '
-                              'Other brands are not touched. Type "reset" to go on: ').strip() != "reset":
+    if not args.yes and input('This deletes every draft in the Lumio Payroll demo brand, restores its Brand Library and '
+                              'clears visitors' demo copies. Brands people created are not touched. Type "reset" to go on: ').strip() != "reset":
         sys.exit("Nothing changed.")
 
     # 1. Empty the demo brand's drafts and library; keep its accounts and every other brand.
@@ -132,7 +133,9 @@ def main() -> None:
         for model in (models.Rule, models.Fact, models.Term):
             db.query(model).filter(model.brand_id == brand_id).delete(synchronize_session=False)
         seed_library(db, brand_id)
+        cleared = clear_old_sandboxes(db, timedelta(0))  # copies of the old demo are out of date
         db.commit()
+    print(f"Visitors' demo copies cleared: {cleared}.")
     print("Demo drafts deleted, demo Brand Library restored.")
 
     # 2. Build the drafts through the real API.
