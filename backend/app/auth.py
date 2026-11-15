@@ -46,8 +46,8 @@ def current_user(
     except Exception:
         raise HTTPException(401, "Your session has expired. Sign in again.")
     user = db.get(User, user_id)
-    if user is None:
-        raise HTTPException(401, "Account not found.")
+    if user is None or user.active is False:
+        raise HTTPException(401, "This account is no longer active. Ask your brand owner.")
     return user
 
 

@@ -32,6 +32,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(300))
     role: Mapped[str] = mapped_column(String(20))  # creator | manager | reviewer
+    active: Mapped[bool] = mapped_column(Boolean, default=True)  # removed teammates are switched off, not deleted
     brand: Mapped[Brand] = relationship()
 
 
@@ -87,6 +88,8 @@ class Draft(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    # Deleted drafts are hidden, not erased, so the append-only history stays whole.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     creator: Mapped[User] = relationship()
 
 

@@ -22,7 +22,7 @@ def _utc(dt):
 
 @router.get("/insights")
 def insights(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    q = db.query(Draft).filter(Draft.brand_id == user.brand_id)
+    q = db.query(Draft).filter(Draft.brand_id == user.brand_id, Draft.deleted_at.is_(None))
     if user.role == "creator":
         q = q.filter(Draft.creator_id == user.id)
     drafts = q.all()

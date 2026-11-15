@@ -21,6 +21,12 @@ def migrate(engine) -> None:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN brand_id INTEGER"))
             if f"ix_{table}_brand_id" not in {i["name"] for i in insp.get_indexes(table)}:
                 conn.execute(text(f"CREATE INDEX ix_{table}_brand_id ON {table} (brand_id)"))
+        extra = {"users": ("active", "BOOLEAN DEFAULT TRUE"), "drafts": ("deleted_at", "TIMESTAMP WITH TIME ZONE")}
+        for table, (col, kind) in extra.items():
+            if insp.has_table(table) and col not in {c["name"] for c in insp.get_columns(table)}:
+                if engine.dialect.name != "postgresql":
+                    kind = kind.replace("TIMESTAMP WITH TIME ZONE", "DATETIME")
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {kind}"))
         for table in ("rules", "facts"):
             if not insp.has_table(table):
                 continue

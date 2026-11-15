@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..auth import current_user, hash_password, make_token, require
+from ..auth import current_user, hash_password, make_token, require, verify_password
 from ..db import get_db
-from ..models import Brand, User
+from ..models import AuditLog, Brand, Draft, User
 from ..seed import seed_library
 from .common import log
 
@@ -37,6 +37,11 @@ class RoleIn(BaseModel):
     role: str
 
 
+class PasswordIn(BaseModel):
+    current: str
+    new: str = Field(min_length=8, max_length=200)
+
+
 def user_out(u: User) -> dict:
     return {"id": u.id, "name": u.name, "email": u.email, "role": u.role,
             "brand": u.brand.name if u.brand else "", "demo_brand": bool(u.brand and u.brand.demo)}
@@ -44,7 +49,8 @@ def user_out(u: User) -> dict:
 
 def not_demo(user: User) -> None:
     if user.brand and user.brand.demo:
-        raise HTTPException(403, "The demo brand's team is shared by every visitor and cannot be changed. Create your own brand to add people.")
+        raise HTTPException(403, "The demo brand is shared by every visitor, so its accounts and team cannot be changed. "
+                                 "Create your own brand to do this.")
 
 
 def clean_email(db: Session, email: str) -> str:
@@ -74,7 +80,7 @@ def sign_up(body: SignUpIn, db: Session = Depends(get_db)):
 
 @router.get("/team")
 def team(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    members = db.query(User).filter(User.brand_id == user.brand_id).order_by(User.id).all()
+    members = db.query(User).filter(User.brand_id == user.brand_id, User.active.isnot(False)).order_by(User.id).all()
     return [{"id": m.id, "name": m.name, "email": m.email, "role": m.role, "you": m.id == user.id} for m in members]
 
 
@@ -83,9 +89,16 @@ def add_member(body: MemberIn, db: Session = Depends(get_db), user: User = Depen
     not_demo(user)
     if body.role not in ROLES:
         raise HTTPException(422, "Role must be creator, manager or reviewer.")
-    member = User(brand_id=user.brand_id, name=body.name.strip(), email=clean_email(db, body.email),
-                  role=body.role, password_hash=hash_password(body.password))
-    db.add(member)
+    email = body.email.strip().lower()
+    member = db.query(User).filter(User.email == email).first()
+    if member and member.brand_id == user.brand_id and member.active is False:
+        # Someone removed earlier comes back with a new role and starting password.
+        member.active, member.name, member.role = True, body.name.strip(), body.role
+        member.password_hash = hash_password(body.password)
+    else:
+        member = User(brand_id=user.brand_id, name=body.name.strip(), email=clean_email(db, email),
+                      role=body.role, password_hash=hash_password(body.password))
+        db.add(member)
     log(db, user, "member_added", f"{member.name} as {ROLES[body.role]}")
     db.commit()
     return team(db, user)
@@ -107,3 +120,44 @@ def change_role(member_id: int, body: RoleIn, db: Session = Depends(get_db), use
     log(db, user, "role_changed", f"{member.name} is now {ROLES[body.role]}")
     db.commit()
     return team(db, user)
+
+
+@router.delete("/team/{member_id}")
+def remove_member(member_id: int, db: Session = Depends(get_db), user: User = Depends(owner)):
+    """Switches the account off. Their name stays on the drafts and history they took part in."""
+    not_demo(user)
+    member = db.get(User, member_id)
+    if member is None or member.brand_id != user.brand_id or member.active is False:
+        raise HTTPException(404, "Team member not found.")
+    if member.id == user.id:
+        raise HTTPException(409, "You cannot remove yourself.")
+    member.active = False
+    log(db, user, "member_removed", member.name)
+    db.commit()
+    return team(db, user)
+
+
+@router.put("/me/password")
+def change_password(body: PasswordIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    not_demo(user)
+    if not verify_password(body.current, user.password_hash):
+        raise HTTPException(400, "Your current password is not right.")
+    user.password_hash = hash_password(body.new)
+    log(db, user, "password_changed")
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/onboarding")
+def onboarding(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Progress on a new brand's first steps. The demo brand has none to show."""
+    b = user.brand_id
+    library = db.query(AuditLog).filter(AuditLog.brand_id == b, AuditLog.action.in_(
+        ("rule_added", "rule_edited", "rule_approved", "rule_deleted", "fact_added", "fact_edited", "fact_deleted",
+         "term_added", "term_deleted", "guidelines_imported"))).first() is not None
+    return {
+        "show": bool(user.brand and not user.brand.demo and user.role == "reviewer"),
+        "library_changed": library,
+        "has_draft": db.query(Draft).filter(Draft.brand_id == b).first() is not None,
+        "has_team": db.query(User).filter(User.brand_id == b, User.active.isnot(False)).count() > 1,
+    }

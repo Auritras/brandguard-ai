@@ -91,7 +91,9 @@ def test_roles_are_enforced(client, creator, manager, reviewer):
     assert client.post("/api/rules", headers=manager, json=rule).status_code == 403
     r = client.post("/api/rules", headers=reviewer, json=rule)
     assert r.status_code == 200 and r.json()["code"].startswith("R-")
-    assert client.post("/api/drafts", headers=manager, json={"title": "x y", "body": "b"}).status_code == 403
+    # Anyone may write a draft, but never approve their own (see test_brands for the full rule).
+    own = client.post("/api/drafts", headers=manager, json={"title": "x y", "body": "b"}).json()
+    assert own["can"]["approve"] is False
 
 
 def test_import_proposes_rules_that_are_not_used_until_approved(client, reviewer, creator):

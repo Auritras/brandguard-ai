@@ -66,3 +66,74 @@ def test_demo_team_cannot_be_changed(client, reviewer):
     assert r.status_code == 403
     rohan = next(m for m in client.get("/api/team", headers=reviewer).json() if m["role"] == "manager")
     assert client.put(f"/api/team/{rohan['id']}", headers=reviewer, json={"role": "creator"}).status_code == 403
+
+
+def test_account_basics_password_remove_teammate_delete_draft(client, creator, reviewer):
+    owner, _, owner_email = sign_up(client, "Basics Brand")
+    # Change password: the old one stops working, the new one works.
+    assert client.put("/api/me/password", headers=owner, json={"current": "wrong-one", "new": "brand-new-pass"}).status_code == 400
+    assert client.put("/api/me/password", headers=owner, json={"current": "long-enough-1", "new": "brand-new-pass"}).status_code == 200
+    assert client.post("/api/auth/login", json={"email": owner_email, "password": "long-enough-1"}).status_code == 401
+    assert client.post("/api/auth/login", json={"email": owner_email, "password": "brand-new-pass"}).status_code == 200
+    # Demo accounts keep their shared password.
+    assert client.put("/api/me/password", headers=creator, json={"current": "brandguard-demo", "new": "something-else"}).status_code == 403
+
+    # Remove a teammate: they can no longer sign in or use an old session; adding them again restores them.
+    email = f"temp-{uuid.uuid4().hex[:8]}@acme.test"
+    team = client.post("/api/team", headers=owner, json={"name": "Temp", "email": email, "role": "creator", "password": "temp-pass-1"}).json()
+    temp_id = next(m["id"] for m in team if m["name"] == "Temp")
+    temp = {"Authorization": "Bearer " + client.post("/api/auth/login", json={"email": email, "password": "temp-pass-1"}).json()["token"]}
+    d = client.post("/api/drafts", headers=temp, json={"title": "By temp", "body": "Hello there."}).json()
+    team = client.delete(f"/api/team/{temp_id}", headers=owner).json()
+    assert all(m["id"] != temp_id for m in team)
+    assert client.post("/api/auth/login", json={"email": email, "password": "temp-pass-1"}).status_code == 403
+    assert client.get("/api/drafts", headers=temp).status_code == 401
+    assert client.get(f"/api/drafts/{d['id']}", headers=owner).json()["creator"] == "Temp"  # their work stays
+    me = next(m for m in client.get("/api/team", headers=owner).json() if m["you"])
+    assert client.delete(f"/api/team/{me['id']}", headers=owner).status_code == 409
+    back = client.post("/api/team", headers=owner, json={"name": "Temp", "email": email, "role": "manager", "password": "temp-pass-2"})
+    assert back.status_code == 200 and client.post("/api/auth/login", json={"email": email, "password": "temp-pass-2"}).status_code == 200
+
+    # Delete a draft: only unsent drafts, only by their creator; it disappears from lists and reports.
+    mine = client.post("/api/drafts", headers=creator, json={"title": "Throwaway", "body": "Just testing."}).json()
+    assert client.delete(f"/api/drafts/{mine['id']}", headers=reviewer).status_code == 403
+    assert client.delete(f"/api/drafts/{mine['id']}", headers=creator).status_code == 200
+    assert client.get(f"/api/drafts/{mine['id']}", headers=creator).status_code == 404
+    assert all(x["id"] != mine["id"] for x in client.get("/api/drafts", headers=creator).json())
+    sent = client.post("/api/drafts", headers=creator, json={"title": "Sent one", "body": "Book a demo today."}).json()
+    client.post(f"/api/drafts/{sent['id']}/check", headers=creator)
+    client.post(f"/api/drafts/{sent['id']}/submit", headers=creator)
+    assert client.delete(f"/api/drafts/{sent['id']}", headers=creator).status_code == 409
+
+
+def test_waiting_count_and_onboarding(client, creator, manager):
+    before = client.get("/api/waiting", headers=manager).json()["count"]
+    d = client.post("/api/drafts", headers=creator, json={"title": "For Rohan", "body": "Book a demo today."}).json()
+    client.post(f"/api/drafts/{d['id']}/check", headers=creator)
+    client.post(f"/api/drafts/{d['id']}/submit", headers=creator)
+    assert client.get("/api/waiting", headers=manager).json()["count"] == before + 1
+
+    owner, _, _ = sign_up(client, "Fresh Brand")
+    o = client.get("/api/onboarding", headers=owner).json()
+    assert o == {"show": True, "library_changed": False, "has_draft": False, "has_team": False}
+    client.post("/api/terms", headers=owner, json={"banned": "kinda", "preferred": "somewhat"})
+    client.post("/api/drafts", headers=owner, json={"title": "First", "body": "Hello."})
+    o = client.get("/api/onboarding", headers=owner).json()
+    assert o["library_changed"] and o["has_draft"] and not o["has_team"]
+    assert client.get("/api/onboarding", headers=manager).json()["show"] is False  # not on the demo brand
+
+
+def test_owner_can_write_but_never_approve_their_own_draft(client):
+    owner, _, _ = sign_up(client, "Solo Brand")
+    d = client.post("/api/drafts", headers=owner, json={"title": "Mine", "body": "Book a demo today."})
+    assert d.status_code == 200
+    did = d.json()["id"]
+    client.post(f"/api/drafts/{did}/check", headers=owner)
+    d = client.post(f"/api/drafts/{did}/submit", headers=owner).json()
+    assert d["status"] == "in_review" and d["can"]["approve"] is False
+    assert client.post(f"/api/drafts/{did}/approve", headers=owner).status_code == 403
+    # A teammate can approve it.
+    email = f"mgr-{uuid.uuid4().hex[:8]}@acme.test"
+    client.post("/api/team", headers=owner, json={"name": "Mo", "email": email, "role": "manager", "password": "manager-pass"})
+    mgr = {"Authorization": "Bearer " + client.post("/api/auth/login", json={"email": email, "password": "manager-pass"}).json()["token"]}
+    assert client.post(f"/api/drafts/{did}/approve", headers=mgr).json()["status"] == "approved"

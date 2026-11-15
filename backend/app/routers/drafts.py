@@ -14,7 +14,7 @@ from ..db import get_db
 from ..engine.extract import extract_text
 from ..engine.exact import run_exact
 from ..engine.run import run_review
-from ..models import AuditLog, Comment, Draft, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
+from ..models import now, AuditLog, Comment, Draft, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
 from .common import iso, log
 
 router = APIRouter(prefix="/api", tags=["drafts"])
@@ -63,7 +63,8 @@ def get_draft(db: Session, draft_id: int, user: User, lock: bool = False) -> Dra
     """`lock` holds the draft's row until the request commits, so two people acting on the same
     draft at the same moment are handled one after the other (Postgres; SQLite has no row locks)."""
     draft = db.get(Draft, draft_id, with_for_update=lock)
-    if draft is None or draft.brand_id != user.brand_id or (user.role == "creator" and draft.creator_id != user.id):
+    if draft is None or draft.deleted_at is not None or draft.brand_id != user.brand_id \
+            or (user.role == "creator" and draft.creator_id != user.id):
         raise HTTPException(404, "Draft not found.")
     return draft
 
@@ -73,6 +74,12 @@ def get_finding(db: Session, finding_id: int, user: User) -> tuple[Finding, Draf
     if finding is None:
         raise HTTPException(404, "Finding not found.")
     return finding, get_draft(db, finding.draft_id, user, lock=True)
+
+
+def not_own(draft: Draft, user: User) -> None:
+    """Four eyes: approvals, waivers and dispute decisions always come from someone other than the writer."""
+    if draft.creator_id == user.id:
+        raise HTTPException(403, "You wrote this draft, so someone else on your team has to review it.")
 
 
 def own_editable(draft: Draft, user: User) -> None:
@@ -118,6 +125,7 @@ def detail(db: Session, d: Draft, user: User) -> dict:
         **summary(db, d),
         "audience": d.audience, "purpose": d.purpose, "body": d.body,
         "checked_version": d.checked_version, "needs_check": d.checked_version != d.version,
+        "mine": is_owner,
         "findings": [finding_out(f) for f in findings],
         "run": None if run is None else {
             "version": run.version, "ai_used": run.ai_used, "ai_provider": run.ai_provider, "ai_model": run.ai_model,
@@ -132,13 +140,15 @@ def detail(db: Session, d: Draft, user: User) -> dict:
                     for a in db.query(AuditLog).filter(AuditLog.draft_id == d.id).order_by(AuditLog.id.desc())],
         "can": {
             "edit": is_owner and d.status in EDITABLE,
+            "delete": is_owner and d.status == "draft" and not db.query(AuditLog).filter(
+                AuditLog.draft_id == d.id, AuditLog.action == "submitted_for_review").first(),
             "submit": is_owner and d.status in EDITABLE,
-            "decide_disputes": user.role in ("manager", "reviewer") and d.status in ("in_review", "authorised_review"),
-            "approve": (user.role == "manager" and d.status == "in_review")
-                       or (user.role == "reviewer" and d.status in ("in_review", "authorised_review")),
-            "request_changes": (user.role == "manager" and d.status == "in_review")
-                               or (user.role == "reviewer" and d.status in ("in_review", "authorised_review")),
-            "waive": user.role == "reviewer" and d.status in ("in_review", "authorised_review"),
+            "decide_disputes": not is_owner and user.role in ("manager", "reviewer") and d.status in ("in_review", "authorised_review"),
+            "approve": not is_owner and ((user.role == "manager" and d.status == "in_review")
+                                         or (user.role == "reviewer" and d.status in ("in_review", "authorised_review"))),
+            "request_changes": not is_owner and ((user.role == "manager" and d.status == "in_review")
+                                                 or (user.role == "reviewer" and d.status in ("in_review", "authorised_review"))),
+            "waive": not is_owner and user.role == "reviewer" and d.status in ("in_review", "authorised_review"),
         },
     }
 
@@ -157,14 +167,27 @@ async def extract(file: UploadFile = File(...), user: User = Depends(current_use
 
 @router.get("/drafts")
 def list_drafts(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    q = db.query(Draft).filter(Draft.brand_id == user.brand_id)
+    q = db.query(Draft).filter(Draft.brand_id == user.brand_id, Draft.deleted_at.is_(None))
     if user.role == "creator":
         q = q.filter(Draft.creator_id == user.id)
     return [summary(db, d) for d in q.order_by(Draft.updated_at.desc())]
 
 
+# What counts as "waiting for you": the same rule the drafts list uses for its orange marks.
+WAITING = {"creator": ("changes_requested",), "manager": ("in_review",), "reviewer": ("authorised_review", "in_review")}
+
+
+@router.get("/waiting")
+def waiting(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    q = db.query(Draft).filter(Draft.brand_id == user.brand_id, Draft.deleted_at.is_(None),
+                               Draft.status.in_(WAITING.get(user.role, ())))
+    if user.role == "creator":
+        q = q.filter(Draft.creator_id == user.id)
+    return {"count": q.count()}
+
+
 @router.post("/drafts")
-def create_draft(body: DraftIn, db: Session = Depends(get_db), user: User = Depends(require("creator"))):
+def create_draft(body: DraftIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     draft = Draft(brand_id=user.brand_id, creator_id=user.id, **body.model_dump())
     db.add(draft)
     db.flush()
@@ -206,6 +229,21 @@ def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends
     found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all())
     return [{"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
              "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
+
+
+@router.delete("/drafts/{draft_id}")
+def delete_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Only the creator, and only before it was ever sent for review. The draft is hidden, not erased."""
+    draft = get_draft(db, draft_id, user, lock=True)
+    if draft.creator_id != user.id:
+        raise HTTPException(403, "Only the creator of this draft can delete it.")
+    sent = db.query(AuditLog).filter(AuditLog.draft_id == draft.id, AuditLog.action == "submitted_for_review").first()
+    if draft.status != "draft" or sent:
+        raise HTTPException(409, "This draft has been sent for review, so it stays on the record.")
+    draft.deleted_at = now()
+    log(db, user, "draft_deleted", draft.title, draft.id)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/drafts/{draft_id}/check")
@@ -271,6 +309,7 @@ def dispute(finding_id: int, body: ReasonIn, db: Session = Depends(get_db), user
 def decide(finding_id: int, body: DecideIn, db: Session = Depends(get_db),
            user: User = Depends(require("manager", "reviewer"))):
     finding, draft = get_finding(db, finding_id, user)
+    not_own(draft, user)
     if draft.status not in ("in_review", "authorised_review"):
         raise HTTPException(409, "Disputes are decided while the draft is in review.")
     if finding.status != "disputed":
@@ -295,6 +334,7 @@ def decide(finding_id: int, body: DecideIn, db: Session = Depends(get_db),
 @router.post("/findings/{finding_id}/waive")
 def waive(finding_id: int, body: ReasonIn, db: Session = Depends(get_db), user: User = Depends(require("reviewer"))):
     finding, draft = get_finding(db, finding_id, user)
+    not_own(draft, user)
     if draft.status not in ("in_review", "authorised_review"):
         raise HTTPException(409, "Findings are waived while the draft is in review.")
     if finding.status not in BLOCKING:
@@ -323,6 +363,7 @@ def submit(draft_id: int, db: Session = Depends(get_db), user: User = Depends(cu
 def request_changes(draft_id: int, body: NoteIn, db: Session = Depends(get_db),
                     user: User = Depends(require("manager", "reviewer"))):
     draft = get_draft(db, draft_id, user, lock=True)
+    not_own(draft, user)
     allowed = ("in_review",) if user.role == "manager" else ("in_review", "authorised_review")
     if draft.status not in allowed:
         raise HTTPException(409, "This draft is not waiting for your review.")
@@ -336,6 +377,7 @@ def request_changes(draft_id: int, body: NoteIn, db: Session = Depends(get_db),
 @router.post("/drafts/{draft_id}/approve")
 def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(require("manager", "reviewer"))):
     draft = get_draft(db, draft_id, user, lock=True)
+    not_own(draft, user)
     blocking = blocking_findings(db, draft)
     if user.role == "manager":
         if draft.status != "in_review":

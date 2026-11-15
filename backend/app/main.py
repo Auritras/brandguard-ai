@@ -65,6 +65,8 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email.strip().lower()).first()
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Wrong email or password.")
+    if user.active is False:
+        raise HTTPException(403, "This account has been removed from its brand. Ask the brand owner to add you again.")
     return {"token": make_token(user), "user": user_out(user)}
 
 
