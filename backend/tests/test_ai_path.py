@@ -75,3 +75,33 @@ def test_ai_fixes_obey_rules_and_do_not_repeat_exact_findings(client, creator, m
     assert ai_findings[0]["suggestion"] == "Our customers love it."
     superlative = next(f for f in d["findings"] if f["ref_code"] == "R-002")
     assert "leading" not in (superlative["suggestion"] or "")
+
+
+def test_rate_limited_ai_call_waits_and_retries(monkeypatch):
+    import httpx
+    from app.engine import ai
+
+    calls = []
+
+    def fake_post(url, headers, json, timeout):
+        calls.append(1)
+        req = httpx.Request("POST", url)
+        if len(calls) < 3:
+            return httpx.Response(429, headers={"retry-after": "0"}, json={"error": {"message": "slow down"}}, request=req)
+        body = {"choices": [{"message": {"content": '{"findings": [], "rewrites": []}'}}]}
+        return httpx.Response(200, json=body, request=req)
+
+    monkeypatch.setattr(ai.httpx, "post", fake_post)
+    monkeypatch.setattr(ai.time, "sleep", lambda s: None)
+    assert ai._chat("s", "u") == {"findings": [], "rewrites": []}
+    assert len(calls) == 3
+
+
+def test_rate_limit_message_is_friendly_and_hides_provider_details():
+    import httpx
+    from app.engine import ai
+
+    req = httpx.Request("POST", "https://example.test")
+    res = httpx.Response(429, json={"error": {"message": "Rate limit reached in organization org_123"}}, request=req)
+    why = ai._why(httpx.HTTPStatusError("429", request=req, response=res))
+    assert "org_" not in why and "try the check again" in why

@@ -5,6 +5,7 @@ Its output is treated as untrusted and goes through engine.verify before anyone 
 """
 import json
 import re
+import time
 
 import httpx
 
@@ -67,6 +68,8 @@ def build_prompt(draft, rules, facts, exact_findings, style=()) -> str:
 
 def _why(e: Exception) -> str:
     """A short, safe reason for a failed AI call: the HTTP status and the provider's own message."""
+    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
+        return "the AI provider's free usage limit was busy; try the check again in a minute"
     if isinstance(e, httpx.HTTPStatusError):
         try:
             msg = e.response.json().get("error", {}).get("message", "")
@@ -76,17 +79,37 @@ def _why(e: Exception) -> str:
     return type(e).__name__
 
 
+RETRIES = 3          # extra attempts when the provider says "too many requests"
+MAX_WAIT = 15        # seconds to wait before one retry, at most
+
+
+def _post(payload: dict) -> httpx.Response:
+    """Send one request; on HTTP 429 wait as long as the provider asks (capped) and try again."""
+    for attempt in range(RETRIES + 1):
+        r = httpx.post(
+            config.AI_BASE_URL.rstrip("/") + "/chat/completions",
+            headers={"Authorization": f"Bearer {config.AI_API_KEY}"},
+            json=payload,
+            timeout=45,
+        )
+        if r.status_code != 429 or attempt == RETRIES:
+            return r
+        try:
+            wait = float(r.headers.get("retry-after", ""))
+        except ValueError:
+            wait = 2.0 * (attempt + 1)
+        time.sleep(min(max(wait, 1.0), MAX_WAIT))
+    return r
+
+
 def _chat(system: str, user: str) -> dict:
-    r = httpx.post(
-        config.AI_BASE_URL.rstrip("/") + "/chat/completions",
-        headers={"Authorization": f"Bearer {config.AI_API_KEY}"},
-        json={
+    r = _post(
+        {
             "model": config.AI_MODEL,
             "temperature": 0,
             "response_format": {"type": "json_object"},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        },
-        timeout=45,
+        }
     )
     r.raise_for_status()
     return json.loads(r.json()["choices"][0]["message"]["content"])
