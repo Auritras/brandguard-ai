@@ -58,6 +58,32 @@ PRICING = (
     "Pricing starts at Rs 49 per employee per month."
 )
 
+HANDOUT = (
+    "Welcome to Lumio Payroll. This handout walks your team through the first payroll run: add employees, "
+    "set salary components, then run payroll and share payslips. Our clients usually finish setup in an afternoon."
+)
+WELCOME = (
+    "Welcome to Lumio Payroll. Your account is ready. Start by adding your employees, then run your first payroll "
+    "when you are ready. Our help centre has a short guide for each step."
+)
+HERO = "Payroll for small businesses, done in minutes. Trusted by 10,000 companies across India."
+HOW_TO = (
+    "Running payroll in India means handling PF, ESI and professional tax every month. Lumio Payroll works these "
+    "out for you from each employee's salary details. Click here for the full guide."
+)
+HIRING = (
+    "We are hiring. Lumio Payroll is looking for a payroll specialist to help small businesses pay their people "
+    "right. Join the best team in payroll and help 8,200 companies every month."
+)
+FESTIVE_AD = (
+    "This festive season, switch to Lumio Payroll risk-free. Customers rated us 4.6 out of 5. "
+    "Pricing starts at Rs 49 per employee per month."
+)
+FESTIVE_POST = (
+    "Festive bonus season is here!! HURRY UP AND RUN PAYROLL NOW so your staff get their bonus on time. "
+    "Cheap, simple and quick."
+)
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -202,6 +228,48 @@ def main() -> None:
         d = accept(d, "TERM", "staff")
         d = recheck_and_submit(d)
         timeline[d["id"]] = (1, 0.8)
+
+        # More of the demo brand's channels, at a mix of stages.
+        d = new("Document: customer onboarding handout", "Document", "New customers' finance teams",
+                "Walk a new customer through their first payroll run", HANDOUT)
+        d = accept(d, "TERM", "clients")
+        d = recheck_and_submit(d)
+        d = approve_fully(d, "Setup time comes from our onboarding team's own tracking; fine for a handout.")
+        timeline[d["id"]] = (12, 11)
+
+        d = new("Email: welcome to Lumio Payroll", "Email", "Customers who just signed up",
+                "Help new customers take their first step", WELCOME)
+        d = recheck_and_submit(d)
+        d = approve_fully(d, "Plain welcome copy; nothing to support.")
+        timeline[d["id"]] = (11, 10.5)
+
+        d = new("Website: homepage hero", "Website", "Visitors to the home page",
+                "Say what Lumio is in one line and build trust", HERO)
+        d = dispute(d, "F-001", "Sales says we crossed 10,000 companies this month. We have asked for the fact to be updated.")
+        d = recheck_and_submit(d)
+        call("POST", f"/drafts/{d['id']}/comments", rohan, text="Copy is good. The customer count is Meera's call until the fact changes.")
+        d = call("POST", f"/drafts/{d['id']}/approve", rohan)
+        timeline[d["id"]] = (2.5, 2.2)
+
+        d = new("Blog: how payroll works in India", "Blog", "First-time employers",
+                "Explain PF, ESI and professional tax simply", HOW_TO)
+        d = dispute(d, "R-005", "On the blog this line is a button that names the guide, so screen readers read the guide's title.")
+        d = recheck_and_submit(d)
+        timeline[d["id"]] = (1.5, 1.2)
+
+        d = new("LinkedIn: we're hiring a payroll specialist", "LinkedIn", "Payroll professionals",
+                "Attract applicants for a payroll specialist role", HIRING)
+        d = own_fix(d, "R-002", "the best", "a friendly")
+        d = recheck_and_submit(d)
+        timeline[d["id"]] = (0.6, 0.5)
+
+        d = new("Advertisement: festive season offer", "Advertisement", "Small businesses before the festive season",
+                "Get sign-ups during the festive season", FESTIVE_AD)
+        timeline[d["id"]] = (0.5, 0.45)
+
+        d = new("Instagram: festive bonus reminder", "Instagram", "Small business owners on Instagram",
+                "Remind owners to pay festive bonuses on time", FESTIVE_POST)
+        timeline[d["id"]] = (0.3, 0.25)
 
         # With Asha: checked, nothing handled yet. The richest one to try.
         d = new("LinkedIn post: new onboarding", "LinkedIn", "Owners of small businesses in India",

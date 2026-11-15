@@ -159,8 +159,8 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 ## Resetting the demo
 
 The live demo accounts are shared, so whatever one person does stays for the next. To put the
-Lumio Payroll demo brand back to a clean state (one draft at each stage of review, history spread
-over the past nine days, the original Brand Library), run this from `backend` with the live database address in
+Lumio Payroll demo brand back to a clean state (13 drafts across all seven channels and every stage
+of review, history spread over the past twelve days, the original Brand Library), run this from `backend` with the live database address in
 `backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
 AI findings):
 
