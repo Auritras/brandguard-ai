@@ -101,6 +101,30 @@ FIZZ_ABOUT = (
     "Fizzbox is a refreshing beverage that boosts immunity and helps you detox. "
     "Loved by consumers across India."
 )
+FIZZ_HIRING = (
+    "We are hiring! Join the Fizzbox crew as a campus ambassador. Love drinks? Love people? "
+    "APPLY TODAY on our careers page."
+)
+FIZZ_SELL_SHEET = (
+    "Fizzbox Classic: 45 calories per 330 ml can. Fizzbox Zero: 0 g sugar per can. "
+    "Already in 1,200 stores across India. Order through your usual distributor."
+)
+FIZZ_DIWALI = (
+    "Light up Diwali with Fizzbox! Stock up NOW for the party. "
+    "Our mango fizz is so good it's basically guilt-free."
+)
+FIZZ_CRICKET = (
+    "Cricket season means Fizzbox season!! Way better than SodaCo and every other fizzy drink out there. "
+    "GRAB A COLD ONE NOW AT YOUR NEAREST STORE."
+)
+FIZZ_CANTEEN = (
+    "Special offer for school canteens: give the kids a cold Fizzbox with lunch! "
+    "Order 10 crates and get one free."
+)
+FIZZ_FAQ = (
+    "Is Fizzbox Zero really zero sugar? Yes: 0 g sugar per can. "
+    "How many calories are in Fizzbox Classic? 45 in every 330 ml can."
+)
 FIZZ_BLOG = (
     "Please be advised that we hereby utilise natural fruit flavours in all of our drinks. "
     "Read more."
@@ -324,6 +348,36 @@ def main() -> None:
         d = new("Advertisement: zero sugar billboard", "Advertisement", "Commuters", "Launch Fizzbox Zero", FIZZ_BILLBOARD)
         d = recheck_and_submit(d)
         timeline[d["id"]] = (1, 0.7)
+
+        d = new("Document: retailer sell sheet", "Document", "Shop owners and distributors",
+                "Get retailers to stock Fizzbox", FIZZ_SELL_SHEET)
+        d = recheck_and_submit(d)
+        d = approve_fully(d, "Every number matches an approved fact.")
+        timeline[d["id"]] = (10, 9.5)
+
+        d = new("Website: FAQ", "Website", "Fans with questions", "Answer the sugar and calorie questions", FIZZ_FAQ)
+        d = recheck_and_submit(d)
+        d = approve_fully(d, "Numbers match the label.")
+        timeline[d["id"]] = (8, 7.6)
+
+        d = new("Email: school canteen offer", "Email", "School canteen managers", "Sell crates to schools", FIZZ_CANTEEN)
+        d = recheck_and_submit(d)
+        d = call("POST", f"/drafts/{d['id']}/request-changes", rohan,
+                 note="We never market to children. Please drop the school angle and aim this at office canteens instead.")
+        timeline[d["id"]] = (4, 3.4)
+
+        d = new("Instagram: Diwali fizz party", "Instagram", "Fans planning Diwali parties", "Sell party packs for Diwali", FIZZ_DIWALI)
+        d = dispute(d, "R-003", "It's a playful figure of speech for a party treat, not a health claim.")
+        d = recheck_and_submit(d)
+        d = call("POST", f"/drafts/{d['id']}/approve", rohan)
+        timeline[d["id"]] = (1.8, 1.4)
+
+        d = new("LinkedIn: hiring campus ambassadors", "LinkedIn", "College students", "Recruit campus ambassadors", FIZZ_HIRING)
+        d = recheck_and_submit(d)
+        timeline[d["id"]] = (0.9, 0.6)
+
+        d = new("Advertisement: cricket season", "Advertisement", "Cricket fans", "Push sales during the cricket season", FIZZ_CRICKET)
+        timeline[d["id"]] = (0.3, 0.25)
 
         # With Kabir: checked, nothing handled yet. Same kind of hype that Lumio flags, but here only the
         # health claim, the children and the wrong calorie number are problems.

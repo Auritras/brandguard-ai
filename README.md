@@ -182,7 +182,7 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 
 Visitors work in private copies, so the demo brands themselves never change (they are read-only
 except to this script). The copies are made from the two demo brands, which this script rebuilds: run it to change or refresh what visitors
-start from (Lumio: 13 drafts across all seven channels and every stage of review; Fizzbox: 5 drafts;
+start from (Lumio: 13 drafts across all seven channels and every stage of review; Fizzbox: 11 drafts;
 , history spread over the past twelve days, the original Brand Library), run this from `backend` with the live database address in
 `backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
 AI findings):
