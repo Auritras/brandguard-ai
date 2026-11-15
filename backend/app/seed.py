@@ -96,7 +96,8 @@ def seed(db: Session) -> None:
     brand = demo_brand(db)
     # Anything made before brands existed belongs to the demo brand.
     for model in (User, Rule, Fact, Term, Draft, AuditLog):
-        db.execute(update(model).where(model.brand_id.is_(None)).values(brand_id=brand.id))
+        if db.query(model.id).filter(model.brand_id.is_(None)).first():  # write only when needed
+            db.execute(update(model).where(model.brand_id.is_(None)).values(brand_id=brand.id))
     for name, email, role in USERS:
         if db.query(User).filter_by(email=email).first() is None:
             db.add(User(brand_id=brand.id, name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))

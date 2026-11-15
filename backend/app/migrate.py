@@ -10,6 +10,8 @@ BRAND_TABLES = ("users", "rules", "facts", "terms", "drafts", "audit_log")
 
 
 def migrate(engine) -> None:
+    """Only touches a table when something is actually missing. Statements like CREATE INDEX lock the
+    whole table on Postgres even when the index exists, which would block live writes on every start."""
     insp = inspect(engine)
     with engine.begin() as conn:
         for table in BRAND_TABLES:
@@ -17,7 +19,8 @@ def migrate(engine) -> None:
                 continue
             if "brand_id" not in {c["name"] for c in insp.get_columns(table)}:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN brand_id INTEGER"))
-            conn.execute(text(f"CREATE INDEX IF NOT EXISTS ix_{table}_brand_id ON {table} (brand_id)"))
+            if f"ix_{table}_brand_id" not in {i["name"] for i in insp.get_indexes(table)}:
+                conn.execute(text(f"CREATE INDEX ix_{table}_brand_id ON {table} (brand_id)"))
         for table in ("rules", "facts"):
             if not insp.has_table(table):
                 continue
