@@ -152,8 +152,9 @@ export default function App() {
           onCompare={(brand) => switchTo('/demo/switch', user.role, '', brand)} />
       )}
       <main id="main" aria-busy={!!demoBusy} className={`${demoBusy ? 'pointer-events-none opacity-50' : ''} transition-opacity duration-300 mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none`}>
-        {/* Each screen fades up when you move to it; filters on the same screen do not count. */}
-        <div key={location.pathname} className="page-in">
+        {/* Each screen fades up when you move to it; filters on the same screen do not count. It is also
+            keyed by who is signed in, so switching person or demo brand reloads the screen's data. */}
+        <div key={`${location.pathname}:${user.id}`} className="page-in">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft user={user} />} />
