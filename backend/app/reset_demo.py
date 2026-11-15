@@ -112,7 +112,8 @@ def main() -> None:
     print(f"Database: {target}")
     print(f"AI checks: {'on' if AI_API_KEY else 'off'}")
     if not args.yes and input('This deletes every draft in the Lumio Payroll demo brand, restores its Brand Library and '
-                              'clears visitors' demo copies. Brands people created are not touched. Type "reset" to go on: ').strip() != "reset":
+                              "clears visitors' demo copies. Brands people created are not touched. "
+                              'Type "reset" to go on: ').strip() != "reset":
         sys.exit("Nothing changed.")
 
     # 1. Empty the demo brand's drafts and library; keep its accounts and every other brand.
