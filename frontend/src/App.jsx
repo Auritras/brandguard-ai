@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { api, getAuth, setAuth, setDemoToken } from './api.js'
+import { api, getAuth, getDemoToken, setAuth, setDemoToken } from './api.js'
 import { Button } from './ui.jsx'
 import Login from './pages/Login.jsx'
 import Drafts from './pages/Drafts.jsx'
@@ -33,8 +33,8 @@ export default function App() {
       .then(async (u) => {
         // A session in the demo template (from before private copies) moves into a fresh copy instead.
         if (u.demo_brand && !u.sandbox) {
-          const a = await api('/demo/start', { method: 'POST', body: { role: u.role } })
-          setDemoToken(a.token)
+          const a = await api('/demo/start', { method: 'POST', body: { role: u.role, brand: u.demo_key || 'lumio' } })
+          setDemoToken(a.token, a.user.demo_key)
           setAuth(a)
           setAuthState(a)
           return
@@ -70,12 +70,20 @@ export default function App() {
   // Inside a demo copy: become someone else in the same copy, or start a new copy.
   const [demoBusy, setDemoBusy] = useState('') // 'switch' | 'restart' while the server works
   const [demoNote, setDemoNote] = useState('')
-  const switchTo = async (path, role, note) => {
+  const switchTo = async (path, role, note, brand) => {
     setDemoBusy(path.endsWith('start') ? 'restart' : 'switch')
     setDemoNote('')
     try {
-      const a = await api(path, { method: 'POST', body: { role } })
-      setDemoToken(a.token)
+      let a = null
+      if (brand) {
+        // Jump to the other demo brand: carry on in this browser's copy of it, or make one.
+        const saved = getDemoToken(brand)
+        if (saved) a = await api('/demo/switch', { method: 'POST', body: { role }, token: saved }).catch(() => null)
+        if (!a) a = await api('/demo/start', { method: 'POST', body: { role, brand } })
+      } else {
+        a = await api(path, { method: 'POST', body: { role, brand: auth.user.demo_key || 'lumio' } })
+      }
+      setDemoToken(a.token, a.user.demo_key)
       signIn(a)
       if (note) {
         setDemoNote(note)
@@ -140,14 +148,15 @@ export default function App() {
         // Keyed by the copy's account, so the bar starts closed in a new copy.
         <DemoBar key={user.email} user={user} busy={demoBusy} note={demoNote}
           onSwitch={(role) => switchTo('/demo/switch', role)}
-          onRestart={() => switchTo('/demo/start', user.role, 'Fresh copy ready: everything is back to the start.')} />
+          onRestart={() => switchTo('/demo/start', user.role, 'Fresh copy ready: everything is back to the start.')}
+          onCompare={(brand) => switchTo('/demo/switch', user.role, '', brand)} />
       )}
       <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none">
         {/* Each screen fades up when you move to it; filters on the same screen do not count. */}
         <div key={location.pathname} className="page-in">
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
-          <Route path="/new" element={<NewDraft />} />
+          <Route path="/new" element={<NewDraft user={user} />} />
           <Route path="/drafts/:id" element={<DraftView user={user} />} />
           <Route path="/drafts/:id/record" element={<Record user={user} />} />
           <Route path="/insights" element={<Insights />} />
@@ -162,28 +171,34 @@ export default function App() {
   )
 }
 
-const DEMO_PEOPLE = [
-  ['creator', 'Asha', 'Creator'],
-  ['manager', 'Rohan', 'Manager'],
-  ['reviewer', 'Meera', 'Brand owner'],
-]
+const DEMO_PEOPLE = {
+  lumio: [['creator', 'Asha', 'Creator'], ['manager', 'Rohan', 'Manager'], ['reviewer', 'Meera', 'Brand owner']],
+  fizzbox: [['creator', 'Kabir', 'Creator'], ['manager', 'Tara', 'Manager'], ['reviewer', 'Neel', 'Brand owner']],
+}
+const DEMO_BRANDS = { lumio: 'Lumio Payroll', fizzbox: 'Fizzbox' }
 
 // A slim bar for demo visitors: whose shoes they are in, and one click to be someone else.
-function DemoBar({ user, busy, note, onSwitch, onRestart }) {
+function DemoBar({ user, busy, note, onSwitch, onRestart, onCompare }) {
   const [confirm, setConfirm] = useState(false)
+  const key = user.demo_key || 'lumio'
+  const other = key === 'lumio' ? 'fizzbox' : 'lumio'
   return (
     <div className="border-b-2 border-ink bg-accent-soft print:hidden">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2 text-sm">
-        <p className="font-semibold text-accent-deep">Your private demo copy</p>
+        <p className="font-semibold text-accent-deep">Your private copy of {DEMO_BRANDS[key]}</p>
         <div role="group" aria-label="Act as" className="flex flex-wrap items-center gap-1">
           <span className="mr-1 text-muted">Act as</span>
-          {DEMO_PEOPLE.map(([role, name, label]) => (
+          {DEMO_PEOPLE[key].map(([role, name, label]) => (
             <button key={role} disabled={!!busy} onClick={() => role !== user.role && onSwitch(role)} aria-pressed={role === user.role}
               className={`rounded-md border-2 px-2.5 py-1 font-semibold transition ${role === user.role ? 'border-ink bg-ink text-paper' : 'border-ink/20 bg-white hover:border-ink'}`}>
               {name} <span className={role === user.role ? 'text-paper/70' : 'text-muted'}>· {label}</span>
             </button>
           ))}
         </div>
+        <button disabled={!!busy} onClick={() => onCompare(other)} className="font-semibold text-primary hover:underline"
+          title="The same person's role in the other demo brand, with its own rules">
+          Compare with {DEMO_BRANDS[other]} →
+        </button>
         <div className="ml-auto flex items-center gap-2" aria-live="polite">
           {busy === 'switch' && <span className="text-muted">Switching…</span>}
           {note && !busy && <span role="status" className="font-semibold text-accent-deep">{note}</span>}

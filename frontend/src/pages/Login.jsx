@@ -43,22 +43,29 @@ export default function Login({ onSignIn, signedOut }) {
     }
   }
   // Try the demo: carry on in this browser's private copy if it still exists, else make a new one.
+  const [demoBrand, setDemoBrand] = useState('lumio')
   const demo = async (role, fresh = false) => {
     setBusy(true)
     setError('')
     try {
       let a = null
-      const saved = getDemoToken()
+      const saved = getDemoToken(demoBrand)
       if (saved && !fresh) a = await api('/demo/switch', { method: 'POST', body: { role }, token: saved }).catch(() => null)
-      if (!a) a = await api('/demo/start', { method: 'POST', body: { role } })
-      setDemoToken(a.token)
+      if (!a) a = await api('/demo/start', { method: 'POST', body: { role, brand: demoBrand } })
+      setDemoToken(a.token, demoBrand)
       onSignIn(a)
     } catch (err) {
       setError(err.message)
       setBusy(false)
     }
   }
-  const hasCopy = !!getDemoToken()
+  const hasCopy = !!getDemoToken(demoBrand)
+  const brands = demoInfo?.brands || []
+  const chosen = brands.find((b) => b.key === demoBrand)
+  const ABOUT = {
+    lumio: 'Payroll software. Calm, careful copy: no hype, no promises, every number backed by a fact. 13 drafts.',
+    fizzbox: 'Soft drinks. Loud and playful: "BUY NOW" is welcome, but health claims and anything aimed at kids are not. 5 drafts.',
+  }
   const pick = (k) => {
     setTab(k)
     setError('')
@@ -77,8 +84,9 @@ export default function Login({ onSignIn, signedOut }) {
           issue names the rule it breaks and suggests a fix. People make the final approval.
         </p>
         <p className="mt-6 max-w-md text-sm text-ink/80">
-          The demo uses a fictional brand, Lumio Payroll. All its rules, facts and sample content are made up. Or create
-          your own brand: it is private to you and the teammates you add.
+          Try two fictional demo brands with opposite styles, Lumio Payroll and Fizzbox: paste the same text into both
+          and see each brand's own rules at work. All their rules, facts and content are made up. Or create your own
+          brand: it is private to you and the teammates you add.
         </p>
       </div>
 
@@ -96,13 +104,22 @@ export default function Login({ onSignIn, signedOut }) {
         <div key={tab} className="step-in mt-5">
           {tab === 'demo' && (
             <>
-              <p className="text-sm text-muted">
+              <div role="radiogroup" aria-label="Demo brand" className="grid grid-cols-2 gap-2">
+                {brands.map((b) => (
+                  <button key={b.key} role="radio" aria-checked={demoBrand === b.key} onClick={() => setDemoBrand(b.key)}
+                    className={`rounded-md border-2 p-2.5 text-left transition ${demoBrand === b.key ? 'border-ink bg-ink text-paper' : 'border-line bg-white hover:border-ink'}`}>
+                    <span className="block font-display font-bold">{b.name}</span>
+                    <span className={`block text-xs ${demoBrand === b.key ? 'text-paper/75' : 'text-muted'}`}>{ABOUT[b.key]}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-sm text-muted">
                 {hasCopy
-                  ? 'Carry on in your private copy of the Lumio Payroll demo. Pick who to be; you can switch at any time.'
-                  : 'You get your own private copy of the Lumio Payroll demo: 13 drafts at every stage. Pick who to be; you can switch at any time.'}
+                  ? `Carry on in your private copy of ${chosen?.name || 'the demo'}. Pick who to be; you can switch at any time.`
+                  : `You get your own private copy of ${chosen?.name || 'the demo'}. Pick who to be; you can switch at any time.`}
               </p>
               <div className="mt-3 grid gap-2">
-                {(demoInfo?.accounts || []).map((a) => (
+                {(chosen?.accounts || []).map((a) => (
                   <button key={a.role} disabled={busy} onClick={() => demo(a.role)}
                     className="rounded-md border-2 border-line bg-white p-3 text-left transition hover:border-primary hover:bg-primary-soft disabled:opacity-50">
                     <span className="block font-semibold">{a.name}</span>

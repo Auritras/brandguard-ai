@@ -16,7 +16,20 @@ const SAMPLE = {
     'Hurry, prices go up soon and you will regret missing out. Click here to book a demo.',
 }
 
-export default function NewDraft() {
+// Fizzbox's sample: hype and capitals are on-brand there; the health claim, the children and the
+// calorie number are what its rules catch.
+const FIZZ_SAMPLE = {
+  title: 'Instagram: mango fizz launch',
+  channel: 'Instagram',
+  audience: 'Teens and young adults',
+  purpose: 'Launch the mango flavour and send fans to stores',
+  body:
+    'Our healthy new mango fizz is HERE!! Grab yours NOW. Perfect for kids after school, ' +
+    'and only 30 calories a can. Sugar-free and loved by consumers everywhere.',
+}
+
+export default function NewDraft({ user }) {
+  const sample = user?.demo_key === 'fizzbox' ? FIZZ_SAMPLE : SAMPLE
   const navigate = useNavigate()
   const [form, setForm] = useState({ title: '', channel: 'LinkedIn', audience: '', purpose: '', body: '' })
   const [error, setError] = useState('')
@@ -57,7 +70,7 @@ export default function NewDraft() {
           <h1 className="font-display text-3xl font-bold">New draft</h1>
           <p className="mt-1 text-muted">Paste your content or upload a file. Problems are flagged as you type; the full check runs when you save.</p>
         </div>
-        <Button onClick={() => setForm(SAMPLE)}>Load a sample post</Button>
+        <Button onClick={() => setForm(sample)}>Load a sample post</Button>
       </div>
 
       <Card className="mt-6 p-6">

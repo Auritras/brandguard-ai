@@ -16,11 +16,21 @@ the first page load can take 30 to 60 seconds while it wakes.
 
 ## Try it in two minutes
 
-The demo uses a fictional brand, **Lumio Payroll**. All rules, facts and sample content are made
-up for the demo. On the sign-in page, **Try the demo** and pick a person. You get your own private
+There are two fictional demo brands with opposite styles. All their rules, facts and content are
+made up.
+
+- **Lumio Payroll** (payroll software): calm, careful copy. No hype, no pressure, no shouting, one
+  exclamation mark at most, every number backed by an approved fact.
+- **Fizzbox** (soft drinks): loud and playful. "Grab yours NOW!" and "BUY NOW" are on-brand, but
+  health claims ("healthy", "boosts immunity", "detox"), anything aimed at children and wrong sugar
+  or calorie numbers are high-risk.
+
+Paste the same text into both and each brand's own rules decide what is flagged. On the sign-in
+page, **Try the demo**, pick a brand and a person. You get your own private
 copy of the demo (13 drafts across all channels, at every stage of review), so nothing you do
-affects anyone else. Switch person at any time with **Act as** at the top; **Start over** gives you
-a fresh copy.
+affects anyone else. Switch person at any time with **Act as** at the top, jump to the other brand
+with **Compare with…**, and **Start over** for a fresh copy. (In Fizzbox the three people are
+Kabir, Tara and Neel.)
 
 | Person | Role | What to try |
 |---|---|---|
@@ -170,10 +180,10 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 
 ## Resetting the demo
 
-Visitors work in private copies, so the demo itself never changes. The copies are made from the
-Lumio Payroll demo brand, which this script rebuilds: run it to change or refresh what visitors
-start from (13 drafts across all seven channels and every stage
-of review, history spread over the past twelve days, the original Brand Library), run this from `backend` with the live database address in
+Visitors work in private copies, so the demo brands themselves never change (they are read-only
+except to this script). The copies are made from the two demo brands, which this script rebuilds: run it to change or refresh what visitors
+start from (Lumio: 13 drafts across all seven channels and every stage of review; Fizzbox: 5 drafts;
+, history spread over the past twelve days, the original Brand Library), run this from `backend` with the live database address in
 `backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
 AI findings):
 

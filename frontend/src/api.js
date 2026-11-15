@@ -15,18 +15,19 @@ export function setAuth(auth) {
 }
 
 // The token of this browser's demo copy, kept after signing out so the visitor can carry on.
-export function getDemoToken() {
+// One saved copy per demo brand ('lumio' also reads the key used before there were two brands).
+export function getDemoToken(brand = 'lumio') {
   try {
-    return localStorage.getItem('bg_demo') || ''
+    return localStorage.getItem(`bg_demo_${brand}`) || (brand === 'lumio' ? localStorage.getItem('bg_demo') : '') || ''
   } catch {
     return ''
   }
 }
 
-export function setDemoToken(token) {
+export function setDemoToken(token, brand = 'lumio') {
   try {
-    if (token) localStorage.setItem('bg_demo', token)
-    else localStorage.removeItem('bg_demo')
+    if (token) localStorage.setItem(`bg_demo_${brand}`, token)
+    else localStorage.removeItem(`bg_demo_${brand}`)
   } catch {
     /* private window: each visit starts a fresh copy */
   }
