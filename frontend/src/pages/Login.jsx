@@ -63,8 +63,8 @@ export default function Login({ onSignIn, signedOut }) {
   const brands = demoInfo?.brands || []
   const chosen = brands.find((b) => b.key === demoBrand)
   const ABOUT = {
-    lumio: 'Payroll software. Calm, careful copy: no hype, no promises, every number backed by a fact. 13 drafts.',
-    fizzbox: 'Soft drinks. Loud and playful: "BUY NOW" is welcome, but health claims and anything aimed at kids are not. 5 drafts.',
+    lumio: 'Payroll software. Calm and careful: no hype.',
+    fizzbox: 'Soft drinks. Loud and fun: "BUY NOW" welcome.',
   }
   const pick = (k) => {
     setTab(k)
