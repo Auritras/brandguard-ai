@@ -17,15 +17,16 @@ the first page load can take 30 to 60 seconds while it wakes.
 ## Try it in two minutes
 
 The demo uses a fictional brand, **Lumio Payroll**. All rules, facts and sample content are made
-up for the demo. Sign in with one click as any of the three demo accounts:
+up for the demo. On the sign-in page, **Try the demo** and pick a person. You get your own private
+copy of the demo (13 drafts across all channels, at every stage of review), so nothing you do
+affects anyone else. Switch person at any time with **Act as** at the top; **Start over** gives you
+a fresh copy.
 
-| Account | Role | What to try |
+| Person | Role | What to try |
 |---|---|---|
-| Asha | Creator | New draft → **Load a sample post** → **Save and run check**. Accept a fix, dispute a finding, then **Send for review**. |
-| Rohan | Manager | Open the draft. With a high-risk finding still open, **Approve and escalate** sends it to the brand owner. |
+| Asha | Creator | Open **LinkedIn post: new onboarding** (top of the list). Accept a fix, dispute a finding, then **Send for review**. Or New draft → **Load a sample post**. |
+| Rohan | Manager | Open a draft waiting for you. With a high-risk finding still open, **Approve and escalate** sends it to the brand owner. |
 | Meera | Authorised reviewer (brand owner) | Waive the high-risk finding with a reason, or decide the dispute, then **Approve**. Edit rules, facts and terms in **Brand Library**. |
-
-The demo accounts are shared, so you may see drafts other visitors made.
 
 **Or create your own brand:** on the sign-in page choose **Create a brand**. You become its brand owner,
 its Brand Library starts with sample rules you can change, and on **Team** you add teammates as
@@ -48,6 +49,9 @@ or reports. The demo brand's team is fixed, since every visitor shares it.
   draft that was never sent for review. Deleted drafts are hidden, not erased, so the history stays
   whole.
 - The menu shows how many drafts are waiting for you.
+- **Private demo copies:** every demo visitor gets a copy of the demo brand (accounts, library,
+  drafts, findings, versions, comments and history, duplicated in the database without new AI
+  calls), can switch person inside it, and never sees anyone else's.
 
 **Brand Library** (editable by the brand owner only)
 - Rules with a code, category, severity and optional exact patterns. New rules start as
@@ -126,7 +130,7 @@ AI step was skipped and why. The AI never approves, waives or publishes.
 | Database | PostgreSQL on Supabase (SQLite locally) |
 | AI | Groq API, `openai/gpt-oss-120b`, JSON mode, temperature 0 |
 | Documents | python-docx, pypdf |
-| Tests | pytest (32 tests: auth, exact engine, AI path with a fake model and rate limits, full workflow, insights, live check, brand isolation, teams and account basics) |
+| Tests | pytest (36 tests: auth, exact engine, AI path with a fake model and rate limits, full workflow, insights, live check, brand isolation, teams, account basics and demo copies) |
 | Hosting | Vercel (frontend), Render (backend), Supabase (database), all on free plans |
 
 Passwords are hashed with PBKDF2 (200,000 rounds). Sessions are signed tokens that last 12 hours.
@@ -166,8 +170,9 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 
 ## Resetting the demo
 
-The live demo accounts are shared, so whatever one person does stays for the next. To put the
-Lumio Payroll demo brand back to a clean state (13 drafts across all seven channels and every stage
+Visitors work in private copies, so the demo itself never changes. The copies are made from the
+Lumio Payroll demo brand, which this script rebuilds: run it to change or refresh what visitors
+start from (13 drafts across all seven channels and every stage
 of review, history spread over the past twelve days, the original Brand Library), run this from `backend` with the live database address in
 `backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
 AI findings):
@@ -177,7 +182,8 @@ python -m app.reset_demo --env-file .env
 ```
 
 It shows which database it will change and asks you to type `reset`. Add `--no-ai` for exact
-checks only. The three demo accounts and every brand that people created are kept.
+checks only. Visitors' existing copies are cleared; brands that people created are kept. Copies
+older than a day are also cleared automatically.
 `backend/.env` is ignored by git; never commit it.
 
 ## Repository layout

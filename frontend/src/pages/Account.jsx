@@ -44,8 +44,8 @@ export default function Account({ user }) {
         <h2 className="font-display text-xl font-bold">Change password</h2>
         {user.demo_brand ? (
           <p className="mt-2 text-sm text-muted">
-            Demo accounts share one password with every visitor, so it cannot be changed. Create your own brand from the
-            sign-in page to have an account of your own.
+            Demo people have no password: you reach them from the demo, and switch between them with "Act as" at the
+            top. Create your own brand from the sign-in page to have an account of your own.
           </p>
         ) : (
           <form className="mt-4 grid gap-3" onSubmit={save}>

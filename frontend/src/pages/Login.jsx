@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, getDemoToken, setDemoToken } from '../api.js'
 import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
 
 const ROLE_HELP = {
@@ -21,7 +21,7 @@ export default function Login({ onSignIn, signedOut }) {
   const [tab, setTab] = useState('demo')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [demo, setDemo] = useState(cachedDemo)
+  const [demoInfo, setDemo] = useState(cachedDemo)
   const [form, setForm] = useState({ brand: '', name: '', email: '', password: '' })
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -42,6 +42,23 @@ export default function Login({ onSignIn, signedOut }) {
       setBusy(false)
     }
   }
+  // Try the demo: carry on in this browser's private copy if it still exists, else make a new one.
+  const demo = async (role, fresh = false) => {
+    setBusy(true)
+    setError('')
+    try {
+      let a = null
+      const saved = getDemoToken()
+      if (saved && !fresh) a = await api('/demo/switch', { method: 'POST', body: { role }, token: saved }).catch(() => null)
+      if (!a) a = await api('/demo/start', { method: 'POST', body: { role } })
+      setDemoToken(a.token)
+      onSignIn(a)
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
+  }
+  const hasCopy = !!getDemoToken()
   const pick = (k) => {
     setTab(k)
     setError('')
@@ -79,17 +96,27 @@ export default function Login({ onSignIn, signedOut }) {
         <div key={tab} className="step-in mt-5">
           {tab === 'demo' && (
             <>
-              <p className="text-sm text-muted">Three accounts in the Lumio Payroll demo, one per role. Shared with every visitor.</p>
+              <p className="text-sm text-muted">
+                {hasCopy
+                  ? 'Carry on in your private copy of the Lumio Payroll demo. Pick who to be; you can switch at any time.'
+                  : 'You get your own private copy of the Lumio Payroll demo: 13 drafts at every stage. Pick who to be; you can switch at any time.'}
+              </p>
               <div className="mt-3 grid gap-2">
-                {(demo?.accounts || []).map((a) => (
-                  <button key={a.email} disabled={busy} onClick={() => go('/auth/login', { email: a.email, password: demo.password })}
+                {(demoInfo?.accounts || []).map((a) => (
+                  <button key={a.role} disabled={busy} onClick={() => demo(a.role)}
                     className="rounded-md border-2 border-line bg-white p-3 text-left transition hover:border-primary hover:bg-primary-soft disabled:opacity-50">
                     <span className="block font-semibold">{a.name}</span>
                     <span className="block text-sm text-muted">{ROLE_HELP[a.role]}</span>
                   </button>
                 ))}
-                {!demo && !error && <p className="text-sm text-muted">Loading demo accounts… the free server can take up to a minute to wake.</p>}
+                {!demoInfo && !error && <p className="text-sm text-muted">Loading demo accounts… the free server can take up to a minute to wake.</p>}
+                {busy && <p role="status" className="text-sm text-muted">Setting up your copy…</p>}
               </div>
+              {hasCopy && (
+                <button className="mt-3 text-sm font-semibold text-primary hover:underline" disabled={busy} onClick={() => demo('creator', true)}>
+                  Start a fresh copy instead
+                </button>
+              )}
             </>
           )}
 

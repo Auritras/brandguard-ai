@@ -48,7 +48,9 @@ export default function Team({ user }) {
       </p>
       {user.demo_brand && (
         <p className="mt-3 rounded-md bg-primary-soft px-3 py-2 text-sm text-primary-deep">
-          This is the shared demo brand, so its team is fixed. Create your own brand from the sign-in page to add people.
+          {user.sandbox
+            ? 'This is your demo copy, so its team is fixed. Use "Act as" at the top to be someone else, or create your own brand from the sign-in page to add people.'
+            : 'This is the demo brand, so its team is fixed. Create your own brand from the sign-in page to add people.'}
         </p>
       )}
 

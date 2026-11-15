@@ -14,10 +14,29 @@ export function setAuth(auth) {
   else localStorage.removeItem('bg_auth')
 }
 
-export async function api(path, { method = 'GET', body, file } = {}) {
+// The token of this browser's demo copy, kept after signing out so the visitor can carry on.
+export function getDemoToken() {
+  try {
+    return localStorage.getItem('bg_demo') || ''
+  } catch {
+    return ''
+  }
+}
+
+export function setDemoToken(token) {
+  try {
+    if (token) localStorage.setItem('bg_demo', token)
+    else localStorage.removeItem('bg_demo')
+  } catch {
+    /* private window: each visit starts a fresh copy */
+  }
+}
+
+export async function api(path, { method = 'GET', body, file, token } = {}) {
   const headers = {}
-  const auth = getAuth()
-  if (auth?.token) headers.Authorization = `Bearer ${auth.token}`
+  const auth = token ? null : getAuth()
+  if (token) headers.Authorization = `Bearer ${token}`
+  else if (auth?.token) headers.Authorization = `Bearer ${auth.token}`
   let payload
   if (file) {
     payload = new FormData()
