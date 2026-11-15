@@ -71,7 +71,7 @@ export default function App() {
   const [demoBusy, setDemoBusy] = useState('') // 'switch' | 'restart' while the server works
   const [demoNote, setDemoNote] = useState('')
   const switchTo = async (path, role, note, brand) => {
-    setDemoBusy(path.endsWith('start') ? 'restart' : 'switch')
+    setDemoBusy(brand ? 'compare' : path.endsWith('start') ? 'restart' : 'switch')
     setDemoNote('')
     try {
       let a = null
@@ -151,7 +151,7 @@ export default function App() {
           onRestart={() => switchTo('/demo/start', user.role, 'Fresh copy ready: everything is back to the start.')}
           onCompare={(brand) => switchTo('/demo/switch', user.role, '', brand)} />
       )}
-      <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none">
+      <main id="main" aria-busy={!!demoBusy} className={`${demoBusy ? 'pointer-events-none opacity-50' : ''} transition-opacity duration-300 mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none`}>
         {/* Each screen fades up when you move to it; filters on the same screen do not count. */}
         <div key={location.pathname} className="page-in">
         <Routes>
@@ -195,15 +195,21 @@ function DemoBar({ user, busy, note, onSwitch, onRestart, onCompare }) {
             </button>
           ))}
         </div>
-        <button disabled={!!busy} onClick={() => onCompare(other)} className="font-semibold text-primary hover:underline"
-          title="The same person's role in the other demo brand, with its own rules">
-          Compare with {DEMO_BRANDS[other]} →
-        </button>
+        {busy === 'compare' ? (
+          <span role="status" className="flex items-center gap-2 font-semibold text-primary">
+            <span aria-hidden="true" className="spinner" /> Opening {DEMO_BRANDS[other]}…
+          </span>
+        ) : (
+          <button disabled={!!busy} onClick={() => onCompare(other)} className="font-semibold text-primary hover:underline"
+            title="The same role in the other demo brand, with its own rules">
+            Compare with {DEMO_BRANDS[other]} →
+          </button>
+        )}
         <div className="ml-auto flex items-center gap-2" aria-live="polite">
-          {busy === 'switch' && <span className="text-muted">Switching…</span>}
+          {busy === 'switch' && <span role="status" className="flex items-center gap-2 font-semibold text-accent-deep"><span aria-hidden="true" className="spinner" /> Switching…</span>}
           {note && !busy && <span role="status" className="font-semibold text-accent-deep">{note}</span>}
           {busy === 'restart' ? (
-            <span className="rounded-md border-2 border-ink bg-ink px-2.5 py-1 font-semibold text-paper">Making a fresh copy…</span>
+            <span role="status" className="flex items-center gap-2 rounded-md border-2 border-ink bg-ink px-2.5 py-1 font-semibold text-paper"><span aria-hidden="true" className="spinner" /> Making a fresh copy…</span>
           ) : confirm ? (
             <>
               <span className="text-muted">Lose your changes?</span>
