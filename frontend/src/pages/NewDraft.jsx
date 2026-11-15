@@ -24,8 +24,11 @@ const FIZZ_SAMPLE = {
   audience: 'Teens and young adults',
   purpose: 'Launch the mango flavour and send fans to stores',
   body:
-    'Our healthy new mango fizz is HERE!! Grab yours NOW. Perfect for kids after school, ' +
-    'and only 30 calories a can. Sugar-free and loved by consumers everywhere.',
+    "Big news, fizz fam!! Our healthy new mango fizz is HERE and it's the tastiest drink in India. Grab yours NOW.\n\n" +
+    "Only 30 calories a can, so it's basically guilt-free. It boosts immunity too, and it's perfect for kids after school. " +
+    'Sugar-free fans, we have you covered.\n\n' +
+    'Way better than SodaCo, and loved by consumers everywhere. Please be advised that stock is limited. ' +
+    'Click here to find a store.',
 }
 
 export default function NewDraft({ user }) {

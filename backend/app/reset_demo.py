@@ -89,8 +89,11 @@ FESTIVE_POST = (
 # Fizzbox: the loud, playful drinks brand. Calls to action in capitals are fine here; health claims
 # and anything aimed at children are not.
 FIZZ_LAUNCH = (
-    "Our healthy new mango fizz is HERE!! Grab yours NOW. Perfect for kids after school, "
-    "and only 30 calories a can."
+    "Big news, fizz fam!! Our healthy new mango fizz is HERE and it's the tastiest drink in India. Grab yours NOW.\n\n"
+    "Only 30 calories a can, so it's basically guilt-free. It boosts immunity too, and it's perfect for kids after school. "
+    "Sugar-free fans, we have you covered.\n\n"
+    "Way better than SodaCo, and loved by consumers everywhere. Please be advised that stock is limited. "
+    "Click here to find a store."
 )
 FIZZ_BILLBOARD = "Zero sugar. Full fizz. 0 g sugar in every can of Fizzbox Zero. BUY NOW!"
 FIZZ_WELCOME = (
@@ -379,8 +382,8 @@ def main() -> None:
         d = new("Advertisement: cricket season", "Advertisement", "Cricket fans", "Push sales during the cricket season", FIZZ_CRICKET)
         timeline[d["id"]] = (0.3, 0.25)
 
-        # With Kabir: checked, nothing handled yet. Same kind of hype that Lumio flags, but here only the
-        # health claim, the children and the wrong calorie number are problems.
+        # With Kabir: checked, nothing handled yet. The richest one to try: hype that Lumio would flag is
+        # fine here, but health claims, children, a competitor, the calorie number and stiff wording are not.
         d = new("Instagram: summer launch", "Instagram", "Teens and young adults", "Launch the mango flavour", FIZZ_LAUNCH)
         timeline[d["id"]] = (0.1, 0.05)
 
@@ -409,7 +412,12 @@ def main() -> None:
                 obj.created_at = t
             draft = db.get(models.Draft, draft_id)
             draft.created_at, draft.updated_at = start, end
+        # A visitor who started a demo while this script was running got a half-built copy: clear it,
+        # so their next click makes a complete one.
+        late = clear_old_sandboxes(db, timedelta(0))
         db.commit()
+        if late:
+            print(f"Copies made during the reset cleared: {late}.")
 
         for key, brand_id in template_ids.items():
             print(f"\nDemo drafts, {TEMPLATES[key][0]}:")
