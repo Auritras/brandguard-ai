@@ -14,6 +14,7 @@ past few days so the times read naturally. The three demo accounts are kept.
 import argparse
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 
@@ -147,6 +148,8 @@ def main() -> None:
             r = c.request(method, f"/api{path}", headers=headers, json=body or None)
             if r.status_code >= 400:
                 raise RuntimeError(f"{method} {path} failed: {r.status_code} {r.text}")
+            if AI_API_KEY and path.endswith("/check"):
+                time.sleep(5)  # stay inside the AI provider's free per-minute limit
             return r.json()
 
         def new(title, channel, audience, purpose, body):
