@@ -47,8 +47,8 @@ def _copy(db: Session, rows, shift, **remap) -> dict:
     return {old: new.id for old, new in pairs}
 
 
-def create_sandbox(db: Session) -> Brand:
-    template = demo_brand(db)
+def create_sandbox(db: Session, key: str = "lumio") -> Brand:
+    template = demo_brand(db, key)
     t = template.id
     drafts = db.query(Draft).filter(Draft.brand_id == t, Draft.deleted_at.is_(None)).order_by(Draft.id).all()
     draft_ids = [d.id for d in drafts]

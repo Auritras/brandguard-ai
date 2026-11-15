@@ -69,38 +69,105 @@ TERMS = [
 ]
 
 
-DEMO_BRAND = "Lumio Payroll"
+# ---------------------------------------------------------------------------------------------
+# A second, contrasting demo brand: FICTIONAL "Fizzbox", a playful soft-drinks company. Where Lumio
+# wants calm, plain copy, Fizzbox wants loud and fun: short calls to action like "Buy NOW" and
+# exclamation marks are on-brand. Its strict side is health claims and children.
+
+FIZZ_USERS = [
+    ("Kabir (Creator)", "creator@fizzbox.test", "creator"),
+    ("Tara (Manager)", "manager@fizzbox.test", "manager"),
+    ("Neel (Brand owner)", "reviewer@fizzbox.test", "reviewer"),
+]
+
+FIZZ_RULES = [
+    ("R-001", "tone", "Loud, playful, friendly",
+     "Write like a friend who is excited: short, upbeat and fun. Urgency and calls to action such as "
+     "'Buy NOW' or 'Grab yours today!' are welcome. Do not sound like a corporate notice.",
+     "medium", ""),
+    ("R-002", "tone", "No stiff corporate wording",
+     "Avoid formal or legal-sounding words such as 'utilise', 'hereby', 'kindly', 'please be advised' and 'leverage'.",
+     "low", "\n".join([r"\butili[sz]e[sd]?\b", r"\bhereby\b", r"\bkindly\b", r"\bplease be advised\b", r"\bleverag(e|es|ed|ing)\b"])),
+    ("R-003", "claims", "No health claims",
+     "Never say or suggest a drink is healthy or has health effects: no 'healthy', 'boosts immunity', 'detox', "
+     "'guilt-free' or 'good for you'.",
+     "high", "\n".join([r"\bhealthy\b", r"\bboosts? (?:your )?immun\w*", r"\bdetox\w*", r"\bguilt[- ]free\b", r"\bgood for you\b"])),
+    ("R-004", "claims", "Sugar and calorie numbers need an approved fact",
+     "Any number about sugar, calories or ingredients must match an approved fact.",
+     "high", ""),
+    ("R-005", "messaging", "Never aimed at children",
+     "Do not target or show children under 13; Fizzbox is marketed to teens and adults.",
+     "high", ""),
+    ("R-006", "accessibility", "Caps for short calls to action only",
+     "Capitals are fine for a short call to action (up to four words, like 'BUY NOW'). Longer runs of capitals are hard to read.",
+     "low", r"\b[A-Z]{2,}(?:\s+[A-Z]+){4,}\b"),
+    ("R-007", "accessibility", "Descriptive links",
+     "Link text must say where the link goes. Do not use 'click here' or 'read more' on their own.",
+     "medium", "\n".join([r"\bclick here\b", r"\bread more\b"])),
+    ("R-008", "messaging", "Respect competitors",
+     "Do not name or mock other drinks brands.",
+     "high", ""),
+]
+
+FIZZ_FACTS = [
+    ("F-001", "Fizzbox Zero has 0 g sugar per can.", "sugar", "0", "Product label, 2026", date(2027, 12, 31)),
+    ("F-002", "Each 330 ml can of Fizzbox Classic has 45 calories.", "calories,kcal", "45", "Nutrition panel, 2026", date(2027, 12, 31)),
+    ("F-003", "Fizzbox is sold in 1,200 stores across India.", "stores,shops", "1,200", "Distribution report, Q3 2026", date(2027, 3, 31)),
+]
+
+FIZZ_TERMS = [
+    ("beverage", "drink", "We say drink."),
+    ("consumers", "fans", "The people who buy Fizzbox are our fans."),
+    ("customers", "fans", "The people who buy Fizzbox are our fans."),
+    ("sugar-free", "zero sugar", "Matches the label."),
+]
+
+# Every demo brand: key -> (brand name, people, rules, facts, terms)
+TEMPLATES = {
+    "lumio": ("Lumio Payroll", USERS, RULES, FACTS, TERMS),
+    "fizzbox": ("Fizzbox", FIZZ_USERS, FIZZ_RULES, FIZZ_FACTS, FIZZ_TERMS),
+}
+DEMO_BRAND = TEMPLATES["lumio"][0]
 
 
-def demo_brand(db: Session) -> Brand:
-    brand = db.query(Brand).filter_by(demo=True).first()
+def template_key(name: str) -> str:
+    return next((k for k, t in TEMPLATES.items() if t[0] == name), "lumio")
+
+
+def demo_brand(db: Session, key: str = "lumio") -> Brand:
+    """The read-only template a demo brand's visitor copies are made from."""
+    name = TEMPLATES[key][0]
+    brand = db.query(Brand).filter_by(demo=True, name=name).first()
     if brand is None:
-        brand = Brand(name=DEMO_BRAND, demo=True)
+        brand = Brand(name=name, demo=True)
         db.add(brand)
         db.flush()
     return brand
 
 
-def seed_library(db: Session, brand_id: int) -> None:
-    """A starter Brand Library: the demo brand's rules, facts and terms, which the owner then edits."""
-    for code, cat, title, text, sev, patterns in RULES:
+def seed_library(db: Session, brand_id: int, key: str = "lumio") -> None:
+    """A Brand Library from a template: rules, facts and terms, which the owner then edits."""
+    _name, _users, rules, facts, terms = TEMPLATES[key]
+    for code, cat, title, text, sev, patterns in rules:
         db.add(Rule(brand_id=brand_id, code=code, category=cat, title=title, text=text, severity=sev, patterns=patterns))
-    for code, statement, keywords, value, source, until in FACTS:
+    for code, statement, keywords, value, source, until in facts:
         db.add(Fact(brand_id=brand_id, code=code, statement=statement, keywords=keywords, value=value,
                     source=source, valid_until=until))
-    for banned, preferred, note in TERMS:
+    for banned, preferred, note in terms:
         db.add(Term(brand_id=brand_id, banned=banned, preferred=preferred, note=note))
 
 
 def seed(db: Session) -> None:
-    brand = demo_brand(db)
-    # Anything made before brands existed belongs to the demo brand.
+    lumio = demo_brand(db)
+    # Anything made before brands existed belongs to the Lumio demo brand.
     for model in (User, Rule, Fact, Term, Draft, AuditLog):
         if db.query(model.id).filter(model.brand_id.is_(None)).first():  # write only when needed
-            db.execute(update(model).where(model.brand_id.is_(None)).values(brand_id=brand.id))
-    for name, email, role in USERS:
-        if db.query(User).filter_by(email=email).first() is None:
-            db.add(User(brand_id=brand.id, name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))
-    if db.query(Rule).filter_by(brand_id=brand.id).count() == 0:
-        seed_library(db, brand.id)
+            db.execute(update(model).where(model.brand_id.is_(None)).values(brand_id=lumio.id))
+    for key, (_name, users, *_rest) in TEMPLATES.items():
+        brand = demo_brand(db, key)
+        for name, email, role in users:
+            if db.query(User).filter_by(email=email).first() is None:
+                db.add(User(brand_id=brand.id, name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))
+        if db.query(Rule).filter_by(brand_id=brand.id).count() == 0:
+            seed_library(db, brand.id, key)
     db.commit()

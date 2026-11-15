@@ -10,7 +10,7 @@ from ..auth import current_user, hash_password, make_token, require, verify_pass
 from ..db import get_db
 from ..models import AuditLog, Brand, Draft, User
 from ..sandbox import clear_old_sandboxes, create_sandbox
-from ..seed import seed_library
+from ..seed import TEMPLATES, seed_library, template_key
 from .common import log
 
 router = APIRouter(prefix="/api", tags=["accounts"])
@@ -46,6 +46,7 @@ class PasswordIn(BaseModel):
 def user_out(u: User) -> dict:
     return {"id": u.id, "name": u.name, "email": u.email, "role": u.role,
             "brand": u.brand.name if u.brand else "",
+            "demo_key": template_key(u.brand.name) if u.brand and (u.brand.demo or u.brand.sandbox) else "",
             "demo_brand": bool(u.brand and (u.brand.demo or u.brand.sandbox)),
             "sandbox": bool(u.brand and u.brand.sandbox)}
 
@@ -167,6 +168,7 @@ def onboarding(db: Session = Depends(get_db), user: User = Depends(current_user)
 
 class DemoIn(BaseModel):
     role: str
+    brand: str = "lumio"  # which demo brand to copy (see seed.TEMPLATES)
 
 
 @router.post("/demo/start")
@@ -174,8 +176,10 @@ def start_demo(body: DemoIn, db: Session = Depends(get_db)):
     """A fresh private copy of the demo, signed in as the chosen role."""
     if body.role not in ROLES:
         raise HTTPException(422, "Role must be creator, manager or reviewer.")
+    if body.brand not in TEMPLATES:
+        raise HTTPException(422, f"Demo brand must be one of: {', '.join(TEMPLATES)}.")
     clear_old_sandboxes(db)
-    brand = create_sandbox(db)
+    brand = create_sandbox(db, body.brand)
     user = db.query(User).filter(User.brand_id == brand.id, User.role == body.role).first()
     log(db, user, "demo_started")
     db.commit()

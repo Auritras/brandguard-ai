@@ -82,3 +82,30 @@ def test_demo_template_is_read_only_outside_the_reset(client, creator, monkeypat
     # Copies are unaffected.
     me, _ = start(client, "creator")
     assert client.post("/api/drafts", headers=me, json={"title": "Fine", "body": "Hi."}).status_code == 200
+
+
+def test_same_text_is_judged_by_each_brands_own_rules(client):
+    lumio, _ = start(client, "creator")
+    fizz_r = client.post("/api/demo/start", json={"role": "creator", "brand": "fizzbox"})
+    assert fizz_r.status_code == 200 and fizz_r.json()["user"]["brand"] == "Fizzbox"
+    fizz = {"Authorization": "Bearer " + fizz_r.json()["token"]}
+
+    hype = "Big news!! Grab yours NOW. Our healthy new drink is here for our customers."
+    at_lumio = {f["ref_code"] for f in client.post("/api/check-text", headers=lumio, json={"body": hype}).json()}
+    at_fizz = {f["ref_code"] for f in client.post("/api/check-text", headers=fizz, json={"body": hype}).json()}
+    assert "R-007" in at_lumio          # Lumio: one exclamation mark at most
+    assert "R-003" in at_fizz           # Fizzbox: "healthy" is a health claim
+    assert "TERM" in at_fizz            # Fizzbox says fans, not customers
+    assert "R-003" not in at_lumio      # Lumio has no health rule ("healthy" is fine there)
+    # Fizzbox welcomes short calls to action in capitals, but not long shouting.
+    shout = {f["ref_code"] for f in client.post("/api/check-text", headers=fizz, json={"body": "BUY NOW!"}).json()}
+    assert shout == set()
+    long_shout = {f["ref_code"] for f in client.post("/api/check-text", headers=fizz, json={"body": "THIS IS THE BEST SUMMER EVER"}).json()}
+    assert "R-006" in long_shout
+
+
+def test_demo_brands_are_listed_and_unknown_ones_refused(client):
+    brands = client.get("/api/health").json()["demo"]["brands"]
+    assert [b["name"] for b in brands] == ["Lumio Payroll", "Fizzbox"]
+    assert [a["name"] for a in brands[1]["accounts"]] == ["Kabir (Creator)", "Tara (Manager)", "Neel (Brand owner)"]
+    assert client.post("/api/demo/start", json={"role": "creator", "brand": "nope"}).status_code == 422

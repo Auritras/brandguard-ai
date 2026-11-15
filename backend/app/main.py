@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from . import models  # noqa: F401  (registers tables)
 from .auth import current_user, make_token, verify_password
 from .config import AI_API_KEY, AI_MODEL, AI_PROVIDER_NAME, CORS_ORIGINS
-from .seed import USERS as DEMO_USERS
+from .seed import TEMPLATES
 from .db import Base, SessionLocal, engine, get_db
 from .models import User
 from .seed import seed
@@ -56,7 +56,9 @@ def health():
     return {
         "ok": True, "ai_enabled": bool(AI_API_KEY), "ai_provider": AI_PROVIDER_NAME, "ai_model": AI_MODEL,
         # The demo's three people, for the sign-in page. Visitors get a private copy, never these accounts.
-        "demo": {"accounts": [{"name": n, "role": r} for n, _e, r in DEMO_USERS]},
+        "demo": {"accounts": [{"name": n, "role": r} for n, _e, r in TEMPLATES["lumio"][1]],
+                 "brands": [{"key": k, "name": t[0], "accounts": [{"name": n, "role": r} for n, _e, r in t[1]]}
+                            for k, t in TEMPLATES.items()]},
     }
 
 

@@ -86,6 +86,27 @@ FESTIVE_POST = (
 )
 
 
+# Fizzbox: the loud, playful drinks brand. Calls to action in capitals are fine here; health claims
+# and anything aimed at children are not.
+FIZZ_LAUNCH = (
+    "Our healthy new mango fizz is HERE!! Grab yours NOW. Perfect for kids after school, "
+    "and only 30 calories a can."
+)
+FIZZ_BILLBOARD = "Zero sugar. Full fizz. 0 g sugar in every can of Fizzbox Zero. BUY NOW!"
+FIZZ_WELCOME = (
+    "Hey, welcome to the Fizzbox crew! Your first can is on us at any of our 1,200 stores. "
+    "Grab it TODAY and tell us your favourite flavour."
+)
+FIZZ_ABOUT = (
+    "Fizzbox is a refreshing beverage that boosts immunity and helps you detox. "
+    "Loved by consumers across India."
+)
+FIZZ_BLOG = (
+    "Please be advised that we hereby utilise natural fruit flavours in all of our drinks. "
+    "Read more."
+)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env-file", help="read DATABASE_URL (and GROQ_API_KEY) from this file")
@@ -105,36 +126,26 @@ def main() -> None:
     from .db import Base, SessionLocal, engine
     from .main import app
     from .migrate import migrate
-    from .sandbox import clear_old_sandboxes
-    from .seed import demo_brand, seed, seed_library
+    from .sandbox import clear_old_sandboxes, delete_brand_data
+    from .seed import TEMPLATES, demo_brand, seed, seed_library
 
     target = engine.url.render_as_string(hide_password=True)
     print(f"Database: {target}")
     print(f"AI checks: {'on' if AI_API_KEY else 'off'}")
-    if not args.yes and input('This deletes every draft in the Lumio Payroll demo brand, restores its Brand Library and '
-                              "clears visitors' demo copies. Brands people created are not touched. "
+    if not args.yes and input('This deletes every draft in the demo brands (Lumio Payroll and Fizzbox), restores their '
+                              "Brand Libraries and clears visitors' demo copies. Brands people created are not touched. "
                               'Type "reset" to go on: ').strip() != "reset":
         sys.exit("Nothing changed.")
 
-    # 1. Empty the demo brand's drafts and library; keep its accounts and every other brand.
+    # 1. Empty each demo brand's drafts and library; keep their accounts and every other brand.
     Base.metadata.create_all(engine)
     migrate(engine)
     with SessionLocal() as db:
         seed(db)
-        brand_id = demo_brand(db).id
-        draft_ids = [d for (d,) in db.query(models.Draft.id).filter(models.Draft.brand_id == brand_id)]
-        if draft_ids:
-            finding_ids = [f for (f,) in db.query(models.Finding.id).filter(models.Finding.draft_id.in_(draft_ids))]
-            db.query(models.Comment).filter(models.Comment.draft_id.in_(draft_ids)).delete(synchronize_session=False)
-            if finding_ids:
-                db.query(models.Comment).filter(models.Comment.finding_id.in_(finding_ids)).delete(synchronize_session=False)
-            for model in (models.Finding, models.ReviewRun, models.DraftVersion, models.AuditLog):
-                db.query(model).filter(model.draft_id.in_(draft_ids)).delete(synchronize_session=False)
-            db.query(models.Draft).filter(models.Draft.id.in_(draft_ids)).delete(synchronize_session=False)
-        db.query(models.AuditLog).filter(models.AuditLog.brand_id == brand_id).delete(synchronize_session=False)
-        for model in (models.Rule, models.Fact, models.Term):
-            db.query(model).filter(model.brand_id == brand_id).delete(synchronize_session=False)
-        seed_library(db, brand_id)
+        template_ids = {key: demo_brand(db, key).id for key in TEMPLATES}
+        for key, brand_id in template_ids.items():
+            delete_brand_data(db, brand_id, keep_users=True)
+            seed_library(db, brand_id, key)
         cleared = clear_old_sandboxes(db, timedelta(0))  # copies of the old demo are out of date
         db.commit()
     print(f"Visitors' demo copies cleared: {cleared}.")
@@ -142,8 +153,9 @@ def main() -> None:
 
     # 2. Build the drafts through the real API.
     with TestClient(app) as c:
-        def who(role):
-            r = c.post("/api/auth/login", json={"email": f"{role}@brandguard.test", "password": DEMO_PASSWORD})
+        def who(role, key="lumio"):
+            email = next(e for _n, e, r in TEMPLATES[key][1] if r == role)
+            r = c.post("/api/auth/login", json={"email": email, "password": DEMO_PASSWORD})
             r.raise_for_status()
             return {"Authorization": "Bearer " + r.json()["token"]}
 
@@ -284,6 +296,40 @@ def main() -> None:
                 "Announce the faster onboarding and get sign-ups for a demo", LINKEDIN)
         timeline[d["id"]] = (0.1, 0.05)
 
+        # Fizzbox. The helpers above act as whoever these three names point at, so point them at
+        # Fizzbox's people: Kabir writes, Tara manages, Neel owns the brand.
+        asha, rohan, meera = who("creator", "fizzbox"), who("manager", "fizzbox"), who("reviewer", "fizzbox")
+
+        d = new("Email: fan club welcome", "Email", "New Fizzbox fans", "Welcome new fans and send them to a store", FIZZ_WELCOME)
+        d = recheck_and_submit(d)
+        d = approve_fully(d, "Store count matches the approved fact.")
+        timeline[d["id"]] = (5, 4.5)
+
+        d = new("Website: about us", "Website", "Visitors to the website", "Say what Fizzbox is", FIZZ_ABOUT)
+        d = accept(d, "TERM", "beverage")
+        d = accept(d, "TERM", "consumers")
+        d = dispute(d, "R-003", "Each can has vitamin C, which supports normal immune function. Legal is checking the wording.")
+        d = recheck_and_submit(d)
+        call("POST", f"/drafts/{d['id']}/comments", rohan, text="Health wording is Neel's call.")
+        d = call("POST", f"/drafts/{d['id']}/approve", rohan)
+        timeline[d["id"]] = (3, 2.5)
+
+        d = new("Blog: how we make our fizz", "Blog", "Fans who like to know what is inside",
+                "Explain the natural flavours", FIZZ_BLOG)
+        d = recheck_and_submit(d)
+        d = call("POST", f"/drafts/{d['id']}/request-changes", rohan,
+                 note="Way too formal for us. Make it sound like a friend, and name the link.")
+        timeline[d["id"]] = (2, 1.5)
+
+        d = new("Advertisement: zero sugar billboard", "Advertisement", "Commuters", "Launch Fizzbox Zero", FIZZ_BILLBOARD)
+        d = recheck_and_submit(d)
+        timeline[d["id"]] = (1, 0.7)
+
+        # With Kabir: checked, nothing handled yet. Same kind of hype that Lumio flags, but here only the
+        # health claim, the children and the wrong calorie number are problems.
+        d = new("Instagram: summer launch", "Instagram", "Teens and young adults", "Launch the mango flavour", FIZZ_LAUNCH)
+        timeline[d["id"]] = (0.1, 0.05)
+
     # 3. Spread each draft's history over its days, in the order things happened.
     now = datetime.now(timezone.utc)
     with SessionLocal() as db:
@@ -311,9 +357,10 @@ def main() -> None:
             draft.created_at, draft.updated_at = start, end
         db.commit()
 
-        print("\nDemo drafts:")
-        for d in db.query(models.Draft).filter(models.Draft.brand_id == brand_id).order_by(models.Draft.updated_at.desc()):
-            print(f"  {d.id}. {d.title}  ->  {d.status}")
+        for key, brand_id in template_ids.items():
+            print(f"\nDemo drafts, {TEMPLATES[key][0]}:")
+            for d in db.query(models.Draft).filter(models.Draft.brand_id == brand_id).order_by(models.Draft.updated_at.desc()):
+                print(f"  {d.id}. {d.title}  ->  {d.status}")
 
 
 if __name__ == "__main__":
