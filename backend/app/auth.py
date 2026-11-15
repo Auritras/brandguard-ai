@@ -5,10 +5,11 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from . import config
 from .config import JWT_HOURS, JWT_SECRET
 from .db import get_db
 from .models import User
@@ -37,7 +38,7 @@ def make_token(user: User) -> str:
 
 
 def current_user(
-    creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)
+    request: Request, creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)
 ) -> User:
     if creds is None:
         raise HTTPException(401, "Sign in first.")
@@ -48,6 +49,9 @@ def current_user(
     user = db.get(User, user_id)
     if user is None or user.active is False:
         raise HTTPException(401, "This account is no longer active. Ask your brand owner.")
+    # The demo template is read-only: visitors work in their own copies (see sandbox.py).
+    if request.method not in ("GET", "HEAD") and user.brand and user.brand.demo and not config.TEMPLATE_WRITES:
+        raise HTTPException(403, "The demo template cannot be changed. Use Try the demo on the sign-in page for your own copy.")
     return user
 
 

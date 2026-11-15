@@ -96,6 +96,7 @@ def main() -> None:
         load_env_file(args.env_file)
     if args.no_ai:
         os.environ["GROQ_API_KEY"] = ""
+    os.environ["BRANDGUARD_TEMPLATE_WRITES"] = "1"  # only this script may change the demo template
 
     # Imported only now, so the settings above are in place first.
     from fastapi.testclient import TestClient

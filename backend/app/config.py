@@ -19,5 +19,9 @@ AI_PROVIDER_NAME = os.getenv("AI_PROVIDER_NAME", "Groq")
 
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
 
+# The demo brand is the template every visitor's private copy is made from. It is read-only, except
+# for the reset script, which sets this to rebuild it.
+TEMPLATE_WRITES = os.getenv("BRANDGUARD_TEMPLATE_WRITES") == "1"
+
 # Password for the three seeded demo accounts (shown on the login screen on purpose).
 DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "brandguard-demo")

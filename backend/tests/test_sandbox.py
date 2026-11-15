@@ -68,3 +68,17 @@ def test_old_copies_are_cleared(client):
         db.commit()
         assert cleared >= 1 and db.query(Brand).filter(Brand.sandbox.is_(True)).count() == 0
     assert client.get("/api/drafts", headers=me).status_code == 401
+
+
+def test_demo_template_is_read_only_outside_the_reset(client, creator, monkeypatch):
+    from app import config
+
+    d = client.post("/api/drafts", headers=creator, json={"title": "Before lock", "body": "Hello."}).json()
+    monkeypatch.setattr(config, "TEMPLATE_WRITES", False)
+    assert client.get(f"/api/drafts/{d['id']}", headers=creator).status_code == 200  # reading still works
+    r = client.post(f"/api/drafts/{d['id']}/check", headers=creator)
+    assert r.status_code == 403 and "Try the demo" in r.json()["detail"]
+    assert client.post("/api/drafts", headers=creator, json={"title": "Blocked", "body": "Hi."}).status_code == 403
+    # Copies are unaffected.
+    me, _ = start(client, "creator")
+    assert client.post("/api/drafts", headers=me, json={"title": "Fine", "body": "Hi."}).status_code == 200
