@@ -68,13 +68,23 @@ export default function App() {
   }
 
   // Inside a demo copy: become someone else in the same copy, or start a new copy.
-  const switchTo = async (path, role) => {
+  const [demoBusy, setDemoBusy] = useState('') // 'switch' | 'restart' while the server works
+  const [demoNote, setDemoNote] = useState('')
+  const switchTo = async (path, role, note) => {
+    setDemoBusy(path.endsWith('start') ? 'restart' : 'switch')
+    setDemoNote('')
     try {
       const a = await api(path, { method: 'POST', body: { role } })
       setDemoToken(a.token)
       signIn(a)
-    } catch {
-      /* the bar stays as it was; the next click tries again */
+      if (note) {
+        setDemoNote(note)
+        setTimeout(() => setDemoNote(''), 6000)
+      }
+    } catch (e) {
+      setDemoNote(e.message)
+    } finally {
+      setDemoBusy('')
     }
   }
 
@@ -126,7 +136,12 @@ export default function App() {
           </div>
         </div>
       </header>
-      {user.sandbox && <DemoBar user={user} onSwitch={(role) => switchTo('/demo/switch', role)} onRestart={() => switchTo('/demo/start', user.role)} />}
+      {user.sandbox && (
+        // Keyed by the copy's account, so the bar starts closed in a new copy.
+        <DemoBar key={user.email} user={user} busy={demoBusy} note={demoNote}
+          onSwitch={(role) => switchTo('/demo/switch', role)}
+          onRestart={() => switchTo('/demo/start', user.role, 'Fresh copy ready: everything is back to the start.')} />
+      )}
       <main id="main" className="mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none">
         {/* Each screen fades up when you move to it; filters on the same screen do not count. */}
         <div key={location.pathname} className="page-in">
@@ -154,7 +169,7 @@ const DEMO_PEOPLE = [
 ]
 
 // A slim bar for demo visitors: whose shoes they are in, and one click to be someone else.
-function DemoBar({ user, onSwitch, onRestart }) {
+function DemoBar({ user, busy, note, onSwitch, onRestart }) {
   const [confirm, setConfirm] = useState(false)
   return (
     <div className="border-b-2 border-ink bg-accent-soft print:hidden">
@@ -163,21 +178,25 @@ function DemoBar({ user, onSwitch, onRestart }) {
         <div role="group" aria-label="Act as" className="flex flex-wrap items-center gap-1">
           <span className="mr-1 text-muted">Act as</span>
           {DEMO_PEOPLE.map(([role, name, label]) => (
-            <button key={role} onClick={() => role !== user.role && onSwitch(role)} aria-pressed={role === user.role}
+            <button key={role} disabled={!!busy} onClick={() => role !== user.role && onSwitch(role)} aria-pressed={role === user.role}
               className={`rounded-md border-2 px-2.5 py-1 font-semibold transition ${role === user.role ? 'border-ink bg-ink text-paper' : 'border-ink/20 bg-white hover:border-ink'}`}>
               {name} <span className={role === user.role ? 'text-paper/70' : 'text-muted'}>· {label}</span>
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          {confirm ? (
+        <div className="ml-auto flex items-center gap-2" aria-live="polite">
+          {busy === 'switch' && <span className="text-muted">Switching…</span>}
+          {note && !busy && <span role="status" className="font-semibold text-accent-deep">{note}</span>}
+          {busy === 'restart' ? (
+            <span className="rounded-md border-2 border-ink bg-ink px-2.5 py-1 font-semibold text-paper">Making a fresh copy…</span>
+          ) : confirm ? (
             <>
               <span className="text-muted">Lose your changes?</span>
-              <button className="rounded-md border-2 border-ink bg-ink px-2.5 py-1 font-semibold text-paper" onClick={onRestart}>Start over</button>
+              <button className="rounded-md border-2 border-ink bg-ink px-2.5 py-1 font-semibold text-paper" disabled={!!busy} onClick={onRestart}>Start over</button>
               <button className="px-2 py-1 font-semibold" onClick={() => setConfirm(false)}>Keep</button>
             </>
           ) : (
-            <button className="font-semibold text-accent-deep hover:underline" onClick={() => setConfirm(true)}>Start over with a fresh copy</button>
+            !note && <button className="font-semibold text-accent-deep hover:underline" disabled={!!busy} onClick={() => setConfirm(true)}>Start over with a fresh copy</button>
           )}
         </div>
       </div>
