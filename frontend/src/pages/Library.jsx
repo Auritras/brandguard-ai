@@ -7,6 +7,13 @@ const EMPTY_FACT = { statement: '', keywords: '', value: '', source: '', valid_u
 const EMPTY_TERM = { banned: '', preferred: '', note: '' }
 
 export default function Library({ user }) {
+  useEffect(() => {
+    try {
+      localStorage.setItem(`bg_library_seen_${user.brand || 'demo'}`, '1')
+    } catch {
+      /* private window: the checklist just keeps this step open */
+    }
+  }, [user.brand])
   const owner = user.role === 'reviewer'
   const [lib, setLib] = useState(null)
   const [tab, setTab] = useState('rules')

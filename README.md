@@ -38,8 +38,16 @@ or reports. The demo brand's team is fixed, since every visitor shares it.
 - Each brand is a private workspace with its own people, Brand Library, drafts and Brand health.
   Every API route checks the signed-in person's brand; another brand's records behave as if they
   do not exist.
-- Sign-up creates a brand with you as its owner and a starter library. Owners add teammates and
-  change roles; nobody joins a brand without its owner.
+- Sign-up creates a brand with you as its owner and a starter library. Owners add teammates,
+  change roles and remove people; nobody joins a brand without its owner. A removed person can no
+  longer sign in, but their name stays on the work they did.
+- Anyone in a brand can write a draft, but nobody approves, waives or decides disputes on their own
+  draft: someone else always signs off.
+- A new brand's owner gets a three-step checklist (library, first draft, a teammate).
+- Everyone can change their password (except the shared demo accounts), and a creator can delete a
+  draft that was never sent for review. Deleted drafts are hidden, not erased, so the history stays
+  whole.
+- The menu shows how many drafts are waiting for you.
 
 **Brand Library** (editable by the brand owner only)
 - Rules with a code, category, severity and optional exact patterns. New rules start as
@@ -118,7 +126,7 @@ AI step was skipped and why. The AI never approves, waives or publishes.
 | Database | PostgreSQL on Supabase (SQLite locally) |
 | AI | Groq API, `openai/gpt-oss-120b`, JSON mode, temperature 0 |
 | Documents | python-docx, pypdf |
-| Tests | pytest (27 tests: auth, exact engine, AI path with a fake model, full workflow, insights, live check, brand isolation and teams) |
+| Tests | pytest (32 tests: auth, exact engine, AI path with a fake model and rate limits, full workflow, insights, live check, brand isolation, teams and account basics) |
 | Hosting | Vercel (frontend), Render (backend), Supabase (database), all on free plans |
 
 Passwords are hashed with PBKDF2 (200,000 rounds). Sessions are signed tokens that last 12 hours.
@@ -187,7 +195,7 @@ backend/
     routers/           accounts and teams, Brand Library, draft/workflow and Brand health API
   tests/
 frontend/
-  src/pages/           Login, Drafts, NewDraft, DraftView, Record, Insights, Library, Team
+  src/pages/           Login, Drafts, NewDraft, DraftView, Record, Insights, Library, Team, Account
   src/LiveText.jsx     the editor that checks while you type
   src/diff.js          word-level version comparison
   src/ui.jsx           shared components

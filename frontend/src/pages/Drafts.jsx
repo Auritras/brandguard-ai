@@ -64,12 +64,12 @@ export default function Drafts({ user }) {
               : 'Content from your team. Items waiting for you are listed first.'}
           </p>
         </div>
-        {user.role === 'creator' && (
-          <Link to="/new">
-            <Button kind="primary">New draft</Button>
-          </Link>
-        )}
+        <Link to="/new">
+          <Button kind="primary">New draft</Button>
+        </Link>
       </div>
+
+      <FirstSteps user={user} />
 
       {drafts?.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -102,9 +102,7 @@ export default function Drafts({ user }) {
           <Card className="col-span-full p-8 text-center">
             <p className="font-semibold">No drafts yet.</p>
             <p className="mt-1 text-muted">
-              {user.role === 'creator'
-                ? 'Start one with "New draft". A sample post is ready to load.'
-                : 'Sign in as the Creator to write one and send it for review.'}
+              Start one with "New draft". A sample post is ready to load.
             </p>
           </Card>
         )}
@@ -135,6 +133,64 @@ export default function Drafts({ user }) {
         ))}
       </div>
     </div>
+  )
+}
+
+// A new brand's owner gets three first steps; each ticks off as it is done, and the list goes when all are.
+function FirstSteps({ user }) {
+  const [o, setO] = useState(null)
+  const key = `bg_library_seen_${user.brand || 'demo'}`
+  const hideKey = `bg_first_steps_hidden_${user.brand || 'demo'}`
+  const read = (k) => {
+    try {
+      return localStorage.getItem(k) === '1'
+    } catch {
+      return false
+    }
+  }
+  const [hidden, setHidden] = useState(() => read(hideKey))
+  useEffect(() => {
+    api('/onboarding').then(setO).catch(() => {})
+  }, [])
+  if (!o || !o.show || hidden) return null
+  const steps = [
+    [o.library_changed || read(key), '/library', 'Look over your Brand Library',
+      'It starts with sample rules, facts and terms. Change them to match your brand.'],
+    [o.has_draft, '/new', 'Write your first draft', 'Paste some real copy, or load the sample post, and run the check.'],
+    [o.has_team, '/team', 'Add a teammate',
+      'Nobody approves their own draft, so add a Manager or a Creator to work with.'],
+  ]
+  const left = steps.filter(([done]) => !done).length
+  if (left === 0) return null
+  return (
+    <Card className="mt-6 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold">Get {user.brand} started</h2>
+          <p className="mt-1 text-sm text-muted">{3 - left} of 3 done</p>
+        </div>
+        <Button kind="ghost" onClick={() => {
+          try { localStorage.setItem(hideKey, '1') } catch { /* nothing to remember in a private window */ }
+          setHidden(true)
+        }}>Hide</Button>
+      </div>
+      <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+        {steps.map(([done, to, title, help], i) => (
+          <li key={to}>
+            <Link to={to} className={`flex h-full gap-3 rounded-md border-2 p-3 transition ${done ? 'border-line bg-white/60' : 'border-line bg-white hover:border-primary hover:bg-primary-soft'}`}>
+              <span aria-hidden="true" className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${done ? 'bg-primary text-white' : 'border-2 border-ink'}`}>
+                {done ? '✓' : i + 1}
+              </span>
+              <span>
+                <span className={`block font-semibold ${done ? 'text-muted line-through' : ''}`}>{title}</span>
+                <span className="block text-sm text-muted">{help}</span>
+                <span className="sr-only">{done ? '(done)' : '(to do)'}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Card>
   )
 }
 

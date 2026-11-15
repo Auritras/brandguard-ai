@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
@@ -35,6 +35,10 @@ function nextStep(d, user) {
   if (isOwner && d.needs_check) return 'The text has changed since the last check. Run the check again before sending it for review.'
   if (isOwner && d.open > 0) return `${d.open} finding(s) to handle. Accept the fix, write your own, or dispute. You can also send it for review as it is.`
   if (isOwner) return 'Nothing left to handle. Send it for review.'
+  // You wrote it: someone else on the team decides it, whatever your role.
+  if (d.mine && d.status === 'authorised_review') return 'With the brand owner. You wrote this draft, so someone else decides it.'
+  if (d.mine && d.status === 'in_review') return 'Sent for review. You wrote this draft, so someone else on your team decides it.'
+  if (d.mine && d.status === 'changes_requested') return 'Changes were requested. Edit the text, run the check again, then send it back.'
   if (d.status === 'in_review' && user.role === 'manager')
     return d.blocking > 0
       ? `${d.blocking} high-risk finding(s) are still open. If you approve, the draft goes to the authorised reviewer.`
@@ -60,6 +64,8 @@ export default function DraftView({ user }) {
   const [rewrite, setRewrite] = useState(null) // word diff shown while a change animates in
   const [leaving, setLeaving] = useState([]) // findings just handled, folding out of the list
   const [acted, setActed] = useState(false) // status and next-step only animate after an action here
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const navigate = useNavigate()
   const contentRef = useRef(null)
   const rewriteTimer = useRef()
   useEffect(() => () => clearTimeout(rewriteTimer.current), [])
@@ -159,6 +165,23 @@ export default function DraftView({ user }) {
             {busy === 'approve' ? 'Approving…' : user.role === 'manager' && d.blocking > 0 ? 'Hold to approve and escalate' : 'Hold to approve'}
           </HoldButton>
         )}
+        {d.can.delete && (confirmDelete ? (
+          <span className="flex items-center gap-2">
+            <Button kind="dark" disabled={!!busy} onClick={async () => {
+              setBusy('delete')
+              try {
+                await api(`/drafts/${d.id}`, { method: 'DELETE' })
+                navigate('/')
+              } catch (e) {
+                setError(e.message)
+                setBusy('')
+              }
+            }}>Delete this draft</Button>
+            <Button kind="ghost" onClick={() => setConfirmDelete(false)}>Keep it</Button>
+          </span>
+        ) : (
+          <Button kind="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
+        ))}
         {d.can.request_changes && (
           <ReasonButton label="Request changes" placeholder="What should the creator change?" confirmLabel="Send back"
             onSubmit={(note) => act('changes', `/drafts/${d.id}/request-changes`, { note })} />

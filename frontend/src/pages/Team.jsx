@@ -14,6 +14,7 @@ export default function Team({ user }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [added, setAdded] = useState('')
+  const [confirm, setConfirm] = useState(null) // id of the teammate about to be removed
   const [form, setForm] = useState({ name: '', email: '', role: 'creator', password: '' })
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   const owner = user.role === 'reviewer' && !user.demo_brand
@@ -42,7 +43,8 @@ export default function Team({ user }) {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Team</h1>
       <p className="mt-1 text-muted">
-        Everyone who works on {user.brand}. Only these people can see its drafts and Brand Library.
+        Everyone who works on {user.brand}. Only these people can see its drafts and Brand Library. Someone you remove
+        can no longer sign in, but their name stays on the drafts and history they worked on.
       </p>
       {user.demo_brand && (
         <p className="mt-3 rounded-md bg-primary-soft px-3 py-2 text-sm text-primary-deep">
@@ -57,6 +59,16 @@ export default function Team({ user }) {
               <p className="font-semibold">{m.name}{m.you && <span className="font-normal text-muted"> (you)</span>}</p>
               <p className="truncate text-sm text-muted">{m.email}</p>
             </div>
+            {owner && !m.you && (confirm === m.id ? (
+              <span className="flex items-center gap-2">
+                <Button kind="dark" disabled={busy} onClick={async () => { if (await run(() => api(`/team/${m.id}`, { method: 'DELETE' }))) setConfirm(null) }}>
+                  Remove {m.name}
+                </Button>
+                <Button kind="ghost" onClick={() => setConfirm(null)}>Keep</Button>
+              </span>
+            ) : (
+              <Button kind="ghost" onClick={() => setConfirm(m.id)} aria-label={`Remove ${m.name}`}>Remove</Button>
+            ))}
             {owner ? (
               <select aria-label={`Role for ${m.name}`} value={m.role} disabled={busy}
                 onChange={(e) => run(() => api(`/team/${m.id}`, { method: 'PUT', body: { role: e.target.value } }))}

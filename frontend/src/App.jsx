@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { getAuth, setAuth } from './api.js'
+import { api, getAuth, setAuth } from './api.js'
 import { Button } from './ui.jsx'
 import Login from './pages/Login.jsx'
 import Drafts from './pages/Drafts.jsx'
@@ -10,6 +10,7 @@ import Library from './pages/Library.jsx'
 import Record from './pages/Record.jsx'
 import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
+import Account from './pages/Account.jsx'
 
 
 const ROLE_LABEL = { creator: 'Creator', manager: 'Manager', reviewer: 'Brand owner' }
@@ -24,6 +25,25 @@ export default function App() {
     setAuthState(a)
     navigate('/')
   }
+  // Refresh who is signed in (role or brand may have changed), and how many drafts wait for them.
+  const [waiting, setWaiting] = useState(0)
+  useEffect(() => {
+    if (!auth) return
+    api('/me')
+      .then((u) => {
+        if (JSON.stringify(u) !== JSON.stringify(auth.user)) {
+          const next = { ...auth, user: u }
+          setAuth(next)
+          setAuthState(next)
+        }
+      })
+      .catch(() => {})
+  }, [auth?.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!auth) return
+    api('/waiting').then((w) => setWaiting(w.count)).catch(() => {})
+  }, [auth?.token, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [leaving, setLeaving] = useState(false)
   const [signedOut, setSignedOut] = useState(false)
   // Fade the workspace out, then show the sign-in page (straight away if motion is reduced).
@@ -56,8 +76,13 @@ export default function App() {
             BrandGuard AI
           </Link>
           <nav aria-label="Main" className="order-last flex w-full gap-1 sm:order-none sm:w-auto">
-            <NavLink to="/" end className={tab}>
+            <NavLink to="/" end className={tab} aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
               Drafts
+              {waiting > 0 && (
+                <span key={waiting} aria-hidden="true" className="roll-in ml-1.5 inline-grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-xs font-bold text-white">
+                  {waiting}
+                </span>
+              )}
             </NavLink>
             <NavLink to="/insights" className={tab}>
               Brand health
@@ -70,12 +95,12 @@ export default function App() {
             </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="font-semibold">
+            <Link to="/account" title="Your account" className="rounded px-1 font-semibold hover:bg-white/10">
               {user.name.split(' (')[0]}
               <span className="hidden font-normal text-white/70 sm:inline">
                 {' · '}{ROLE_LABEL[user.role]}{user.brand ? `, ${user.brand}` : ''}
               </span>
-            </span>
+            </Link>
             <Button kind="secondary" onClick={signOut} disabled={leaving}>
               Sign out
             </Button>
@@ -93,6 +118,7 @@ export default function App() {
           <Route path="/insights" element={<Insights />} />
           <Route path="/library" element={<Library user={user} />} />
           <Route path="/team" element={<Team user={user} />} />
+          <Route path="/account" element={<Account user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </div>
