@@ -95,15 +95,24 @@ def test_account_basics_password_remove_teammate_delete_draft(client, creator, r
     assert back.status_code == 200 and client.post("/api/auth/login", json={"email": email, "password": "temp-pass-2"}).status_code == 200
 
     # Delete a draft: only unsent drafts, only by their creator; it disappears from lists and reports.
-    mine = client.post("/api/drafts", headers=creator, json={"title": "Throwaway", "body": "Just testing."}).json()
-    assert client.delete(f"/api/drafts/{mine['id']}", headers=reviewer).status_code == 403
-    assert client.delete(f"/api/drafts/{mine['id']}", headers=creator).status_code == 200
-    assert client.get(f"/api/drafts/{mine['id']}", headers=creator).status_code == 404
-    assert all(x["id"] != mine["id"] for x in client.get("/api/drafts", headers=creator).json())
-    sent = client.post("/api/drafts", headers=creator, json={"title": "Sent one", "body": "Book a demo today."}).json()
-    client.post(f"/api/drafts/{sent['id']}/check", headers=creator)
-    client.post(f"/api/drafts/{sent['id']}/submit", headers=creator)
-    assert client.delete(f"/api/drafts/{sent['id']}", headers=creator).status_code == 409
+    writer_email = f"writer-{uuid.uuid4().hex[:8]}@acme.test"
+    client.post("/api/team", headers=owner, json={"name": "Wen", "email": writer_email, "role": "creator", "password": "writer-pass-1"})
+    writer = {"Authorization": "Bearer " + client.post("/api/auth/login", json={"email": writer_email, "password": "writer-pass-1"}).json()["token"]}
+    mine = client.post("/api/drafts", headers=writer, json={"title": "Throwaway", "body": "Just testing."}).json()
+    assert mine["can"]["delete"] is True
+    assert client.delete(f"/api/drafts/{mine['id']}", headers=owner).status_code == 403
+    assert client.delete(f"/api/drafts/{mine['id']}", headers=writer).status_code == 200
+    assert client.get(f"/api/drafts/{mine['id']}", headers=writer).status_code == 404
+    assert all(x["id"] != mine["id"] for x in client.get("/api/drafts", headers=writer).json())
+    sent = client.post("/api/drafts", headers=writer, json={"title": "Sent one", "body": "Book a demo today."}).json()
+    client.post(f"/api/drafts/{sent['id']}/check", headers=writer)
+    client.post(f"/api/drafts/{sent['id']}/submit", headers=writer)
+    assert client.delete(f"/api/drafts/{sent['id']}", headers=writer).status_code == 409
+
+    # The shared demo brand keeps its drafts for the next visitor.
+    demo = client.post("/api/drafts", headers=creator, json={"title": "Demo draft", "body": "Hello."}).json()
+    assert demo["can"]["delete"] is False
+    assert client.delete(f"/api/drafts/{demo['id']}", headers=creator).status_code == 403
 
 
 def test_waiting_count_and_onboarding(client, creator, manager):

@@ -140,7 +140,7 @@ def detail(db: Session, d: Draft, user: User) -> dict:
                     for a in db.query(AuditLog).filter(AuditLog.draft_id == d.id).order_by(AuditLog.id.desc())],
         "can": {
             "edit": is_owner and d.status in EDITABLE,
-            "delete": is_owner and d.status == "draft" and not db.query(AuditLog).filter(
+            "delete": is_owner and d.status == "draft" and not (user.brand and user.brand.demo) and not db.query(AuditLog).filter(
                 AuditLog.draft_id == d.id, AuditLog.action == "submitted_for_review").first(),
             "submit": is_owner and d.status in EDITABLE,
             "decide_disputes": not is_owner and user.role in ("manager", "reviewer") and d.status in ("in_review", "authorised_review"),
@@ -237,6 +237,8 @@ def delete_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depe
     draft = get_draft(db, draft_id, user, lock=True)
     if draft.creator_id != user.id:
         raise HTTPException(403, "Only the creator of this draft can delete it.")
+    if user.brand and user.brand.demo:
+        raise HTTPException(403, "Drafts in the shared demo brand stay for the next visitor. Create your own brand to delete drafts.")
     sent = db.query(AuditLog).filter(AuditLog.draft_id == draft.id, AuditLog.action == "submitted_for_review").first()
     if draft.status != "draft" or sent:
         raise HTTPException(409, "This draft has been sent for review, so it stays on the record.")
