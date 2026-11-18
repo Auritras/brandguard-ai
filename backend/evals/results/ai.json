@@ -1,0 +1,228 @@
+{
+ "mode": "ai",
+ "date": "2026-11-18T21:16:57+00:00",
+ "commit": "081014a",
+ "model": "openai/gpt-oss-120b",
+ "brands": [
+  {
+   "brand": "fizzbox",
+   "drafts": 40,
+   "planted": 37,
+   "caught": 37,
+   "catch_rate": 100.0,
+   "false_alarms": 2,
+   "precision": 94.9,
+   "clean_drafts": 10,
+   "clean_passed": 9,
+   "per_rule": [
+    {
+     "ref": "F-001",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "F-002",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "F-003",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-001",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-002",
+     "planted": 6,
+     "caught": 6
+    },
+    {
+     "ref": "R-003",
+     "planted": 8,
+     "caught": 8
+    },
+    {
+     "ref": "R-004",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-005",
+     "planted": 3,
+     "caught": 3
+    },
+    {
+     "ref": "R-006",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-007",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-008",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "TERM",
+     "planted": 7,
+     "caught": 7
+    }
+   ],
+   "misses": [],
+   "false_alarm_list": [
+    {
+     "case": "F09",
+     "ref": "R-001",
+     "quote": "Find your nearest store.",
+     "source": "ai",
+     "body": "Find your nearest store. Click here."
+    },
+    {
+     "case": "F33",
+     "ref": "R-001",
+     "quote": "Each 330 ml can of Fizzbox Classic has 45 calories.",
+     "source": "ai",
+     "body": "Each 330 ml can of Fizzbox Classic has 45 calories."
+    }
+   ],
+   "ai_skipped": 0
+  },
+  {
+   "brand": "lumio",
+   "drafts": 40,
+   "planted": 35,
+   "caught": 34,
+   "catch_rate": 97.1,
+   "false_alarms": 5,
+   "precision": 87.2,
+   "clean_drafts": 10,
+   "clean_passed": 9,
+   "per_rule": [
+    {
+     "ref": "F-001",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "F-002",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "F-003",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "F-004",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-001",
+     "planted": 2,
+     "caught": 1
+    },
+    {
+     "ref": "R-002",
+     "planted": 4,
+     "caught": 4
+    },
+    {
+     "ref": "R-003",
+     "planted": 3,
+     "caught": 3
+    },
+    {
+     "ref": "R-004",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-005",
+     "planted": 4,
+     "caught": 4
+    },
+    {
+     "ref": "R-006",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-007",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-008",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-009",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "TERM",
+     "planted": 8,
+     "caught": 8
+    }
+   ],
+   "misses": [
+    {
+     "case": "L22",
+     "ref": "R-001",
+     "quote": "you will regret waiting",
+     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
+    }
+   ],
+   "false_alarm_list": [
+    {
+     "case": "L09",
+     "ref": "R-004",
+     "quote": "Lumio Pay helps small businesses pay their employees on time.",
+     "source": "ai",
+     "body": "Lumio Pay helps small businesses pay their employees on time."
+    },
+    {
+     "case": "L10",
+     "ref": "R-001",
+     "quote": "Our clients tell us",
+     "source": "ai",
+     "body": "Our clients tell us payroll now takes a coffee break, not a whole day."
+    },
+    {
+     "case": "L10",
+     "ref": "R-009",
+     "quote": "payroll now takes a coffee break, not a whole day",
+     "source": "ai",
+     "body": "Our clients tell us payroll now takes a coffee break, not a whole day."
+    },
+    {
+     "case": "L27",
+     "ref": "R-008",
+     "quote": "Their support is terrible.",
+     "source": "ai",
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
+    },
+    {
+     "case": "L36",
+     "ref": "R-004",
+     "quote": "Lumio Payroll makes payday calm",
+     "source": "ai",
+     "body": "Friday feeling: everyone paid, payslips sent. Lumio Payroll makes payday calm."
+    }
+   ],
+   "ai_skipped": 0
+  }
+ ]
+}
