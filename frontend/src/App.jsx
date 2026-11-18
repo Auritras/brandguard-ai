@@ -138,7 +138,7 @@ export default function App() {
             BrandGuard AI
           </Link>
           <nav aria-label="Main" className="order-last flex w-full gap-1 sm:order-none sm:w-auto">
-            <NavLink to="/" end className={tab} data-tour="nav-drafts" aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
+            <NavLink to="/" end viewTransition className={tab} data-tour="nav-drafts" aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
               Drafts
               {waiting > 0 && (
                 <span key={waiting} aria-hidden="true" className="roll-in ml-1.5 inline-grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-xs font-bold text-white">
@@ -146,16 +146,16 @@ export default function App() {
                 </span>
               )}
             </NavLink>
-            <NavLink to="/insights" className={tab} data-tour="nav-insights">
+            <NavLink to="/insights" viewTransition className={tab} data-tour="nav-insights">
               Brand health
             </NavLink>
-            <NavLink to="/library" className={tab} data-tour="nav-library">
+            <NavLink to="/library" viewTransition className={tab} data-tour="nav-library">
               Brand Library
             </NavLink>
-            <NavLink to="/reliability" className={tab} data-tour="nav-reliability">
+            <NavLink to="/reliability" viewTransition className={tab} data-tour="nav-reliability">
               Reliability
             </NavLink>
-            <NavLink to="/team" className={tab}>
+            <NavLink to="/team" viewTransition className={tab}>
               Team
             </NavLink>
           </nav>

@@ -64,7 +64,7 @@ mark {
 .diff-removed + .diff-added { margin-left: 4px; }
 
 /* Highlights behind the live-checked text box: no padding, or the marks drift off the words. */
-mark.live-mark { padding: 0; border-radius: 2px; animation: live-in 0.5s ease-out both; }
+mark.live-mark { padding: 0; border-radius: 2px; animation: sweep 0.45s cubic-bezier(0.3, 0.7, 0.2, 1) both; } /* the marker sweeps along the word */
 @keyframes live-in { from { opacity: 0; } }
 
 ::selection {
@@ -350,6 +350,19 @@ mark.live-mark { padding: 0; border-radius: 2px; animation: live-in 0.5s ease-ou
 @keyframes swatch-in { from { opacity: 0; transform: scale(0.6); } }
 .meter-fill { transform-origin: left; animation: bar-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
 
+/* The review record comes out of a printer slot: it unrolls downwards from its top edge. */
+.ticket { animation: print-out 0.9s cubic-bezier(0.25, 0.8, 0.25, 1) 0.1s both; }
+@keyframes print-out {
+  from { clip-path: inset(-20px -40px 100% -40px); transform: translateY(-14px); }
+  to { clip-path: inset(-20px -40px -20px -40px); transform: none; }
+}
+
+/* Moving between main pages cross-fades (browsers with view transitions; others just switch). */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.22s; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+
 /* Notices at the bottom of the screen slide up into place. */
 .toast-in { animation: toast-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
@@ -359,7 +372,7 @@ mark.live-mark { padding: 0; border-radius: 2px; animation: live-in 0.5s ease-ou
   html { background: white; }
   @page { margin: 16mm; }
   .signature-name { clip-path: none; animation: none; }
-  .ticket { box-shadow: none; }
+  .ticket { box-shadow: none; animation: none; }
   .ticket-tear::before, .ticket-tear::after { background: #fff; }
   .signature-stroke { stroke-dashoffset: 0; animation: none; }
 }
