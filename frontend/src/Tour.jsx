@@ -27,7 +27,8 @@ const STEPS = {
 const keyFor = (user) => `bg_tour_${user.role}_${user.demo_key || user.brand || 'brand'}`
 
 export function tourDone(user) {
-  try { return localStorage.getItem(keyFor(user)) === '1' } catch { return true }
+  // bg_tours_off: someone who never wants the tour to open by itself (also used by the browser tests).
+  try { return localStorage.getItem('bg_tours_off') === '1' || localStorage.getItem(keyFor(user)) === '1' } catch { return true }
 }
 
 export function resetTours() {

@@ -9,3 +9,5 @@ dist/
 *.db
 uploads/
 .claude/
+test-results/
+playwright-report/
