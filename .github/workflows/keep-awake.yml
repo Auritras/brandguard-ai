@@ -1,11 +1,13 @@
 # Render's free server sleeps after 15 minutes without visits, and Supabase pauses a free
-# project after a week without activity. During the day (IST) this pings the API, which runs
-# one tiny database query. Disable it in the Actions tab, or delete this file, after judging.
+# project after a week without activity. During judging (Round 3) this pings the API around the
+# clock; the ping runs one tiny database query. One always-on free service uses about 744 of
+# Render's 750 free hours a month, so this fits. After judging, go back to daytime only
+# (cron "*/14 3-17 * * *", 08:30-23:29 IST) or disable it in the Actions tab.
 name: Keep demo awake
 
 on:
   schedule:
-    - cron: "*/14 3-17 * * *"   # every 14 minutes, 03:00-17:59 UTC = 08:30-23:29 IST
+    - cron: "*/13 * * * *"   # every 13 minutes, day and night
   workflow_dispatch:
 
 jobs:
