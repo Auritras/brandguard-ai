@@ -170,4 +170,7 @@ def seed(db: Session) -> None:
                 db.add(User(brand_id=brand.id, name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))
         if db.query(Rule).filter_by(brand_id=brand.id).count() == 0:
             seed_library(db, brand.id, key)
+        if not brand.palette:  # brand colours and logo for image review
+            from .samples import PALETTES, logo_png
+            brand.palette, brand.logo, brand.logo_type = PALETTES[key], logo_png(key), "image/png"
     db.commit()

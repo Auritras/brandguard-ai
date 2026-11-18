@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from .auth import hash_password
-from .models import AuditLog, Brand, Comment, Draft, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User, now
+from .models import AuditLog, Brand, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User, now
 from .seed import demo_brand
 
 KEEP_FOR = timedelta(hours=24)
@@ -56,7 +56,8 @@ def create_sandbox(db: Session, key: str = "lumio") -> Brand:
     newest = max([_utc(d.updated_at) for d in drafts] + [_utc(a.created_at) for a in logs] or [now()])
     shift = now() - newest - timedelta(minutes=20)
 
-    brand = Brand(name=template.name, demo=False, sandbox=True)
+    brand = Brand(name=template.name, demo=False, sandbox=True,
+                  palette=template.palette, logo=template.logo, logo_type=template.logo_type)
     db.add(brand)
     db.flush()
     b = brand.id
@@ -80,8 +81,10 @@ def create_sandbox(db: Session, key: str = "lumio") -> Brand:
               shift, draft_id=draft_map, user_id=user_map)
         _copy(db, db.query(ReviewRun).filter(ReviewRun.draft_id.in_(draft_ids)).order_by(ReviewRun.id),
               shift, draft_id=draft_map)
+        image_map = _copy(db, db.query(DraftImage).filter(DraftImage.draft_id.in_(draft_ids)).order_by(DraftImage.id),
+                          shift, draft_id=draft_map)
         finding_map = _copy(db, db.query(Finding).filter(Finding.draft_id.in_(draft_ids)).order_by(Finding.id),
-                            shift, draft_id=draft_map, decided_by=user_map)
+                            shift, draft_id=draft_map, decided_by=user_map, image_id=image_map)
         _copy(db, db.query(Comment).filter(Comment.draft_id.in_(draft_ids)).order_by(Comment.id),
               shift, draft_id=draft_map, finding_id=finding_map, user_id=user_map)
     _copy(db, [a for a in logs if a.draft_id is None or a.draft_id in draft_map], shift,
@@ -94,7 +97,7 @@ def delete_brand_data(db: Session, brand_id: int, keep_users: bool = False) -> N
     draft_ids = [d for (d,) in db.query(Draft.id).filter(Draft.brand_id == brand_id)]
     if draft_ids:
         db.query(Comment).filter(Comment.draft_id.in_(draft_ids)).delete(synchronize_session=False)
-        for model in (Finding, ReviewRun, DraftVersion, AuditLog):
+        for model in (Finding, DraftImage, ReviewRun, DraftVersion, AuditLog):
             db.query(model).filter(model.draft_id.in_(draft_ids)).delete(synchronize_session=False)
         db.query(Draft).filter(Draft.id.in_(draft_ids)).delete(synchronize_session=False)
     db.query(AuditLog).filter(AuditLog.brand_id == brand_id).delete(synchronize_session=False)

@@ -16,6 +16,8 @@ AI_API_KEY = os.getenv("GROQ_API_KEY", "")
 AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.groq.com/openai/v1")
 AI_MODEL = os.getenv("AI_MODEL", "openai/gpt-oss-120b")  # Groq retired llama-3.3-70b-versatile on 2026-08-16
 AI_PROVIDER_NAME = os.getenv("AI_PROVIDER_NAME", "Groq")
+# Reads text, the logo and a description from images. Judgements on images are made in code.
+VISION_MODEL = os.getenv("VISION_MODEL", "qwen/qwen3.8-27b")
 
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
 

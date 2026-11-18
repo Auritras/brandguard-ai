@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, BASE } from '../api.js'
 import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading } from '../ui.jsx'
 
 const EMPTY_RULE = { category: 'tone', title: '', text: '', severity: 'medium', patterns: '' }
@@ -58,7 +58,7 @@ export default function Library({ user }) {
       </p>
 
       <div role="tablist" aria-label="Library sections" className="mt-5 flex flex-wrap gap-1">
-        {[['rules', `Rules (${approved.length})`], ['facts', `Approved facts (${lib.facts.length})`], ['terms', `Terms (${lib.terms.length})`]].map(([k, label]) => (
+        {[['rules', `Rules (${approved.length})`], ['facts', `Approved facts (${lib.facts.length})`], ['terms', `Terms (${lib.terms.length})`], ['visuals', 'Colours and logo']].map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`rounded-lg px-3 py-2 text-sm font-semibold ${tab === k ? 'bg-ink text-paper' : 'hover:bg-black/5'}`}>
             {label}
@@ -84,6 +84,17 @@ export default function Library({ user }) {
               <Field label="Paste your brand guidelines" hint="Each instruction becomes a proposed rule. Nothing is used in a check until you approve it.">
                 <textarea className={`${inputCls} min-h-40`} value={importText} onChange={(e) => setImportText(e.target.value)} />
               </Field>
+              <label className="mt-2 block text-sm">
+                <span className="font-semibold">Or read them from a file</span> <span className="text-muted">(PDF, Word, text or Markdown, up to 5 MB)</span>
+                <input type="file" accept=".pdf,.docx,.txt,.md" className="mt-1 block text-sm" disabled={busy}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!file) return
+                    const out = await run(() => api('/extract', { method: 'POST', file }))
+                    if (out) setImportText(out.text)
+                  }} />
+              </label>
               <div className="mt-3 flex gap-2">
                 <Button kind="dark" disabled={busy || importText.trim().length < 20}
                   onClick={async () => {
@@ -201,6 +212,8 @@ export default function Library({ user }) {
         </div>
       )}
 
+      {tab === 'visuals' && <Visuals visuals={lib.visuals} owner={owner} run={run} setNote={setNote} />}
+
       {tab === 'terms' && (
         <div className="mt-4 grid gap-3">
           {owner && <div><Button kind="primary" onClick={() => setTerm(EMPTY_TERM)}>Add a term</Button></div>}
@@ -239,6 +252,74 @@ export default function Library({ user }) {
           </Card>
         </div>
       )}
+    </div>
+  )
+}
+
+// Brand colours and the official logo, used by image review.
+function Visuals({ visuals, owner, run, setNote }) {
+  const [colours, setColours] = useState(visuals.palette)
+  const valid = (h) => /^#[0-9a-f]{6}$/i.test(h)
+  const changed = colours.join() !== visuals.palette.join()
+  return (
+    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <Card className="p-5">
+        <h2 className="font-display text-lg font-bold">Brand colours</h2>
+        <p className="mt-1 text-sm text-muted">The main colours of every image are compared with these. White, black and greys always pass.</p>
+        <ul className="mt-4 grid gap-2">
+          {colours.map((c, i) => (
+            <li key={i} className="swatch-in flex items-center gap-2" style={{ '--i': i }}>
+              {owner ? (
+                <>
+                  <input type="color" aria-label={`Colour ${i + 1}`} value={valid(c) ? c : '#000000'} className="h-9 w-12 cursor-pointer rounded border-2 border-line bg-white"
+                    onChange={(e) => setColours(colours.map((x, j) => (j === i ? e.target.value : x)))} />
+                  <input aria-label={`Colour ${i + 1} as a hex code`} className={`${inputCls} w-32 font-mono`} value={c}
+                    onChange={(e) => setColours(colours.map((x, j) => (j === i ? e.target.value.trim() : x)))} />
+                  <Button kind="ghost" onClick={() => setColours(colours.filter((_, j) => j !== i))} aria-label={`Remove colour ${c}`}>Remove</Button>
+                </>
+              ) : (
+                <>
+                  <span className="h-8 w-12 rounded border border-black/15" style={{ background: c }} />
+                  <span className="font-mono text-sm">{c}</span>
+                </>
+              )}
+            </li>
+          ))}
+          {colours.length === 0 && <li className="text-sm text-muted">No brand colours yet, so image colours are not checked.</li>}
+        </ul>
+        {owner && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {colours.length < 12 && <Button onClick={() => setColours([...colours, '#000000'])}>Add a colour</Button>}
+            <Button kind="dark" disabled={!changed || !colours.every(valid)}
+              onClick={async () => {
+                const out = await run(() => api('/brand/palette', { method: 'PUT', body: { palette: colours } }))
+                if (out) setNote('Brand colours saved. Images are checked against them from the next check.')
+              }}>Save colours</Button>
+          </div>
+        )}
+      </Card>
+      <Card className="p-5">
+        <h2 className="font-display text-lg font-bold">Logo</h2>
+        <p className="mt-1 text-sm text-muted">When a logo is in an image, its shape and colours are measured against this file.</p>
+        {visuals.has_logo ? (
+          <img src={BASE + visuals.logo_url} alt="The brand's official logo" className="mt-4 max-h-28 rounded border border-line bg-white p-2" />
+        ) : (
+          <p className="mt-4 text-sm text-muted">No logo yet.</p>
+        )}
+        {owner && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center rounded-md border-2 border-ink bg-card px-3.5 py-1.5 text-sm font-semibold shadow-[2px_2px_0_0_var(--color-ink)] hover:bg-primary-soft">
+              {visuals.has_logo ? 'Replace logo' : 'Upload logo'}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={async (e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (file && await run(() => api('/brand/logo', { method: 'POST', file }))) setNote('Logo saved.')
+              }} />
+            </label>
+            {visuals.has_logo && <Button kind="ghost" onClick={() => run(() => api('/brand/logo', { method: 'DELETE' }))}>Remove logo</Button>}
+          </div>
+        )}
+      </Card>
     </div>
   )
 }

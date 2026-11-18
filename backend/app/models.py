@@ -2,7 +2,7 @@
 ever visible to members of that brand."""
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -18,6 +18,10 @@ class Brand(Base):
     name: Mapped[str] = mapped_column(String(120))
     demo: Mapped[bool] = mapped_column(Boolean, default=False)  # the Lumio Payroll template that demo copies come from
     sandbox: Mapped[bool] = mapped_column(Boolean, default=False)  # one visitor's private copy of the demo
+    # Visual identity for image review: brand colours as "#1b2a4a,#1f9e89", and the official logo.
+    palette: Mapped[str] = mapped_column(String(300), default="")
+    logo: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    logo_type: Mapped[str] = mapped_column(String(40), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -139,6 +143,24 @@ class Finding(Base):
     status: Mapped[str] = mapped_column(String(12), default="open")
     note: Mapped[str] = mapped_column(Text, default="")  # dispute reason / decision reason / waiver reason
     decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    image_id: Mapped[int | None] = mapped_column(ForeignKey("draft_images.id"), nullable=True)  # found in this image
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class DraftImage(Base):
+    """An image attached to a draft. Stored shrunk (at most 1280 px a side); `analysis` caches what the
+    image review measured, keyed by `analysed_key`, so re-running a check does not call the AI again."""
+    __tablename__ = "draft_images"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    draft_id: Mapped[int] = mapped_column(ForeignKey("drafts.id"), index=True)
+    filename: Mapped[str] = mapped_column(String(200), default="")
+    mime: Mapped[str] = mapped_column(String(40))
+    data: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+    alt_text: Mapped[str] = mapped_column(Text, default="")
+    analysis: Mapped[str] = mapped_column(Text, default="")
+    analysed_key: Mapped[str] = mapped_column(String(64), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

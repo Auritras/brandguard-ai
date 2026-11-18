@@ -37,6 +37,20 @@ def make_token(user: User) -> str:
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 
+def make_file_token(kind: str, ident: int) -> str:
+    """A short-lived link token for one image, so an <img> tag can load it without the sign-in header."""
+    payload = {"kind": kind, "id": ident, "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_HOURS)}
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+
+def read_file_token(token: str, kind: str) -> int | None:
+    try:
+        data = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except Exception:
+        return None
+    return int(data["id"]) if data.get("kind") == kind else None
+
+
 def current_user(
     request: Request, creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)
 ) -> User:

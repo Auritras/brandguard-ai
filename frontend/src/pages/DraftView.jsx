@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
+import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
 import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
   const spans = []
   for (const f of findings) {
-    if (!['open', 'disputed'].includes(f.status)) continue
+    if (!['open', 'disputed'].includes(f.status) || f.image_id) continue
     const at = body.indexOf(f.quote)
     if (at === -1) continue
     spans.push({ start: at, end: at + f.quote.length, f })
@@ -55,7 +56,7 @@ function nextStep(d, user) {
 export default function DraftView({ user }) {
   const { id } = useParams()
   const [d, setD] = useState(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(useLocation().state?.note || '')
   const [busy, setBusy] = useState('')
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
@@ -83,7 +84,10 @@ export default function DraftView({ user }) {
     setError('')
     try {
       const d = latest.current
-      const next = await api(path, { method: body === undefined ? 'POST' : body.__method || 'POST', body: body?.__method ? body.data : body })
+      const opts = body === undefined ? { method: 'POST' }
+        : body.__form ? { method: 'POST', file: body.__form.file, fields: body.__form.fields }
+          : body.__method ? { method: body.__method, body: body.data } : { method: 'POST', body }
+      const next = await api(path, opts)
       // When the text changes (a fix accepted or written), show the change being made before settling.
       if (d && next.body !== d.body && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
         clearTimeout(rewriteTimer.current)
@@ -249,6 +253,7 @@ export default function DraftView({ user }) {
               <div><dt className="font-semibold">Purpose</dt><dd className="text-muted">{d.purpose || 'Not stated'}</dd></div>
             </dl>
           </Card>
+          <ImagePanel d={d} busy={busy} act={act} onError={setError} />
         </div>
 
         {/* The record: comments, history, versions. */}
@@ -411,23 +416,32 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
   const sev = SEVERITY[f.severity]
   const disputed = f.status === 'disputed'
   const canDecide = d.can.decide_disputes && disputed && (f.severity !== 'high' || user.role === 'reviewer')
+  const imgIndex = f.image_id ? d.images.findIndex((x) => x.id === f.image_id) : -1
+  const img = imgIndex >= 0 ? d.images[imgIndex] : null
+  const inPixels = !!f.image_id && f.ref_code !== 'VIS-ALT' // only the description can be fixed from here
   return (
     <Card ref={ref} id={leaving ? undefined : `finding-${f.id}`} className={`stamp-in scroll-mt-6 p-4 ${leaving ? 'fold-away' : ''}`} style={{ '--i': i }}
       inert={leaving || undefined} aria-hidden={leaving || undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip className={sev.chip}>{sev.label} risk</Chip>
         <Chip className="border-line bg-white capitalize text-ink">{f.category}</Chip>
-        <span className="text-xs text-muted">Found by {f.source === 'ai' ? 'AI, then verified' : 'an exact check'}</span>
+        <span className="text-xs text-muted">Found by {f.source === 'ai' ? 'AI, then verified' : f.ref_code.startsWith('VIS-') ? 'measuring the image' : 'an exact check'}</span>
       </div>
+      {img && (
+        <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted">
+          <img src={imageSrc(img.url)} alt="" className="h-9 w-14 rounded border border-line object-cover" />
+          In image {imgIndex + 1}
+        </p>
+      )}
       <p className="mt-3 text-sm"><span className={`rounded px-1 ${sev.mark}`}>“{f.quote}”</span></p>
       <p className="mt-2 text-sm">{f.reason}</p>
       <p className="mt-2 rounded-lg bg-paper p-2 text-sm">
-        <span className="font-semibold">{f.ref_code === 'TERM' ? 'Terminology list' : `${f.ref_code.startsWith('F-') ? 'Approved fact' : 'Rule'} ${f.ref_code}`}:</span>{' '}
+        <span className="font-semibold">{f.ref_code === 'TERM' ? 'Terminology list' : f.ref_code.startsWith('VIS-') ? 'Image standard' : `${f.ref_code.startsWith('F-') ? 'Approved fact' : 'Rule'} ${f.ref_code}`}:</span>{' '}
         {f.ref_text}
       </p>
       {f.suggestion && !disputed && (
         <p className="mt-2 rounded-lg border border-primary/25 bg-primary-soft p-2 text-sm">
-          <span className="font-semibold">Suggested fix:</span> {f.suggestion}
+          <span className="font-semibold">{f.image_id ? 'Suggested description' : 'Suggested fix'}:</span> {f.suggestion}
         </p>
       )}
       {disputed && (
@@ -440,11 +454,18 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
       <div className="mt-3 flex flex-wrap gap-2">
         {d.can.edit && f.status === 'open' && (
           <>
-            {f.suggestion && (
-              <Button kind="primary" disabled={busy} onClick={() => act('accept', `/findings/${f.id}/accept`)}>Accept fix</Button>
+            {inPixels && <p className="w-full text-sm text-muted">This is in the image itself: change the image, then remove this one and add the new one. Or dispute it.</p>}
+            {f.suggestion && !inPixels && (
+              <Button kind="primary" disabled={busy} onClick={() => act('accept', `/findings/${f.id}/accept`)}>
+                {f.image_id ? 'Use this description' : 'Accept fix'}
+              </Button>
             )}
-            <ReasonButton label="Write my own fix" placeholder="Replacement for the highlighted text" confirmLabel="Apply my fix" initial={f.suggestion || f.quote}
-              onSubmit={(replacement) => act('edit', `/findings/${f.id}/edit`, { replacement })} />
+            {!inPixels && (
+              <ReasonButton label={f.image_id ? 'Write my own description' : 'Write my own fix'}
+                placeholder={f.image_id ? 'What does the image show?' : 'Replacement for the highlighted text'}
+                confirmLabel={f.image_id ? 'Save description' : 'Apply my fix'} initial={f.image_id ? f.suggestion : f.suggestion || f.quote}
+                onSubmit={(replacement) => act('edit', `/findings/${f.id}/edit`, { replacement })} />
+            )}
             <ReasonButton label="Dispute" placeholder="Why is this finding wrong?" confirmLabel="Send dispute"
               onSubmit={(reason) => act('dispute', `/findings/${f.id}/dispute`, { reason })} />
           </>

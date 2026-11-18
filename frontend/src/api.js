@@ -1,5 +1,5 @@
 // One small wrapper around fetch. In production VITE_API_URL points at the backend.
-const BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '')
+export const BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '')
 
 export function getAuth() {
   try {
@@ -33,7 +33,7 @@ export function setDemoToken(token, brand = 'lumio') {
   }
 }
 
-export async function api(path, { method = 'GET', body, file, token } = {}) {
+export async function api(path, { method = 'GET', body, file, fields, token } = {}) {
   const headers = {}
   const auth = token ? null : getAuth()
   if (token) headers.Authorization = `Bearer ${token}`
@@ -42,6 +42,7 @@ export async function api(path, { method = 'GET', body, file, token } = {}) {
   if (file) {
     payload = new FormData()
     payload.append('file', file)
+    for (const [k, v] of Object.entries(fields || {})) payload.append(k, v)
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
     payload = JSON.stringify(body)

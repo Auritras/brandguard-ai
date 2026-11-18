@@ -3,14 +3,15 @@ owner (reviewer) writes. Nothing here can see or touch another brand's library."
 import re
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..auth import current_user, require
+from ..auth import current_user, make_file_token, read_file_token, require
 from ..db import get_db
 from ..engine.ai import propose_rules
-from ..models import Fact, Rule, Term, User
+from ..engine.image import parse_palette, prepare
+from ..models import Brand, Fact, Rule, Term, User
 from .common import log
 
 router = APIRouter(prefix="/api", tags=["library"])
@@ -99,7 +100,61 @@ def get_library(db: Session = Depends(get_db), user: User = Depends(current_user
         "rules": [rule_out(r) for r in db.query(Rule).filter(Rule.brand_id == user.brand_id).order_by(Rule.status.desc(), Rule.code)],
         "facts": [fact_out(f) for f in db.query(Fact).filter(Fact.brand_id == user.brand_id).order_by(Fact.code)],
         "terms": [term_out(t) for t in db.query(Term).filter(Term.brand_id == user.brand_id).order_by(Term.banned)],
+        "visuals": visuals_out(db.get(Brand, user.brand_id)),
     }
+
+
+def visuals_out(brand: Brand | None) -> dict:
+    has_logo = bool(brand and brand.logo_type)
+    return {"palette": parse_palette(brand.palette if brand else ""), "has_logo": has_logo,
+            "logo_url": f"/api/brand/logo?t={make_file_token('logo', brand.id)}" if has_logo else None}
+
+
+class PaletteIn(BaseModel):
+    palette: list[str] = Field(max_length=12)
+
+
+@router.put("/brand/palette")
+def set_palette(body: PaletteIn, db: Session = Depends(get_db), user: User = Depends(owner)):
+    colours = parse_palette(",".join(body.palette))
+    if len(colours) != len([c for c in body.palette if c.strip()]):
+        raise HTTPException(422, "Colours must be hex codes such as #1b2a4a.")
+    brand = db.get(Brand, user.brand_id)
+    brand.palette = ",".join(dict.fromkeys(colours))
+    log(db, user, "palette_changed", brand.palette or "no colours")
+    db.commit()
+    return visuals_out(brand)
+
+
+@router.post("/brand/logo")
+async def set_logo(file: UploadFile = File(...), db: Session = Depends(get_db), user: User = Depends(owner)):
+    try:
+        data, mime, _w, _h = prepare(await file.read())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    brand = db.get(Brand, user.brand_id)
+    brand.logo, brand.logo_type = data, mime
+    log(db, user, "logo_changed", file.filename or "logo")
+    db.commit()
+    return visuals_out(brand)
+
+
+@router.delete("/brand/logo")
+def remove_logo(db: Session = Depends(get_db), user: User = Depends(owner)):
+    brand = db.get(Brand, user.brand_id)
+    brand.logo, brand.logo_type = None, ""
+    log(db, user, "logo_removed", "")
+    db.commit()
+    return visuals_out(brand)
+
+
+@router.get("/brand/logo")
+def logo_file(t: str = "", db: Session = Depends(get_db)):
+    brand_id = read_file_token(t, "logo")
+    brand = db.get(Brand, brand_id) if brand_id else None
+    if brand is None or not brand.logo:
+        raise HTTPException(404, "No logo.")
+    return Response(brand.logo, media_type=brand.logo_type or "image/png", headers={"Cache-Control": "private, max-age=600"})
 
 
 @router.post("/rules")

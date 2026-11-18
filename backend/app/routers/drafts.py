@@ -3,18 +3,20 @@
 States: draft -> in_review -> (changes_requested | authorised_review | approved)
 Only people move a draft forward. The automated check never approves anything.
 """
+import json
 import re
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..auth import current_user, require
+from ..auth import current_user, make_file_token, read_file_token, require
 from ..db import get_db
 from ..engine.extract import extract_text
 from ..engine.exact import run_exact
+from ..engine.image import prepare
 from ..engine.run import run_review
-from ..models import now, AuditLog, Comment, Draft, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
+from ..models import now, AuditLog, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
 from .common import iso, log
 
 router = APIRouter(prefix="/api", tags=["drafts"])
@@ -103,7 +105,16 @@ def blocking_findings(db: Session, draft: Draft) -> list[Finding]:
 def finding_out(f: Finding) -> dict:
     return {"id": f.id, "version": f.version, "source": f.source, "category": f.category, "severity": f.severity,
             "quote": f.quote, "ref_code": f.ref_code, "ref_text": f.ref_text, "reason": f.reason,
-            "suggestion": f.suggestion, "status": f.status, "note": f.note}
+            "suggestion": f.suggestion, "status": f.status, "note": f.note, "image_id": f.image_id}
+
+
+def image_out(img: DraftImage) -> dict:
+    try:
+        analysis = json.loads(img.analysis) if img.analysis else None
+    except ValueError:
+        analysis = None
+    return {"id": img.id, "filename": img.filename, "width": img.width, "height": img.height, "alt_text": img.alt_text,
+            "url": f"/api/images/{img.id}?t={make_file_token('img', img.id)}", "analysis": analysis}
 
 
 def summary(db: Session, d: Draft) -> dict:
@@ -127,6 +138,7 @@ def detail(db: Session, d: Draft, user: User) -> dict:
         "checked_version": d.checked_version, "needs_check": d.checked_version != d.version,
         "mine": is_owner,
         "findings": [finding_out(f) for f in findings],
+        "images": [image_out(i) for i in db.query(DraftImage).filter(DraftImage.draft_id == d.id).order_by(DraftImage.id)],
         "run": None if run is None else {
             "version": run.version, "ai_used": run.ai_used, "ai_provider": run.ai_provider, "ai_model": run.ai_model,
             "ai_note": run.ai_note, "exact_count": run.exact_count, "ai_count": run.ai_count,
@@ -265,6 +277,8 @@ def check_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depen
 def apply_fix(db: Session, finding: Finding, draft: Draft, user: User, replacement: str, status: str) -> None:
     if finding.status != "open":
         raise HTTPException(409, "This finding has already been handled.")
+    if finding.image_id is not None:
+        return apply_image_fix(db, finding, draft, user, replacement, status)
     if finding.quote not in draft.body:
         raise HTTPException(409, "The quoted text is no longer in the draft. Run the check again.")
     new_version(db, draft, user, draft.body.replace(finding.quote, replacement, 1),
@@ -272,6 +286,24 @@ def apply_fix(db: Session, finding: Finding, draft: Draft, user: User, replaceme
     finding.status, finding.decided_by = status, user.id
     finding.note = f"Replaced with: {replacement}"
     log(db, user, f"finding_{status}", f"{finding.ref_code}: \"{finding.quote}\" -> \"{replacement}\"", draft.id)
+    db.commit()
+
+
+def apply_image_fix(db: Session, finding: Finding, draft: Draft, user: User, replacement: str, status: str) -> None:
+    """Only the missing description can be fixed here. Everything else is in the pixels: replace the
+    image, or dispute the finding."""
+    img = db.get(DraftImage, finding.image_id)
+    if img is None or img.draft_id != draft.id:
+        raise HTTPException(409, "That image has been removed. Run the check again.")
+    if finding.ref_code != "VIS-ALT":
+        raise HTTPException(409, "This is inside the image, so it cannot be fixed here. Replace the image, or dispute the finding.")
+    if not replacement.strip():
+        raise HTTPException(422, "Write a description for the image.")
+    img.alt_text = replacement.strip()[:1000]
+    new_version(db, draft, user, draft.body, f"{'Accepted' if status == 'accepted' else 'Own'} image description")
+    finding.status, finding.decided_by = status, user.id
+    finding.note = f"Description: {img.alt_text}"
+    log(db, user, f"finding_{status}", f"VIS-ALT: image described as \"{img.alt_text[:120]}\"", draft.id)
     db.commit()
 
 
@@ -401,6 +433,87 @@ def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(r
         log(db, user, "approved", f"Version {draft.version} approved and locked", draft.id)
     db.commit()
     return detail(db, draft, user)
+
+
+# ---------- images ----------
+
+MAX_IMAGES = 4
+
+
+@router.post("/drafts/{draft_id}/images")
+async def add_image(draft_id: int, file: UploadFile = File(...), alt_text: str = Form(""),
+                    db: Session = Depends(get_db), user: User = Depends(current_user)):
+    draft = get_draft(db, draft_id, user, lock=True)
+    own_editable(draft, user)
+    if db.query(DraftImage).filter(DraftImage.draft_id == draft.id).count() >= MAX_IMAGES:
+        raise HTTPException(409, f"A draft can have up to {MAX_IMAGES} images.")
+    try:
+        data, mime, w, h = prepare(await file.read())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    name = (file.filename or "image")[:200]
+    db.add(DraftImage(draft_id=draft.id, filename=name, mime=mime, data=data, width=w, height=h, alt_text=alt_text.strip()[:1000]))
+    new_version(db, draft, user, draft.body, f"Image added: {name}")
+    log(db, user, "image_added", name, draft.id)
+    db.commit()
+    return detail(db, draft, user)
+
+
+class AltIn(BaseModel):
+    alt_text: str = Field(max_length=1000)
+
+
+def own_image(db: Session, image_id: int, user: User) -> tuple[DraftImage, Draft]:
+    img = db.get(DraftImage, image_id)
+    if img is None:
+        raise HTTPException(404, "Image not found.")
+    draft = get_draft(db, img.draft_id, user, lock=True)
+    own_editable(draft, user)
+    return img, draft
+
+
+@router.put("/images/{image_id}")
+def describe_image(image_id: int, body: AltIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    img, draft = own_image(db, image_id, user)
+    if body.alt_text.strip() != img.alt_text:
+        img.alt_text = body.alt_text.strip()
+        new_version(db, draft, user, draft.body, "Image description changed")
+        log(db, user, "image_described", img.alt_text[:120], draft.id)
+        db.commit()
+    return detail(db, draft, user)
+
+
+@router.delete("/images/{image_id}")
+def remove_image(image_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    img, draft = own_image(db, image_id, user)
+    # Open findings about the image go with it; decided ones stay on the record without the picture.
+    db.query(Finding).filter(Finding.image_id == img.id, Finding.status == "open").delete()
+    db.query(Finding).filter(Finding.image_id == img.id).update({Finding.image_id: None})
+    name = img.filename
+    db.delete(img)
+    new_version(db, draft, user, draft.body, f"Image removed: {name}")
+    log(db, user, "image_removed", name, draft.id)
+    db.commit()
+    return detail(db, draft, user)
+
+
+@router.get("/images/{image_id}")
+def image_file(image_id: int, t: str = "", db: Session = Depends(get_db)):
+    """Loaded by <img> tags, so it is authorised by the link token from the draft page, not a header."""
+    if read_file_token(t, "img") != image_id:
+        raise HTTPException(401, "This image link has expired. Reload the page.")
+    img = db.get(DraftImage, image_id)
+    if img is None:
+        raise HTTPException(404, "Image not found.")
+    return Response(img.data, media_type=img.mime, headers={"Cache-Control": "private, max-age=3600"})
+
+
+@router.get("/sample-image")
+def sample_image(user: User = Depends(current_user)):
+    """The demo's sample post image for this brand, with problems planted for image review to find."""
+    from ..samples import sample_png
+    from ..seed import template_key
+    return Response(sample_png(template_key(user.brand.name if user.brand else "")), media_type="image/png")
 
 
 @router.post("/drafts/{draft_id}/comments")

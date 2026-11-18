@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api.js'
+import { api, BASE, getAuth } from '../api.js'
 import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
 import LiveText from '../LiveText.jsx'
 
@@ -37,7 +37,26 @@ export default function NewDraft({ user }) {
   const [form, setForm] = useState({ title: '', channel: 'LinkedIn', audience: '', purpose: '', body: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [images, setImages] = useState([]) // { file, alt, url } to upload after the draft is saved
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  const addImages = (files) => {
+    const room = 4 - images.length
+    const picked = [...files].filter((f) => f.type.startsWith('image/')).slice(0, room)
+    if (files.length > picked.length) setError(room <= 0 ? 'A draft can have up to 4 images.' : 'Only images can be added here (PNG, JPEG, WebP or GIF), up to 4.')
+    setImages((list) => [...list, ...picked.map((file) => ({ file, alt: '', url: URL.createObjectURL(file) }))])
+  }
+  const loadSampleImage = async () => {
+    setError('')
+    try {
+      const res = await fetch(BASE + '/api/sample-image', { headers: { Authorization: `Bearer ${getAuth()?.token}` } })
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      addImages([new File([blob], user?.demo_key === 'fizzbox' ? 'mango-fizz-post.png' : 'payroll-banner.png', { type: 'image/png' })])
+    } catch {
+      setError('The sample image could not be loaded. Try again in a moment.')
+    }
+  }
 
   const upload = async (e) => {
     const file = e.target.files?.[0]
@@ -58,8 +77,14 @@ export default function NewDraft({ user }) {
     setError('')
     try {
       const d = await api('/drafts', { method: 'POST', body: form })
-      const checked = await api(`/drafts/${d.id}/check`, { method: 'POST' })
-      navigate(`/drafts/${checked.id}`)
+      // The draft is saved from here on, so any problem with an image is reported on the draft's page.
+      const failed = []
+      for (const img of images) {
+        await api(`/drafts/${d.id}/images`, { method: 'POST', file: img.file, fields: { alt_text: img.alt } })
+          .catch((err) => failed.push(`${img.file.name}: ${err.message}`))
+      }
+      await api(`/drafts/${d.id}/check`, { method: 'POST' }).catch(() => {})
+      navigate(`/drafts/${d.id}`, { state: failed.length ? { note: `The draft was saved, but some images were not added. ${failed.join(' ')}` } : null })
     } catch (err) {
       setError(err.message)
       setBusy(false)
@@ -102,6 +127,30 @@ export default function NewDraft({ user }) {
           <Field label="Or upload a file" hint="Text, Markdown, Word (.docx) or PDF, up to 5 MB.">
             <input type="file" accept=".txt,.md,.docx,.pdf" onChange={upload} className="block text-sm" />
           </Field>
+          <fieldset className="grid gap-2">
+            <legend className="mb-1 text-sm font-semibold">Images <span className="font-normal text-muted">(optional, up to 4)</span></legend>
+            <p className="text-xs text-muted">The check reviews each image's colours against your brand palette, the contrast of any text in it, the logo, the text itself, and its description.</p>
+            {images.map((img, i) => (
+              <div key={img.url} className="flex items-start gap-3 rounded-md border-2 border-line bg-white p-2">
+                <img src={img.url} alt="" className="h-16 w-24 shrink-0 rounded object-cover" />
+                <label className="min-w-0 flex-1 text-xs font-semibold">
+                  Description for screen readers <span className="font-normal text-muted">(leave empty and the check will suggest one)</span>
+                  <input className={`${inputCls} mt-1 font-normal`} value={img.alt} maxLength={1000}
+                    onChange={(e) => setImages(images.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))}
+                    placeholder={img.file.name} />
+                </label>
+                <Button kind="ghost" type="button" aria-label={`Remove ${img.file.name}`}
+                  onClick={() => { URL.revokeObjectURL(img.url); setImages(images.filter((_, j) => j !== i)) }}>Remove</Button>
+              </div>
+            ))}
+            {images.length < 4 && (
+              <div className="flex flex-wrap items-center gap-3">
+                <input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" className="block text-sm"
+                  aria-label="Add images" onChange={(e) => { addImages(e.target.files || []); e.target.value = '' }} />
+                {user?.demo_brand && <Button type="button" onClick={loadSampleImage}>Add the sample image</Button>}
+              </div>
+            )}
+          </fieldset>
           <ErrorNote>{error}</ErrorNote>
           <div className="flex gap-2">
             <Button kind="primary" type="submit" disabled={busy}>
