@@ -156,7 +156,7 @@ export default function DraftView({ user }) {
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>
         {yourTurn && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-accent" />}
-        <p className="min-w-0 flex-1 overflow-hidden text-sm font-semibold" aria-live="polite">
+        <p className="min-w-0 flex-1 basis-64 overflow-hidden text-sm font-semibold" aria-live="polite">
           <span key={nextStep(d, user)} className={acted ? 'step-in block' : 'block'}>{nextStep(d, user)}</span>
         </p>
         {d.can.edit && (
