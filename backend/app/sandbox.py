@@ -11,7 +11,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from .auth import hash_password
-from .models import AuditLog, Brand, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User, now
+from .models import (AuditLog, Brand, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, RuleVersion,
+                     Term, User, now)
 from .seed import demo_brand
 
 KEEP_FOR = timedelta(hours=24)
@@ -73,8 +74,14 @@ def create_sandbox(db: Session, key: str = "lumio") -> Brand:
         db.flush()
         user_map[u.id] = copy.id
 
+    rule_map = {}
     for model in (Rule, Fact, Term):
-        _copy(db, db.query(model).filter(model.brand_id == t).order_by(model.id), timedelta(0), brand_id=lambda _: b)
+        m = _copy(db, db.query(model).filter(model.brand_id == t).order_by(model.id), timedelta(0), brand_id=lambda _: b)
+        if model is Rule:
+            rule_map = m
+    if rule_map:
+        _copy(db, db.query(RuleVersion).filter(RuleVersion.rule_id.in_(list(rule_map))).order_by(RuleVersion.id),
+              shift, rule_id=rule_map, user_id=user_map)
     draft_map = _copy(db, drafts, shift, brand_id=lambda _: b, creator_id=user_map)
     if draft_ids:
         _copy(db, db.query(DraftVersion).filter(DraftVersion.draft_id.in_(draft_ids)).order_by(DraftVersion.id),
@@ -101,6 +108,9 @@ def delete_brand_data(db: Session, brand_id: int, keep_users: bool = False) -> N
             db.query(model).filter(model.draft_id.in_(draft_ids)).delete(synchronize_session=False)
         db.query(Draft).filter(Draft.id.in_(draft_ids)).delete(synchronize_session=False)
     db.query(AuditLog).filter(AuditLog.brand_id == brand_id).delete(synchronize_session=False)
+    rule_ids = [r for (r,) in db.query(Rule.id).filter(Rule.brand_id == brand_id)]
+    if rule_ids:
+        db.query(RuleVersion).filter(RuleVersion.rule_id.in_(rule_ids)).delete(synchronize_session=False)
     for model in (Rule, Fact, Term):
         db.query(model).filter(model.brand_id == brand_id).delete(synchronize_session=False)
     if not keep_users:

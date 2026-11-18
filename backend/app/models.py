@@ -54,6 +54,24 @@ class Rule(Base):
     patterns: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(12), default="approved")  # proposed | approved
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    versions: Mapped[list["RuleVersion"]] = relationship(order_by="RuleVersion.number", viewonly=True)
+
+
+class RuleVersion(Base):
+    """A rule as it was before a change: the wording history behind guideline-gap rewrites."""
+    __tablename__ = "rule_versions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rule_id: Mapped[int] = mapped_column(ForeignKey("rules.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(200))
+    text: Mapped[str] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(10))
+    category: Mapped[str] = mapped_column(String(40))
+    patterns: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str] = mapped_column(String(300), default="")  # why it was changed
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)  # when it was replaced
+    user: Mapped["User"] = relationship()
 
 
 class Fact(Base):

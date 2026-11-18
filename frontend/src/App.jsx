@@ -164,7 +164,7 @@ export default function App() {
           <Route path="/new" element={<NewDraft user={user} />} />
           <Route path="/drafts/:id" element={<DraftView user={user} />} />
           <Route path="/drafts/:id/record" element={<Record user={user} />} />
-          <Route path="/insights" element={<Insights />} />
+          <Route path="/insights" element={<Insights user={user} />} />
           <Route path="/library" element={<Library user={user} />} />
           <Route path="/reliability" element={<Reliability user={user} />} />
           <Route path="/team" element={<Team user={user} />} />

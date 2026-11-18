@@ -165,3 +165,66 @@ def propose_rules(text: str) -> tuple[list[dict], str]:
         if 20 <= len(line) <= 300 and RULE_WORDS.search(line):
             out.append({"category": "tone", "title": line[:60].rstrip(" ,.;:"), "text": line, "severity": "medium"})
     return out[:40], "Rules proposed without AI: each instruction-like line became one rule. Check the categories."
+
+
+REWRITE_SYSTEM = """You help a brand owner make one unclear brand rule clearer.
+You get the RULE, and real EXAMPLES where writers and reviewers disagreed with it: what was flagged, what happened
+(waived, dismissed, disputed) and the reasons people gave.
+Rewrite the rule so a writer can tell in advance what is and is not allowed, and the cases in the examples are
+decided the way the reviewers decided them. Keep the rule's intent; do not weaken it beyond what the examples show.
+Keep it to one to three plain sentences. If the rule is checked by exact patterns, you may suggest new patterns
+(one regular expression per line), or "" to keep them.
+Reply with JSON only: {"title":"short name","text":"the rewritten rule","patterns":"","why":"one sentence on what changed and why"}"""
+
+
+def suggest_rewrite(rule, examples: list[dict]) -> dict:
+    """A clearer wording for one rule, from the disagreements it caused. Raises RuntimeError without AI."""
+    if not config.AI_API_KEY:
+        raise RuntimeError("Suggesting a rewrite needs the AI, and no AI key is configured on this server.")
+    lines = [f"RULE {rule.code} [{rule.category}, {rule.severity}] {rule.title}: {rule.text}"]
+    if (rule.patterns or "").strip():
+        lines.append("PATTERNS (checked in code):\n" + rule.patterns)
+    lines.append("EXAMPLES")
+    for e in examples[:8]:
+        lines.append(f"- flagged \"{e['quote']}\" -> {e['outcome']}" + (f"; reason given: {e['note']}" if e.get("note") else ""))
+    try:
+        data = _chat(REWRITE_SYSTEM, "\n".join(lines))
+    except Exception as e:
+        raise RuntimeError(f"The AI could not suggest a rewrite right now ({_why(e)}). Try again in a minute.")
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise RuntimeError("The AI did not return a rewrite. Try again.")
+    patterns = str(data.get("patterns") or "").strip()
+    for line in patterns.splitlines():
+        try:
+            re.compile(line.strip())
+        except re.error:
+            patterns = ""  # never offer a pattern that would not even compile
+            break
+    return {"title": str(data.get("title") or rule.title).strip()[:200], "text": text[:1000],
+            "patterns": patterns, "why": str(data.get("why") or "").strip()[:400]}
+
+
+MISSING_SYSTEM = """You help a brand owner find gaps in their brand rules.
+You get the brand's current RULES, and NOTES that reviewers wrote when they sent drafts back or discussed them.
+Find recurring problems in the NOTES that no current rule covers. Ignore anything a current rule already covers,
+and anything mentioned only once unless it is serious.
+category is one of: tone, claims, messaging, accessibility. severity is one of: low, medium, high.
+Reply with JSON only: {"rules":[{"category":"tone","title":"short name","text":"the rule in one or two sentences","severity":"medium","because":"which notes show this"}]}
+Return an empty list if nothing is missing. At most 5 rules."""
+
+
+def find_missing_rules(rules, notes: list[str]) -> list[dict]:
+    if not config.AI_API_KEY:
+        raise RuntimeError("Finding missing rules needs the AI, and no AI key is configured on this server.")
+    text = "RULES\n" + "\n".join(f"{r.code} {r.title}: {r.text}" for r in rules)
+    text += "\n\nNOTES\n" + "\n".join(f"- {n[:400]}" for n in notes[:60])
+    try:
+        data = _chat(MISSING_SYSTEM, text)
+    except Exception as e:
+        raise RuntimeError(f"The AI could not look for missing rules right now ({_why(e)}). Try again in a minute.")
+    out = []
+    for r in data.get("rules") or []:
+        if isinstance(r, dict) and str(r.get("text", "")).strip():
+            out.append(r)
+    return out[:5]

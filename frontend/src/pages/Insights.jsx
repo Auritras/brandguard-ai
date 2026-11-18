@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { Card, CountUp, ErrorNote, PageLoading, SEVERITY } from '../ui.jsx'
+import GuidelineGaps from '../GuidelineGaps.jsx'
 
 const OUTCOME_LABEL = {
   open: 'Still open', accepted: 'Fix accepted', edited: 'Own fix written', disputed: 'Disputed, waiting',
   dismissed: 'Dismissed', waived: 'Waived with a reason',
 }
 
-export default function Insights() {
+export default function Insights({ user }) {
   const [s, setS] = useState(null)
   const [error, setError] = useState('')
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function Insights() {
           </div>
         </>
       )}
+      {s.drafts > 0 && <GuidelineGaps user={user} />}
     </div>
   )
 }

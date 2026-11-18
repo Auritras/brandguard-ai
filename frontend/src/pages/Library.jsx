@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, BASE } from '../api.js'
-import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading } from '../ui.jsx'
+import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading, timeAgo } from '../ui.jsx'
 
 const EMPTY_RULE = { category: 'tone', title: '', text: '', severity: 'medium', patterns: '' }
 const EMPTY_FACT = { statement: '', keywords: '', value: '', source: '', valid_until: '' }
@@ -132,7 +132,7 @@ export default function Library({ user }) {
                 <div className="flex gap-2">
                   <Button kind="dark" disabled={busy}
                     onClick={async () => {
-                      const { id, code, status, checked_by, ...body } = rule
+                      const { id, code, status, checked_by, versions, ...body } = rule
                       const out = await run(() => api(id ? `/rules/${id}` : '/rules', { method: id ? 'PUT' : 'POST', body }))
                       if (out) setRule(null)
                     }}>
@@ -324,6 +324,25 @@ function Visuals({ visuals, owner, run, setNote }) {
   )
 }
 
+// Earlier wordings of a rule, newest first, with why each was changed.
+function RuleHistory({ r }) {
+  const [rows, setRows] = useState(null)
+  return (
+    <details className="mt-2 text-sm" onToggle={(e) => { if (e.currentTarget.open && !rows) api(`/rules/${r.id}/history`).then(setRows).catch(() => setRows([])) }}>
+      <summary className="cursor-pointer font-semibold text-primary">Earlier wordings ({r.versions})</summary>
+      <ol className="mt-2 grid gap-2">
+        {(rows || []).map((v) => (
+          <li key={v.number} className="border-l-2 border-line pl-3">
+            <p className="text-muted line-through decoration-black/30">{v.text}</p>
+            <p className="text-xs text-muted">Replaced by {v.by || 'someone'} {timeAgo(v.replaced_at)}{v.note ? ` · ${v.note}` : ''}</p>
+          </li>
+        ))}
+        {rows === null && <li className="text-muted">Loading…</li>}
+      </ol>
+    </details>
+  )
+}
+
 function RuleRow({ r, owner, busy, onEdit, onApprove, onDelete }) {
   return (
     <Card className="flex flex-wrap items-start gap-3 p-4">
@@ -335,6 +354,7 @@ function RuleRow({ r, owner, busy, onEdit, onApprove, onDelete }) {
           <Chip className="border-line bg-white capitalize text-ink">{r.category}</Chip>
           <span className="text-xs text-muted">Checked by {r.checked_by === 'code' ? 'exact code' : 'AI, then verified'}</span>
         </div>
+        {r.versions > 0 && <RuleHistory r={r} />}
       </div>
       {owner && (
         <div className="flex gap-2">
