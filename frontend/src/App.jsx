@@ -124,7 +124,7 @@ export default function App() {
   if (!auth) return <Login onSignIn={signIn} signedOut={signedOut} />
   const user = auth.user
   const tab = ({ isActive }) =>
-    `rounded-md px-3 py-1.5 text-sm font-semibold ${isActive ? 'bg-paper text-ink' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
+    `shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-semibold ${isActive ? 'bg-paper text-ink' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
 
   return (
     <div className={`min-h-screen ${leaving ? 'app-out' : ''}`}>
@@ -137,7 +137,7 @@ export default function App() {
             <img src="/favicon.svg" alt="" className="h-7 w-7 rounded" />
             BrandGuard AI
           </Link>
-          <nav aria-label="Main" className="order-last flex w-full gap-1 sm:order-none sm:w-auto">
+          <nav aria-label="Main" className="order-last -mx-1 flex w-[calc(100%+0.5rem)] gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:order-none sm:mx-0 sm:w-auto sm:px-0">
             <NavLink to="/" end viewTransition className={tab} data-tour="nav-drafts" aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
               Drafts
               {waiting > 0 && (

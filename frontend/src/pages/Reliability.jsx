@@ -23,7 +23,7 @@ export default function Reliability({ user }) {
     <div>
       <h1 className="font-display text-3xl font-bold">Reliability</h1>
       <p className="mt-1 max-w-3xl text-muted">
-        How often the check catches what it should. We wrote {r.cases} test drafts with problems planted on purpose,
+        How often the check catches what it should. We wrote {r.cases - r.clean} test drafts with problems planted on purpose,
         and {r.clean} with none, then ran each through the same check you use. Missed problems and false alarms are listed below.
       </p>
 
