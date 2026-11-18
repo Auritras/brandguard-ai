@@ -106,3 +106,22 @@ def test_due_date_and_csv_rules(client, creator, reviewer):
     assert bad.status_code == 422
     ok = client.post("/api/rules/bulk", headers=reviewer, json={"rules": [{"category": "tone", "title": "No slang", "text": "Avoid slang like 'lit'."}]})
     assert ok.json()["rules"][0]["status"] == "proposed"
+
+
+def test_a_fix_inside_a_flagged_sentence_keeps_the_sentence_fix_working(client, creator):
+    d = make(client, creator, "Lumio Pay is trusted by 10,000 companies.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    d = client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).json()  # "Lumio Pay" -> "Lumio Payroll"
+    fact = next(f for f in d["findings"] if f["ref_code"] == "F-001")
+    assert fact["quote"] == "Lumio Payroll is trusted by 10,000 companies."
+    d = client.post(f"/api/findings/{fact['id']}/accept", headers=creator).json()
+    assert d["body"] == "Lumio Payroll is trusted by 8,200 companies."
+
+
+def test_carry_over_does_not_touch_a_longer_word(client, creator):
+    d = make(client, creator, "Lumio Payroll, not Lumio Pay, has 10,000 companies.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    d = client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).json()
+    fact = next(f for f in d["findings"] if f["ref_code"] == "F-001")
+    assert fact["quote"] == "Lumio Payroll, not Lumio Payroll, has 10,000 companies." == d["body"]
+    assert "Payrollroll" not in fact["suggestion"]

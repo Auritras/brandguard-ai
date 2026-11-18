@@ -141,6 +141,31 @@ def own_editable(draft: Draft, user: User) -> None:
         raise HTTPException(409, "This draft is with reviewers and cannot be changed right now.")
 
 
+def find_quote(body: str, quote: str) -> int:
+    """Where a finding's quote is in the text, as a whole word or phrase ("Lumio Pay" is not found inside
+    "Lumio Payroll"). -1 if it is not there."""
+    hits = spans(body, quote)
+    return hits[0][0] if hits else -1
+
+
+def replace_at(body: str, start: int, old: str, new: str) -> str:
+    return body[:start] + new + body[start + len(old):]
+
+
+def carry_over(db: Session, draft: Draft, before: str, start: int, old: str, new: str, done: Finding) -> None:
+    """A fix replaced `old` at `start` in `before` with `new`. Other open findings whose quoted passage
+    contains that spot (a term inside a sentence flagged for its number, say) follow the change, so their
+    own fixes still apply."""
+    end = start + len(old)
+    for f in db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status == "open", Finding.image_id.is_(None)):
+        p = before.find(f.quote)
+        if f is done or p == -1 or not (p <= start and end <= p + len(f.quote)) or f.quote == old:
+            continue
+        f.quote = before[p:start] + new + before[end:p + len(f.quote)]
+        if f.suggestion:
+            f.suggestion = re.sub(r"(?<![\w-])" + re.escape(old) + r"(?![\w-])", new.replace("\\", "\\\\"), f.suggestion, count=1)
+
+
 def new_version(db: Session, draft: Draft, user: User, body: str, note: str) -> None:
     draft.version += 1
     draft.body = body
@@ -341,10 +366,12 @@ def apply_fix(db: Session, finding: Finding, draft: Draft, user: User, replaceme
         raise HTTPException(409, "This is about the whole text. Shorten it with Edit text, then run the check again.")
     if finding.image_id is not None:
         return apply_image_fix(db, finding, draft, user, replacement, status)
-    if finding.quote not in draft.body:
+    before, start = draft.body, find_quote(draft.body, finding.quote)
+    if start == -1:
         raise HTTPException(409, "The quoted text is no longer in the draft. Run the check again.")
-    new_version(db, draft, user, draft.body.replace(finding.quote, replacement, 1),
+    new_version(db, draft, user, replace_at(draft.body, start, finding.quote, replacement),
                 f"{'Accepted' if status == 'accepted' else 'Own fix for'} {finding.ref_code}")
+    carry_over(db, draft, before, start, finding.quote, replacement, finding)
     finding.status, finding.decided_by = status, user.id
     finding.note = f"Replaced with: {replacement}"
     log(db, user, f"finding_{status}", f"{finding.ref_code}: \"{finding.quote}\" -> \"{replacement}\"", draft.id)
@@ -376,15 +403,18 @@ def accept_low(draft_id: int, db: Session = Depends(get_db), user: User = Depend
     own_editable(draft, user)
     todo = [f for f in db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status == "open",
                                                  Finding.severity == "low", Finding.image_id.is_(None)).order_by(Finding.id)
-            if f.suggestion and f.quote in draft.body]
+            if f.suggestion and find_quote(draft.body, f.quote) != -1]
     if not todo:
         raise HTTPException(409, "There are no low-risk suggested fixes left to accept.")
     body = draft.body
     done = []
     for f in todo:
-        if f.quote in body:
-            body = body.replace(f.quote, f.suggestion, 1)
+        start = find_quote(body, f.quote)
+        if start != -1:
+            before = body
+            body = replace_at(body, start, f.quote, f.suggestion)
             f.status, f.decided_by, f.note = "accepted", user.id, f"Replaced with: {f.suggestion}"
+            carry_over(db, draft, before, start, f.quote, f.suggestion, f)
             done.append(f"{f.ref_code}: \"{f.quote}\" -> \"{f.suggestion}\"")
     new_version(db, draft, user, body, f"Accepted {len(done)} low-risk fix(es)")
     log(db, user, "finding_accepted", "; ".join(done)[:1000], draft.id)
