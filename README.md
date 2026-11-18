@@ -148,8 +148,8 @@ On Windows:
 powershell -ExecutionPolicy Bypass -File scripts/dev.ps1
 ```
 
-Then open http://localhost:5173 and choose **Try the demo**. It uses a local SQLite database (created
-with both demo brands on first start). For the AI checks, put `GROQ_API_KEY=...` in `backend/.env`
+Then open http://localhost:5173 and choose **Try the demo**. It uses a local SQLite database; the
+first run builds both demo brands and their drafts in it (exact checks only, about half a minute). For the AI checks, put `GROQ_API_KEY=...` in `backend/.env`
 (a free key from console.groq.com); the script reads only that line.
 
 **By hand:** in `backend`, create a virtual environment, `pip install -r requirements.txt`, then

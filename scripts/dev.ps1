@@ -26,6 +26,14 @@ if (Test-Path 'backend\.env') {
 }
 if ($key) { Write-Output 'AI checks: on (key from backend\.env)' } else { Write-Output 'AI checks: off (exact checks only). Add GROQ_API_KEY to backend\.env to turn them on.' }
 
+if (-not (Test-Path 'backend\brandguard.db')) {
+  Write-Output 'Building the demo drafts in the local database (first run only, about a minute)...'
+  Push-Location backend
+  $env:DATABASE_URL = ''; $env:GROQ_API_KEY = ''
+  & .\.venv\Scripts\python.exe -m app.reset_demo --no-ai --yes | Out-Null
+  Pop-Location
+}
+
 # The backend runs in its own window with only the AI key set, so a DATABASE_URL elsewhere is never used.
 $cmd = "`$env:DATABASE_URL=''; `$env:GROQ_API_KEY='$key'; Set-Location '$root\backend'; .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000"
 Start-Process powershell -ArgumentList '-NoExit', '-Command', $cmd

@@ -23,6 +23,11 @@ KEY=""
 [ -f backend/.env ] && KEY=$(grep -E '^GROQ_API_KEY=' backend/.env | head -1 | cut -d= -f2- | tr -d '"')
 [ -n "$KEY" ] && echo "AI checks: on (key from backend/.env)" || echo "AI checks: off (exact checks only). Add GROQ_API_KEY to backend/.env to turn them on."
 
+if [ ! -f backend/brandguard.db ]; then
+  echo "Building the demo drafts in the local database (first run only, about a minute)..."
+  (cd backend && env -u DATABASE_URL GROQ_API_KEY="" .venv/bin/python -m app.reset_demo --no-ai --yes >/dev/null)
+fi
+
 (cd backend && env -u DATABASE_URL GROQ_API_KEY="$KEY" .venv/bin/python -m uvicorn app.main:app --port 8000) &
 BACK=$!
 trap 'kill $BACK 2>/dev/null' EXIT INT TERM
