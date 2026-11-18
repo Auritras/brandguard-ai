@@ -2,10 +2,11 @@
 teammates. Nobody can join a brand without its owner, and no one can see another brand."""
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ..limits import DEMO_COPIES, SIGN_UPS, client_ip
 from ..auth import current_user, hash_password, make_token, require, verify_password
 from ..db import get_db
 from ..models import AuditLog, Brand, Draft, User
@@ -66,7 +67,8 @@ def clean_email(db: Session, email: str) -> str:
 
 
 @router.post("/auth/signup")
-def sign_up(body: SignUpIn, db: Session = Depends(get_db)):
+def sign_up(body: SignUpIn, request: Request, db: Session = Depends(get_db)):
+    SIGN_UPS.check(client_ip(request))
     email = clean_email(db, body.email)
     brand = Brand(name=body.brand.strip())
     db.add(brand)
@@ -172,8 +174,9 @@ class DemoIn(BaseModel):
 
 
 @router.post("/demo/start")
-def start_demo(body: DemoIn, db: Session = Depends(get_db)):
+def start_demo(body: DemoIn, request: Request, db: Session = Depends(get_db)):
     """A fresh private copy of the demo, signed in as the chosen role."""
+    DEMO_COPIES.check(client_ip(request))
     if body.role not in ROLES:
         raise HTTPException(422, "Role must be creator, manager or reviewer.")
     if body.brand not in TEMPLATES:

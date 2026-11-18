@@ -3,10 +3,12 @@
 States: draft -> in_review -> (changes_requested | authorised_review | approved)
 Only people move a draft forward. The automated check never approves anything.
 """
+import contextvars
 import json
 import re
+from datetime import timedelta
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -17,45 +19,59 @@ from ..engine.exact import run_exact
 from ..engine.image import prepare
 from ..engine.run import run_review
 from ..models import now, AuditLog, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
+from .. import config
+from ..limits import CHECKS
 from .common import iso, log
 
-router = APIRouter(prefix="/api", tags=["drafts"])
+# The version of the draft page the person was looking at when they acted (the newest history line they
+# had seen). Set per request from the X-Seen-Rev header; see fresh() below.
+SEEN = contextvars.ContextVar("seen_rev", default=None)
+
+
+async def capture_seen(x_seen_rev: str | None = Header(None)):
+    SEEN.set(int(x_seen_rev) if x_seen_rev and x_seen_rev.isdigit() else None)
+
+
+router = APIRouter(prefix="/api", tags=["drafts"], dependencies=[Depends(capture_seen)])
 
 EDITABLE = ("draft", "changes_requested")
 BLOCKING = ("open", "disputed")  # a high-severity finding in one of these states blocks approval
 
 
+MAX_BODY = 20000  # characters: about eight pages, far more than any post, ad or email
+
+
 class DraftIn(BaseModel):
     title: str = Field(min_length=2, max_length=200)
-    channel: str = ""
-    audience: str = ""
-    purpose: str = ""
-    body: str = Field(min_length=1)
+    channel: str = Field("", max_length=60)
+    audience: str = Field("", max_length=200)
+    purpose: str = Field("", max_length=1000)
+    body: str = Field(min_length=1, max_length=MAX_BODY)
 
 
 class BodyIn(BaseModel):
-    body: str = Field(min_length=1)
+    body: str = Field(min_length=1, max_length=MAX_BODY)
 
 
 class EditIn(BaseModel):
-    replacement: str
+    replacement: str = Field(max_length=5000)
 
 
 class ReasonIn(BaseModel):
-    reason: str = Field(min_length=3)
+    reason: str = Field(min_length=3, max_length=1000)
 
 
 class DecideIn(BaseModel):
     decision: str  # uphold | dismiss
-    reason: str = Field(min_length=3)
+    reason: str = Field(min_length=3, max_length=1000)
 
 
 class NoteIn(BaseModel):
-    note: str = Field(min_length=3)
+    note: str = Field(min_length=3, max_length=2000)
 
 
 class CommentIn(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=2000)
     finding_id: int | None = None
 
 
@@ -68,7 +84,34 @@ def get_draft(db: Session, draft_id: int, user: User, lock: bool = False) -> Dra
     if draft is None or draft.deleted_at is not None or draft.brand_id != user.brand_id \
             or (user.role == "creator" and draft.creator_id != user.id):
         raise HTTPException(404, "Draft not found.")
+    if lock:
+        fresh(db, draft, user)
     return draft
+
+
+QUIET = ("comment_added", "check_run", "demo_started")  # nothing on the page that a decision depends on
+
+
+def fresh(db: Session, draft: Draft, user: User) -> None:
+    """Two people on one draft: if someone else changed it after this person's page was loaded, refuse the
+    action and say who did what, instead of acting on a page that is out of date."""
+    seen = SEEN.get()
+    if seen is None:
+        return
+    newer = db.query(AuditLog).filter(AuditLog.draft_id == draft.id, AuditLog.id > seen, AuditLog.user_id != user.id,
+                                      AuditLog.action.notin_(QUIET)).order_by(AuditLog.id.desc()).first()
+    if newer:
+        who = newer.user.name.split(" (")[0]
+        raise HTTPException(409, f"{who} {ACTION_TEXT.get(newer.action, 'changed this draft')} a moment ago, so your page was "
+                                 "out of date. It now shows the latest; check it and try again if it still applies.")
+
+
+ACTION_TEXT = {"approved": "approved this draft", "sent_to_authorised_review": "approved and escalated this draft",
+               "changes_requested": "sent this draft back for changes", "finding_waived": "waived a finding",
+               "dispute_rejected": "rejected a dispute", "dispute_accepted": "dismissed a finding",
+               "submitted_for_review": "sent this draft for review", "draft_edited": "edited the text",
+               "finding_accepted": "accepted a fix", "finding_edited": "changed the text", "finding_disputed": "disputed a finding",
+               "image_added": "added an image", "image_removed": "removed an image", "draft_deleted": "deleted this draft"}
 
 
 def get_finding(db: Session, finding_id: int, user: User) -> tuple[Finding, Draft]:
@@ -137,6 +180,8 @@ def detail(db: Session, d: Draft, user: User) -> dict:
         "audience": d.audience, "purpose": d.purpose, "body": d.body,
         "checked_version": d.checked_version, "needs_check": d.checked_version != d.version,
         "mine": is_owner,
+        # The newest history line: sent back with each action, so changes by others are noticed (see fresh()).
+        "rev": db.query(AuditLog.id).filter(AuditLog.draft_id == d.id).order_by(AuditLog.id.desc()).limit(1).scalar() or 0,
         "findings": [finding_out(f) for f in findings],
         "images": [image_out(i) for i in db.query(DraftImage).filter(DraftImage.draft_id == d.id).order_by(DraftImage.id)],
         "run": None if run is None else {
@@ -216,7 +261,7 @@ def read_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depend
 
 @router.put("/drafts/{draft_id}")
 def edit_draft(draft_id: int, body: BodyIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    draft = get_draft(db, draft_id, user)
+    draft = get_draft(db, draft_id, user, lock=True)
     own_editable(draft, user)
     if body.body != draft.body:
         new_version(db, draft, user, body.body, "Edited by hand")
@@ -235,7 +280,7 @@ def spans(body: str, quote: str) -> list[list[int]]:
 @router.post("/check-text")
 def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     """Exact checks only, on unsaved text, for checking while typing. Nothing is stored or sent to AI."""
-    text = body.body[:20000]
+    text = body.body[:MAX_BODY]
     b = user.brand_id
     rules = db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all()
     found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all())
@@ -262,8 +307,14 @@ def delete_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depe
 
 @router.post("/drafts/{draft_id}/check")
 def check_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    draft = get_draft(db, draft_id, user)
+    draft = get_draft(db, draft_id, user, lock=True)
     own_editable(draft, user)
+    # A double click, or a second tab, should not run (and pay for) the same check twice.
+    last = db.query(ReviewRun).filter(ReviewRun.draft_id == draft.id).order_by(ReviewRun.id.desc()).first()
+    if last and last.version == draft.version and draft.checked_version == draft.version and (last.ai_used or not config.AI_API_KEY) \
+            and now() - (last.created_at if last.created_at.tzinfo else last.created_at.replace(tzinfo=now().tzinfo)) < timedelta(seconds=15):
+        return detail(db, draft, user)
+    CHECKS.check(f"user:{user.id}")
     run = run_review(db, draft)
     log(db, user, "check_run",
         f"Version {draft.version}: {run.exact_count} exact, {run.ai_count} AI, {run.dropped_count} AI finding(s) dropped by verification",
@@ -519,6 +570,9 @@ def sample_image(user: User = Depends(current_user)):
 @router.post("/drafts/{draft_id}/comments")
 def add_comment(draft_id: int, body: CommentIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     draft = get_draft(db, draft_id, user)
+    last = db.query(Comment).filter(Comment.draft_id == draft.id).order_by(Comment.id.desc()).first()
+    if last and last.user_id == user.id and last.text == body.text:
+        return detail(db, draft, user)  # the same comment sent twice (double click, or a retry): keep one
     db.add(Comment(draft_id=draft.id, finding_id=body.finding_id, user_id=user.id, text=body.text))
     log(db, user, "comment_added", body.text[:120], draft.id)
     db.commit()

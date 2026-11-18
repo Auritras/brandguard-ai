@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from .db import Base, SessionLocal, engine, get_db
 from .models import User
 from .seed import seed
 from .migrate import migrate
+from .limits import SIGN_INS, client_ip
 
 
 @asynccontextmanager
@@ -46,8 +47,8 @@ def ping(db: Session = Depends(get_db)):
 
 
 class LoginIn(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=200)
+    password: str = Field(max_length=200)
 
 
 
@@ -64,7 +65,8 @@ def health():
 
 
 @app.post("/api/auth/login")
-def login(body: LoginIn, db: Session = Depends(get_db)):
+def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
+    SIGN_INS.check(client_ip(request))
     user = db.query(User).filter(User.email == body.email.strip().lower()).first()
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Wrong email or password.")

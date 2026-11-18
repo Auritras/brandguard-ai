@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { api, getAuth, getDemoToken, setAuth, setDemoToken } from './api.js'
 import { Button } from './ui.jsx'
+import { ErrorBoundary } from './Resilience.jsx'
 import Login from './pages/Login.jsx'
 import Drafts from './pages/Drafts.jsx'
 import NewDraft from './pages/NewDraft.jsx'
@@ -159,6 +160,7 @@ export default function App() {
         {/* Each screen fades up when you move to it; filters on the same screen do not count. It is also
             keyed by who is signed in, so switching person or demo brand reloads the screen's data. */}
         <div key={`${location.pathname}:${user.id}`} className="page-in">
+        <ErrorBoundary>
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft user={user} />} />
@@ -171,6 +173,7 @@ export default function App() {
           <Route path="/account" element={<Account user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ErrorBoundary>
         </div>
       </main>
     </div>

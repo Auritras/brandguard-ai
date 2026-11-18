@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, BASE, getAuth } from '../api.js'
 import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
@@ -34,9 +34,30 @@ const FIZZ_SAMPLE = {
 export default function NewDraft({ user }) {
   const sample = user?.demo_key === 'fizzbox' ? FIZZ_SAMPLE : SAMPLE
   const navigate = useNavigate()
-  const [form, setForm] = useState({ title: '', channel: 'LinkedIn', audience: '', purpose: '', body: '' })
+  // What is being written is kept in this browser as you type, so a refresh, a closed tab or a crash
+  // does not lose it. The last channel and audience are remembered for next time.
+  const key = `bg_new_draft_${user?.id || 'x'}`
+  const read = (k) => { try { return JSON.parse(localStorage.getItem(k)) } catch { return null } }
+  const blank = { title: '', channel: 'LinkedIn', audience: '', purpose: '', body: '', ...(read('bg_last_channel') || {}) }
+  const saved = read(key)
+  const [form, setForm] = useState(saved?.body || saved?.title ? { ...blank, ...saved } : blank)
+  const [restored, setRestored] = useState(!!(saved?.body || saved?.title))
+  const dirty = !!(form.body.trim() || form.title.trim())
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { if (dirty) localStorage.setItem(key, JSON.stringify(form)); else localStorage.removeItem(key) } catch { /* private window */ }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [form, dirty, key])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // Leaving with unsaved images or text: the browser asks first (the text itself is kept anyway).
+  useEffect(() => {
+    if (!dirty || busy) return
+    const warn = (e) => { e.preventDefault(); e.returnValue = '' }
+    addEventListener('beforeunload', warn)
+    return () => removeEventListener('beforeunload', warn)
+  }, [dirty, busy])
   const [images, setImages] = useState([]) // { file, alt, url } to upload after the draft is saved
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -77,6 +98,10 @@ export default function NewDraft({ user }) {
     setError('')
     try {
       const d = await api('/drafts', { method: 'POST', body: form })
+      try {
+        localStorage.removeItem(key)
+        localStorage.setItem('bg_last_channel', JSON.stringify({ channel: form.channel, audience: form.audience }))
+      } catch { /* private window */ }
       // The draft is saved from here on, so any problem with an image is reported on the draft's page.
       const failed = []
       for (const img of images) {
@@ -101,6 +126,13 @@ export default function NewDraft({ user }) {
         <Button onClick={() => setForm(sample)}>Load a sample post</Button>
       </div>
 
+      {restored && (
+        <p role="status" className="step-in mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-card px-3 py-2 text-sm">
+          <span>Restored what you were writing before. It is kept in this browser until you save it.</span>
+          <button type="button" className="font-semibold text-primary hover:underline"
+            onClick={() => { setForm({ ...blank, title: '', body: '', purpose: '' }); setRestored(false) }}>Start blank instead</button>
+        </p>
+      )}
       <Card className="mt-6 p-6">
         <form className="grid gap-4" onSubmit={save}>
           <Field label="Title">

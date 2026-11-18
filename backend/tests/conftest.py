@@ -3,7 +3,8 @@ import tempfile
 
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(tempfile.mkdtemp(), "test.db").replace("\\", "/")
 os.environ["GROQ_API_KEY"] = ""
-os.environ["BRANDGUARD_TEMPLATE_WRITES"] = "1"  # most tests work in the demo brand directly
+os.environ["BRANDGUARD_TEMPLATE_WRITES"] = "1"
+os.environ["BRANDGUARD_RATE_LIMITS"] = "off"  # most tests work in the demo brand directly
 
 import pytest
 from fastapi.testclient import TestClient

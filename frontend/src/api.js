@@ -33,11 +33,33 @@ export function setDemoToken(token, brand = 'lumio') {
   }
 }
 
-export async function api(path, { method = 'GET', body, file, fields, token } = {}) {
+// Requests that take a while are announced (the free server sleeps and takes up to a minute to wake),
+// so the app can say so instead of looking frozen. See ServerStatus in App.jsx.
+const pending = new Set()
+export const serverEvents = new EventTarget()
+const announce = () => serverEvents.dispatchEvent(new CustomEvent('change', { detail: { slow: [...pending].some((p) => p.slow) } }))
+
+const FIELD = { body: 'Content', title: 'Title', purpose: 'Purpose', audience: 'Audience', channel: 'Channel', text: 'Text',
+  reason: 'Reason', note: 'Note', replacement: 'Replacement', alt_text: 'Description', email: 'Email', password: 'Password', name: 'Name', brand: 'Brand name' }
+function readable(d) {
+  if (typeof d === 'string') return d
+  if (Array.isArray(d)) {
+    return d.map((x) => {
+      const field = FIELD[x.loc?.[x.loc.length - 1]] || ''
+      const max = x.ctx?.max_length
+      const msg = max ? `is too long (at most ${max.toLocaleString()} characters)` : (x.msg || '').replace(/^String should /, 'should ').replace(/^Value error, /, '')
+      return field ? `${field} ${msg}.` : msg
+    }).join(' ')
+  }
+  return 'Something went wrong.'
+}
+
+export async function api(path, { method = 'GET', body, file, fields, token, rev } = {}) {
   const headers = {}
   const auth = token ? null : getAuth()
   if (token) headers.Authorization = `Bearer ${token}`
   else if (auth?.token) headers.Authorization = `Bearer ${auth.token}`
+  if (rev !== undefined && rev !== null) headers['X-Seen-Rev'] = String(rev)
   let payload
   if (file) {
     payload = new FormData()
@@ -47,11 +69,32 @@ export async function api(path, { method = 'GET', body, file, fields, token } = 
     headers['Content-Type'] = 'application/json'
     payload = JSON.stringify(body)
   }
+  const ticket = { slow: false }
+  pending.add(ticket)
+  const timer = setTimeout(() => { ticket.slow = true; announce() }, 2500)
   let res
   try {
-    res = await fetch(BASE + '/api' + path, { method, headers, body: payload })
+    // Reading is safe to repeat, so a dropped connection gets one more try before giving up.
+    const tries = method === 'GET' ? 2 : 1
+    for (let i = 0; i < tries; i++) {
+      try {
+        res = await fetch(BASE + '/api' + path, { method, headers, body: payload })
+        break
+      } catch (e) {
+        if (i === tries - 1) throw e
+        await new Promise((r) => setTimeout(r, 1500))
+      }
+    }
   } catch {
-    throw new Error('Could not reach the server. It may be waking up; try again in a few seconds.')
+    const err = new Error(navigator.onLine === false
+      ? 'You seem to be offline. Nothing was lost; try again when you are back online.'
+      : 'Could not reach the server. It may be waking up; try again in a few seconds.')
+    err.status = 0
+    throw err
+  } finally {
+    clearTimeout(timer)
+    pending.delete(ticket)
+    if (ticket.slow) announce()
   }
   if (res.status === 401 && auth) {
     setAuth(null)
@@ -60,12 +103,17 @@ export async function api(path, { method = 'GET', body, file, fields, token } = 
   // Every API reply is JSON. Anything else (such as the site's own HTML page) means the
   // site is not pointed at the backend, so say so instead of waiting forever.
   if (!(res.headers.get('content-type') || '').includes('application/json')) {
-    throw new Error('The site could not reach its server. Check that VITE_API_URL is set and the site was redeployed.')
+    const err = new Error(res.status >= 500
+      ? 'The server is restarting or busy. Try again in a moment.'
+      : 'The site could not reach its server. Check that VITE_API_URL is set and the site was redeployed.')
+    err.status = res.status
+    throw err
   }
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    const d = data.detail
-    throw new Error(typeof d === 'string' ? d : Array.isArray(d) ? d.map((x) => x.msg).join('; ') : 'Something went wrong.')
+    const err = new Error(readable(data.detail))
+    err.status = res.status
+    throw err
   }
   return data
 }

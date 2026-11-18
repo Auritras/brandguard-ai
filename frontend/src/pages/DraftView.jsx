@@ -87,7 +87,7 @@ export default function DraftView({ user }) {
       const opts = body === undefined ? { method: 'POST' }
         : body.__form ? { method: 'POST', file: body.__form.file, fields: body.__form.fields }
           : body.__method ? { method: body.__method, body: body.data } : { method: 'POST', body }
-      const next = await api(path, opts)
+      const next = await api(path, { ...opts, rev: latest.current?.rev })
       // When the text changes (a fix accepted or written), show the change being made before settling.
       if (d && next.body !== d.body && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
         clearTimeout(rewriteTimer.current)
@@ -108,6 +108,8 @@ export default function DraftView({ user }) {
       return true
     } catch (e) {
       setError(e.message)
+      // Someone else acted first, or the draft moved on: show the latest instead of a stale page.
+      if (e.status === 409 || e.status === 404) load()
       return false
     } finally {
       setBusy('')
@@ -316,6 +318,16 @@ export default function DraftView({ user }) {
             Findings <span className="text-base font-normal text-muted">(<RollNumber value={active.length} /> to handle)</span>
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
+          {d.run && !d.run.ai_used && /failed|could not/i.test(d.run.ai_note) && (
+            <Card className="border-accent/50 bg-accent-soft p-4 text-sm">
+              <p><span className="font-semibold">The AI part of the check did not run this time.</span> Only the exact checks ran, so tone, positioning and unsupported claims were not judged.</p>
+              {d.can.edit && (
+                <Button className="mt-2" kind="dark" disabled={!!busy} onClick={() => act('check', `/drafts/${d.id}/check`)}>
+                  {busy === 'check' ? 'Checking…' : 'Run the check again'}
+                </Button>
+              )}
+            </Card>
+          )}
           {d.run !== null && active.length === 0 && (
             <Card className="flex items-center gap-3 p-4 text-sm">
               <svg viewBox="0 0 32 32" className="h-9 w-9 shrink-0" aria-hidden="true">

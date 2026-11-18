@@ -350,6 +350,10 @@ mark.live-mark { padding: 0; border-radius: 2px; animation: live-in 0.5s ease-ou
 @keyframes swatch-in { from { opacity: 0; transform: scale(0.6); } }
 .meter-fill { transform-origin: left; animation: bar-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
 
+/* Notices at the bottom of the screen slide up into place. */
+.toast-in { animation: toast-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+
 /* Printing the review record: plain white paper, no desk texture. */
 @media print {
   html { background: white; }
