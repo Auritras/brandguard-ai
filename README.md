@@ -106,8 +106,8 @@ From [docs/TESTING.md](docs/TESTING.md), where every number is explained:
 | | Lumio Payroll | Fizzbox |
 |---|---|---|
 | Exact checks (every push): planted problems caught | 27 of 27 | 29 of 29 |
-| Full check with AI: planted problems caught | 34 of 35 (97.1%) | 37 of 37 (100%) |
-| Full check with AI: of what it flagged, real | 87.2% | 94.9% |
+| Full check with AI, last two runs: planted problems caught | 34 and 33 of 35 (97.1%, 94.3%) | 37 of 37 both times |
+| Full check with AI, last two runs: of what it flagged, real | 87.2%, 78.6% | 94.9%, 92.5% |
 | Browser journeys passing | 4 of 4, with an accessibility scan of 9 screens | |
 | Load test, live server | 15 people at once, 105 requests, 0 failed | |
 

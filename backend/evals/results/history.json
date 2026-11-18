@@ -42,5 +42,49 @@
   "false_alarms": 5,
   "planted": 35,
   "caught": 34
+ },
+ {
+  "date": "2026-11-18T22:35:58+00:00",
+  "commit": "963058f",
+  "mode": "exact",
+  "brand": "fizzbox",
+  "catch_rate": 100.0,
+  "precision": 100.0,
+  "false_alarms": 0,
+  "planted": 29,
+  "caught": 29
+ },
+ {
+  "date": "2026-11-18T22:35:58+00:00",
+  "commit": "963058f",
+  "mode": "exact",
+  "brand": "lumio",
+  "catch_rate": 100.0,
+  "precision": 100.0,
+  "false_alarms": 0,
+  "planted": 27,
+  "caught": 27
+ },
+ {
+  "date": "2026-11-18T22:36:08+00:00",
+  "commit": "963058f",
+  "mode": "ai",
+  "brand": "fizzbox",
+  "catch_rate": 100.0,
+  "precision": 92.5,
+  "false_alarms": 3,
+  "planted": 37,
+  "caught": 37
+ },
+ {
+  "date": "2026-11-18T22:36:08+00:00",
+  "commit": "963058f",
+  "mode": "ai",
+  "brand": "lumio",
+  "catch_rate": 94.3,
+  "precision": 78.6,
+  "false_alarms": 9,
+  "planted": 35,
+  "caught": 33
  }
 ]

@@ -21,12 +21,19 @@ that rule on that passage. Anything else it flags counts as a false alarm, even 
 |---|---|---|---|---|
 | Exact checks (every push) | Lumio Payroll | 27 of 27 (100%) | 100% | 10 of 10 |
 | Exact checks (every push) | Fizzbox | 29 of 29 (100%) | 100% | 10 of 10 |
-| Full check with AI | Lumio Payroll | 34 of 35 (97.1%) | 87.2% | 9 of 10 |
-| Full check with AI | Fizzbox | 37 of 37 (100%) | 94.9% | 9 of 10 |
+| Full check with AI, 19 Nov run 1 | Lumio Payroll | 34 of 35 (97.1%) | 87.2% | 9 of 10 |
+| Full check with AI, 19 Nov run 1 | Fizzbox | 37 of 37 (100%) | 94.9% | 9 of 10 |
+| Full check with AI, 19 Nov run 2 | Lumio Payroll | 33 of 35 (94.3%) | 78.6% | 10 of 10 |
+| Full check with AI, 19 Nov run 2 | Fizzbox | 37 of 37 (100%) | 92.5% | 9 of 10 |
 
-What the AI run gets wrong, honestly: it missed fear-based urgency once ("you will regret waiting"),
-and it raised 7 findings that were not planted. Some of those are fair (it caught a second insult to a
-competitor that we had not listed); some are not (it called "Find your nearest store." too corporate).
+The AI part varies between runs of the same code, even at temperature 0, which is why the page shows
+a trend and not one number. The exact checks do not vary.
+
+What the AI runs get wrong, honestly: twice it missed fear-based urgency ("you will regret waiting"); once
+it flagged the insult to a competitor ("Their support is terrible.") instead of the competitor's name we
+listed, which our strict scoring counts as one miss and one false alarm. Most false alarms are claims the
+AI thinks need a fact ("payroll now takes a coffee break") or tone calls ("Find your nearest store." as too
+corporate). None of them is a high-risk problem being missed.
 The latest numbers, every miss and every false alarm are on the Reliability page in the app.
 
 ## Browser tests
