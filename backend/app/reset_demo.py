@@ -134,6 +134,17 @@ FIZZ_BLOG = (
 )
 
 
+PF_BLOG = ("PF is due by the 15th of every month. Miss it and interest starts from day one. "
+           "Lumio Payroll works out the amount for each employee and reminds you a week before. "
+           "Read more about PF deadlines in our guide.")
+
+TAX_EMAIL = ("The new tax slabs apply from April. Lumio Payroll updates every payslip for you, so there is nothing to change "
+             "on your side. Read more about the new slabs on our help page.")
+
+FIZZ_GYM = ("Leg day done? Grab a Fizzbox Zero! 0 g sugar per can, all the fizz, and totally guilt-free. "
+            "Find it in the gym fridge or your nearest store.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env-file", help="read DATABASE_URL (and GROQ_API_KEY) from this file")
@@ -154,6 +165,7 @@ def main() -> None:
     from .main import app
     from .migrate import migrate
     from .sandbox import clear_old_sandboxes, delete_brand_data
+    from .samples import sample_png
     from .seed import TEMPLATES, demo_brand, seed, seed_library
 
     target = engine.url.render_as_string(hide_password=True)
@@ -196,9 +208,18 @@ def main() -> None:
                 time.sleep(5)  # stay inside the AI provider's free per-minute limit
             return r.json()
 
-        def new(title, channel, audience, purpose, body):
+        def new(title, channel, audience, purpose, body, image=None):
             d = call("POST", "/drafts", asha, title=title, channel=channel, audience=audience, purpose=purpose, body=body)
+            if image:  # the brand's sample post image, with its planted problems, reviewed in the same check
+                name, data = image
+                r = c.post(f"/api/drafts/{d['id']}/images", headers=asha, files={"file": (name, data, "image/png")})
+                if r.status_code >= 400:
+                    raise RuntimeError(f"image upload failed: {r.status_code} {r.text}")
             return call("POST", f"/drafts/{d['id']}/check", asha)
+
+        def dismiss(d, code, reason, by):
+            f = next((f for f in d["findings"] if f["status"] == "disputed" and f["ref_code"] == code), None)
+            return call("POST", f"/findings/{f['id']}/decide", by, decision="dismiss", reason=reason) if f else d
 
         def find(d, code, quote_has=""):
             return next((f for f in d["findings"] if f["status"] == "open" and f["ref_code"] == code and quote_has in f["quote"]), None)
@@ -318,9 +339,27 @@ def main() -> None:
                 "Remind owners to pay festive bonuses on time", FESTIVE_POST)
         timeline[d["id"]] = (0.3, 0.25)
 
-        # With Asha: checked, nothing handled yet. The richest one to try.
+        # Two more blog and email pieces where "Read more about ..." was disputed and the manager agreed:
+        # with the open dispute above, the rule on descriptive links shows up under Guideline gaps.
+        d = new("Blog: PF deadlines explained", "Blog", "Small business owners",
+                "Explain the monthly PF deadline", PF_BLOG)
+        d = dispute(d, "R-005", "The button says 'Read more about PF deadlines', so it names where it goes.")
+        d = recheck_and_submit(d)
+        d = dismiss(d, "R-005", "Agreed: the link names the guide, so screen readers are fine.", rohan)
+        d = approve_fully(d, "Link text names the guide.")
+        timeline[d["id"]] = (7, 6.5)
+
+        d = new("Email: new tax slabs", "Email", "Existing customers", "Tell customers about the new tax slabs", TAX_EMAIL)
+        d = dispute(d, "R-005", "'Read more about the new slabs' is the full button text, not 'Read more' on its own.")
+        d = recheck_and_submit(d)
+        d = dismiss(d, "R-005", "Fair. The button text says where it goes.", rohan)
+        d = approve_fully(d, "Fine as written.")
+        timeline[d["id"]] = (5, 4.6)
+
+        # With Asha: checked, nothing handled yet. The richest one to try, with its banner image.
         d = new("LinkedIn post: new onboarding", "LinkedIn", "Owners of small businesses in India",
-                "Announce the faster onboarding and get sign-ups for a demo", LINKEDIN)
+                "Announce the faster onboarding and get sign-ups for a demo", LINKEDIN,
+                image=("payroll-banner.png", sample_png("lumio")))
         timeline[d["id"]] = (0.1, 0.05)
 
         # Fizzbox. The helpers above act as whoever these three names point at, so point them at
@@ -375,6 +414,17 @@ def main() -> None:
         d = call("POST", f"/drafts/{d['id']}/approve", rohan)
         timeline[d["id"]] = (1.8, 1.4)
 
+        d = new("Instagram: post-gym fizz", "Instagram", "Fans who work out", "Sell Fizzbox Zero after workouts", FIZZ_GYM)
+        d = dispute(d, "R-003", "'Guilt-free' is about the zero sugar, which is on the label, not a health claim.")
+        d = recheck_and_submit(d)
+        d = call("POST", f"/drafts/{d['id']}/approve", rohan)
+        d = dismiss(d, "R-003", "Zero sugar is on the label; 'guilt-free' here is about that, so it can run.", meera)
+        for f in d["findings"]:
+            if f["severity"] == "high" and f["status"] in ("open", "disputed"):
+                call("POST", f"/findings/{f['id']}/waive", meera, reason="Zero sugar matches the approved fact.")
+        d = call("POST", f"/drafts/{d['id']}/approve", meera)
+        timeline[d["id"]] = (6, 5.5)
+
         d = new("LinkedIn: hiring campus ambassadors", "LinkedIn", "College students", "Recruit campus ambassadors", FIZZ_HIRING)
         d = recheck_and_submit(d)
         timeline[d["id"]] = (0.9, 0.6)
@@ -384,7 +434,8 @@ def main() -> None:
 
         # With Kabir: checked, nothing handled yet. The richest one to try: hype that Lumio would flag is
         # fine here, but health claims, children, a competitor, the calorie number and stiff wording are not.
-        d = new("Instagram: summer launch", "Instagram", "Teens and young adults", "Launch the mango flavour", FIZZ_LAUNCH)
+        d = new("Instagram: summer launch", "Instagram", "Teens and young adults", "Launch the mango flavour", FIZZ_LAUNCH,
+                image=("mango-fizz-post.png", sample_png("fizzbox")))
         timeline[d["id"]] = (0.1, 0.05)
 
     # 3. Spread each draft's history over its days, in the order things happened.
