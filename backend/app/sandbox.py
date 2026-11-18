@@ -10,7 +10,6 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from .auth import hash_password
 from .models import (AuditLog, Brand, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, RuleVersion,
                      Term, User, now)
 from .seed import demo_brand
@@ -69,7 +68,9 @@ def create_sandbox(db: Session, key: str = "lumio") -> Brand:
     for u in users:
         copy = User(brand_id=b, name=u.name, role=u.role, active=True,
                     email=f"{u.role}-{tag}@sandbox.brandguard.test",
-                    password_hash=hash_password(secrets.token_urlsafe(24)))  # sign-in is by token only
+                    # Sign-in is by token only. No "$" means no password can ever match (see auth.verify_password),
+                    # and it skips three slow password hashes per copy, which matter on a small shared CPU.
+                    password_hash="token-only-" + secrets.token_hex(8))
         db.add(copy)
         db.flush()
         user_map[u.id] = copy.id
