@@ -1,174 +1,164 @@
 # BrandGuard AI
 
-A review desk that sits between a finished draft and the publish button. A creator pastes or
-uploads content; BrandGuard checks it against the organisation's approved rules, facts and
-terminology; every issue comes back with the exact passage, the rule or fact it breaks, a plain
+A review desk that sits between a finished draft and the publish button. A creator pastes or uploads
+content, with its images; BrandGuard checks it against the brand's approved rules, facts, terminology,
+colours and logo; every issue comes back with the exact passage, the rule or fact it breaks, a plain
 reason and a suggested fix. People make every approval decision.
 
-**Team Nova Blasters** · CodeNova India 2026 · Round 2 build (13 to 16 November 2026)
+**Team Nova Blasters** · CodeNova India 2026 · Round 3 build (19 to 21 November 2026)
 
 - **Live app:** https://brandguard-ai-lac.vercel.app
 - **API:** https://brandguard-api-qtj3.onrender.com/api/health
+- **What changed in Round 3:** [CHANGELOG.md](CHANGELOG.md) · **How it is tested:** [docs/TESTING.md](docs/TESTING.md) · **What comes next:** [ROADMAP.md](ROADMAP.md)
 
-The free server sleeps after 15 minutes without visits. A scheduled GitHub Action
-(`.github/workflows/keep-awake.yml`) pings it from about 08:30 to 23:30 IST; outside those hours
-the first page load can take 30 to 60 seconds while it wakes.
+During judging a scheduled GitHub Action keeps the free server awake day and night. If it was asleep
+anyway, the app shows "Waking the server…" and finishes the request by itself within a minute.
 
 ## Try it in two minutes
 
-There are two fictional demo brands with opposite styles. All their rules, facts and content are
-made up.
+There are two fictional demo brands with opposite styles. All their rules, facts, images and content
+are made up.
 
 - **Lumio Payroll** (payroll software): calm, careful copy. No hype, no pressure, no shouting, one
   exclamation mark at most, every number backed by an approved fact.
-- **Fizzbox** (soft drinks): loud and playful. "Grab yours NOW!" and "BUY NOW" are on-brand, but
-  health claims ("healthy", "boosts immunity", "detox"), anything aimed at children and wrong sugar
-  or calorie numbers are high-risk.
+- **Fizzbox** (soft drinks): loud and playful. "Grab yours NOW!" and "BUY NOW" are on-brand, but health
+  claims, anything aimed at children and wrong sugar or calorie numbers are high-risk.
 
-Paste the same text into both and each brand's own rules decide what is flagged. On the sign-in
-page, **Try the demo**, pick a brand and a person. You get your own private
-copy of the demo (13 drafts across all channels, at every stage of review), so nothing you do
-affects anyone else. Switch person at any time with **Act as** at the top, jump to the other brand
-with **Compare with…**, and **Start over** for a fresh copy. (In Fizzbox the three people are
-Kabir, Tara and Neel.)
+On the sign-in page choose **Try the demo**, pick a brand and a person. You get your own private copy
+(15 drafts for Lumio, 12 for Fizzbox, at every stage of review), and a short tour for your role. Switch
+person with **Act as**, jump to the other brand with **Compare with…**, and **Start over** for a fresh
+copy. Press **Ctrl+K** to jump anywhere.
 
 | Person | Role | What to try |
 |---|---|---|
-| Asha | Creator | Open **LinkedIn post: new onboarding** (top of the list). Accept a fix, dispute a finding, then **Send for review**. Or New draft → **Load a sample post**. |
-| Rohan | Manager | Open a draft waiting for you. With a high-risk finding still open, **Approve and escalate** sends it to the brand owner. |
-| Meera | Authorised reviewer (brand owner) | Waive the high-risk finding with a reason, or decide the dispute, then **Approve**. Edit rules, facts and terms in **Brand Library**. |
+| Asha / Kabir | Creator | Open the draft at the top: it has text and an image with problems planted in both. Accept all low-risk fixes, describe the image, dispute a finding, then **Send for review**. |
+| Rohan / Tara | Manager | Open a draft waiting for you. With a high-risk finding open, **Hold to approve and escalate** sends it to the brand owner. |
+| Meera / Neel | Brand owner | Waive a high-risk finding with a reason, then approve. In **Brand health**, scroll to **Guideline gaps** and ask for a clearer wording of the rule people keep arguing with. Edit colours and the logo in **Brand Library**. |
+
+Anyone can open **Reliability** to see how often the check catches what it should.
 
 **Or create your own brand:** on the sign-in page choose **Create a brand**. You become its brand owner,
-its Brand Library starts with sample rules you can change, and on **Team** you add teammates as
-Creator, Manager or Brand owner. A brand is private: nobody outside it can see its drafts, library
-or reports. The demo brand's team is fixed, since every visitor shares it.
+its library starts with sample rules you can change, and on **Team** you add teammates.
 
-## Features in this build
-
-**Brands and teams**
-- Each brand is a private workspace with its own people, Brand Library, drafts and Brand health.
-  Every API route checks the signed-in person's brand; another brand's records behave as if they
-  do not exist.
-- Sign-up creates a brand with you as its owner and a starter library. Owners add teammates,
-  change roles and remove people; nobody joins a brand without its owner. A removed person can no
-  longer sign in, but their name stays on the work they did.
-- Anyone in a brand can write a draft, but nobody approves, waives or decides disputes on their own
-  draft: someone else always signs off.
-- A new brand's owner gets a three-step checklist (library, first draft, a teammate).
-- Everyone can change their password (except the shared demo accounts), and a creator can delete a
-  draft that was never sent for review. Deleted drafts are hidden, not erased, so the history stays
-  whole.
-- The menu shows how many drafts are waiting for you.
-- **Private demo copies:** every demo visitor gets a copy of the demo brand (accounts, library,
-  drafts, findings, versions, comments and history, duplicated in the database without new AI
-  calls), can switch person inside it, and never sees anyone else's.
-
-**Brand Library** (editable by the brand owner only)
-- Rules with a code, category, severity and optional exact patterns. New rules start as
-  *proposed* and only count once approved.
-- Approved facts with a source and a valid-until date.
-- Terminology list: banned term → preferred term.
-- Guideline import: paste guideline text and get proposed rules to review and approve.
+## What it does
 
 **Review**
-- Content in by pasting, or by uploading `.txt`, `.md`, `.docx` or `.pdf` (up to 5 MB).
-- **Checks while typing:** the instant exact checks run a moment after the writer stops typing and
-  highlight problems in the editor before anything is saved. Nothing is stored or sent to AI.
-- Each draft records its channel, audience and purpose; the AI keeps that purpose in its fixes.
-- **Exact checks in code**, the same answer every time: banned terms, rule patterns
-  (superlatives, promised outcomes, "click here", shouting, repeated exclamation marks),
-  numbers next to a fact's keywords compared with the approved value, and expired facts.
-- **AI checks** for tone, messaging, competitors and unsupported claims, using only the rules
-  that have no exact pattern.
-- **No citation, no finding:** an AI finding is kept only if its quote appears in the draft and
-  its rule or fact code exists in the library. Everything else is dropped and counted.
-- AI-written fixes get the preferred terms applied, and a fix that still breaks a rule is
-  dropped. AI findings that repeat an exact finding are not shown twice.
-- Highlights in the text link to their findings; each finding shows the quote, the cited rule or
-  fact, the reason, the severity and a suggested fix.
-- The creator accepts the fix, writes their own, or disputes it with a reason. Accepting or
-  editing creates a new version.
-- "How this was checked" on every review: how many findings came from code and from AI, which
-  provider and model, what was sent, and how many AI findings were dropped.
+- Content by pasting, by uploading `.txt`, `.md`, `.docx` or `.pdf`, or from any web page with the
+  **Check with BrandGuard** bookmarklet (on the Account page). Up to four images per draft.
+- **Checks while typing** (exact checks only, nothing stored or sent to AI), including channel limits.
+- **Exact checks in code**, the same answer every time: banned terms, rule patterns, numbers next to a
+  fact's keywords against the approved value, expired facts, and channel limits (Instagram 2,200
+  characters and 30 hashtags, LinkedIn 3,000 characters, ad text over 125).
+- **AI checks** for tone, positioning, competitors and unsupported claims. **No citation, no finding:**
+  an AI finding is kept only if its quote is in the draft and its rule exists; the rest are dropped and
+  counted.
+- **Image review:** the image's colours against the brand palette, the contrast of each line of text in
+  it (WCAG 2.2 AA), the logo's proportions and colour against the official file, the text inside it
+  (checked like the draft's own text), and its description for screen readers. The vision model only
+  reads the image; every judgement is measured in code. The draft page draws what was measured on the
+  image.
+- Each finding: the quote, the cited rule or fact, the reason, the severity, a suggested fix. Accept it,
+  write your own, or dispute it. **Accept all low-risk fixes** does the terminology in one go.
+- "How this was checked" on every review: what came from code and from AI, the provider and models,
+  what was sent, how many AI findings were dropped.
 
 **Workflow and record**
-- States: Draft → In review → Changes requested / Authorised review → Approved (locked).
-- A manager can approve when nothing high-risk is open. Otherwise their approval escalates to
-  the authorised reviewer, who must waive each high-risk finding with a written reason, decide
-  the dispute, or request changes. High-risk disputes are decided only by the reviewer.
-- A finding a person has already ruled on is not raised again for the same passage.
-- Comments, full version history, and an append-only audit log of who did what and when.
-- **Compare versions:** any two versions side by side, removed words struck out and new words
-  highlighted.
-- **Review record:** a printable page (or PDF) with the approved text, who approved or escalated
-  it, every finding and how it was handled, how the check ran, and the full timeline.
+- Draft → In review → Changes requested / Authorised review → Approved. Nobody approves their own
+  draft. A manager's approval with high-risk findings open goes to the brand owner, who waives each with
+  a written reason, decides the dispute, or sends it back. Approving and waiving are press-and-hold with
+  a few seconds to undo.
+- Comments, every version (compare any two word by word), an append-only history, due dates.
+- **Review record:** a printable page with the approved text, who approved it, every finding and how it
+  was handled, and the full timeline. Share it read-only by link for 30 days, no account needed.
 
-**Brand health**
-- Most broken rules, facts and terms; findings per draft by channel; the split by risk; what
-  happened to each finding; and the average time from first draft to approval. Creators see their
-  own drafts, managers and reviewers see the team.
+**Brand Library** (the brand owner edits; everyone reads)
+- Rules (with optional exact patterns), approved facts with sources and end dates, terms, brand colours
+  and the logo. Import rules from guideline text, a PDF or Word file, or a spreadsheet (CSV); imported
+  rules wait for approval. Download the rules as a spreadsheet. Every rule keeps its earlier wordings.
+
+**Brand health and guideline gaps**
+- Most broken rules, findings per channel, risk split, what happened to each finding, time to approval.
+- **Guideline gaps:** rules whose findings are often waived, dismissed or disputed rather than fixed,
+  with the real cases. The owner asks for a clearer wording, compares it, edits and accepts it; numbers
+  are then shown before and after the change. **Look for missing rules** reads review notes and proposes
+  rules no current rule covers.
+- **Re-check alerts:** approved content that quotes a fact that has since expired or changed.
+
+**Reliability page**
+- The score of the check on 80 test drafts with planted problems (40 per brand, 10 of them clean), for
+  exact checks and for the full check with AI: what it catches, how much of what it flags is real, the
+  trend over runs, per rule, and every miss and false alarm.
+
+**Teams and access**
+- Each brand is a private workspace: every API route checks the person's brand. Owners add teammates,
+  change roles, remove and re-add people. Every demo visitor gets a private copy of a demo brand.
+
+**When things go wrong**
+- Acting on an out-of-date page (someone else acted first) is refused with who did what, and the page
+  refreshes. Double clicks do not double up. Long input, renamed or broken files get clear messages. A
+  sleeping server, no connection, a failed AI call or a crashed screen each get a plain notice and a way
+  forward. A draft being written survives a refresh.
+
+## Latest scores
+
+From [docs/TESTING.md](docs/TESTING.md), where every number is explained:
+
+| | Lumio Payroll | Fizzbox |
+|---|---|---|
+| Exact checks (every push): planted problems caught | 27 of 27 | 29 of 29 |
+| Full check with AI: planted problems caught | 34 of 35 (97.1%) | 37 of 37 (100%) |
+| Full check with AI: of what it flagged, real | 87.2% | 94.9% |
+| Browser journeys passing | 4 of 4, with an accessibility scan of 9 screens | |
+| Load test, live server | 15 people at once, 105 requests, 0 failed | |
 
 ## How it works
 
-```
-frontend (React, Vercel)  ──HTTPS──▶  backend (FastAPI, Render)  ──▶  Postgres (Supabase)
-                                              │
-                                              └──▶  Groq API (openai/gpt-oss-120b)
+```mermaid
+flowchart LR
+  W[Website<br/>React, Vercel] -- HTTPS --> A[API<br/>FastAPI, Render]
+  A --> D[(Postgres<br/>Supabase)]
+  A -- draft text, selected rules, facts --> T[Groq<br/>openai/gpt-oss-120b]
+  A -- image only --> V[Groq<br/>qwen/qwen3.8-27b]
 ```
 
 One review run (`backend/app/engine/run.py`):
 
-1. Exact checks on the draft (`engine/exact.py`).
-2. The AI gets the draft, its purpose, up to 12 relevant rules without patterns, the approved
-   facts, the exact findings already made, and the pattern rules and terms its own fixes must
-   follow (`engine/ai.py`). It replies in JSON.
-3. Verification drops any AI finding whose quote is not in the draft or whose code is not in the
-   library (`engine/verify.py`).
-4. AI rewrites fill in fixes for exact findings that had none, then every AI-written fix is
-   cleaned against the terms and pattern rules.
-5. Findings and a `ReviewRun` disclosure record are saved.
-
-If the AI call fails or no key is set, the exact checks still run and the review says that the
-AI step was skipped and why. The AI never approves, waives or publishes.
-
-## Tech stack
-
-| Layer | Choice |
-|---|---|
-| Frontend | React 19, Vite 8, Tailwind CSS 4, React Router 7 |
-| Backend | Python 3.14, FastAPI, SQLAlchemy 2, PyJWT, httpx |
-| Database | PostgreSQL on Supabase (SQLite locally) |
-| AI | Groq API, `openai/gpt-oss-120b`, JSON mode, temperature 0 |
-| Documents | python-docx, pypdf |
-| Tests | pytest (36 tests: auth, exact engine, AI path with a fake model and rate limits, full workflow, insights, live check, brand isolation, teams, account basics and demo copies) |
-| Hosting | Vercel (frontend), Render (backend), Supabase (database), all on free plans |
-
-Passwords are hashed with PBKDF2 (200,000 rounds). Sessions are signed tokens that last 12 hours.
-Role checks are enforced in every API route, not only in the screens.
+1. **Exact checks** on the text (`engine/exact.py`).
+2. **AI checks:** the model gets the draft, its purpose, the relevant rules without patterns, the facts,
+   what the exact checks already found, and the rules its own fixes must obey (`engine/ai.py`).
+3. **Verification** drops any AI finding whose quote is not in the draft or whose rule does not exist
+   (`engine/verify.py`). AI-written fixes are cleaned against the terms and patterns.
+4. **Images** (`engine/image.py`): colours, contrast and logo are measured on the pixels; the vision
+   model reads the text, finds the logo and suggests a description; the text goes back through steps 1 to 3.
+5. Findings and a disclosure record are saved. The AI never approves, waives or publishes. Without an
+   AI key, or if the AI fails, the exact checks and image measurements still run and the review says so.
 
 ## Run it locally
 
-You need Python 3.12 or newer and Node 20 or newer.
+You need Python 3.12 or newer and Node 20 or newer. One command installs what is missing and starts
+both the API and the website:
 
 ```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/activate        # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --port 8000
+sh scripts/dev.sh
 ```
 
-To turn on the AI checks locally, copy `backend/.env.example` to `backend/.env`, add a Groq key,
-and start with `uvicorn app.main:app --port 8000 --env-file .env` instead.
+On Windows:
 
 ```bash
-cd frontend
-npm install
-npm run dev                   # http://localhost:5173, /api is proxied to port 8000
+powershell -ExecutionPolicy Bypass -File scripts/dev.ps1
 ```
 
-Without `DATABASE_URL` the backend uses a local SQLite file. The demo brand and accounts are
-created on first start. Run the tests with `python -m pytest` inside `backend`.
+Then open http://localhost:5173 and choose **Try the demo**. It uses a local SQLite database (created
+with both demo brands on first start). For the AI checks, put `GROQ_API_KEY=...` in `backend/.env`
+(a free key from console.groq.com); the script reads only that line.
+
+**By hand:** in `backend`, create a virtual environment, `pip install -r requirements.txt`, then
+`uvicorn app.main:app --port 8000`. In `frontend`, `npm ci` then `npm run dev` (it forwards `/api` to
+port 8000).
+
+**Tests:** `cd backend && python -m pytest` (61 tests, including the reliability gate) ·
+`cd frontend && npm run e2e` (browser journeys; first time `npx playwright install chromium`) ·
+`cd backend && python -m evals.run` (the reliability score; `--mode ai` with a key).
 
 ## Deploy
 
@@ -176,57 +166,68 @@ created on first start. Run the tests with `python -m pytest` inside `backend`.
 |---|---|
 | Supabase | New project. Turn the Data API off and automatic RLS on (the backend connects directly). Copy the **Session pooler** connection string. |
 | Render | Web service, root `backend`, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/api/health`. Variables: see `backend/.env.example`. |
-| Vercel | Import the repo with root `frontend` (Vite). Variable `VITE_API_URL` = the Render address, type Config. Redeploy after changing it. |
+| Vercel | Import the repo with root `frontend` (Vite). Variable `VITE_API_URL` = the Render address. Redeploy after changing it. |
 
 ## Resetting the demo
 
-Visitors work in private copies, so the demo brands themselves never change (they are read-only
-except to this script). The copies are made from the two demo brands, which this script rebuilds: run it to change or refresh what visitors
-start from (Lumio: 13 drafts across all seven channels and every stage of review; Fizzbox: 11 drafts;
-, history spread over the past twelve days, the original Brand Library), run this from `backend` with the live database address in
-`backend/.env` (`DATABASE_URL`, the Supabase Session pooler string; add `GROQ_API_KEY` to include
-AI findings):
+Visitors work in private copies, so the demo brands themselves never change (only this script may
+change them). To rebuild what visitors start from, run this in `backend` with the live database address
+in `backend/.env` (`DATABASE_URL`; add `GROQ_API_KEY` to include AI findings):
 
 ```bash
 python -m app.reset_demo --env-file .env
 ```
 
-It shows which database it will change and asks you to type `reset`. Add `--no-ai` for exact
-checks only. Visitors' existing copies are cleared; brands that people created are kept. Copies
-older than a day are also cleared automatically.
-`backend/.env` is ignored by git; never commit it.
+It shows which database it will change and asks you to type `reset`. Visitors' copies are cleared;
+brands people created are kept. `backend/.env` is ignored by git; never commit it.
+
+## Known limits
+
+- The AI evaluation is not run automatically in CI, because it needs an AI key stored there; it is run
+  by hand and its results are committed. The exact checks are scored on every push.
+- Logo checks compare shape and main colour. They do not catch a logo redrawn in a different font.
+- Contrast is measured per line of text; text on a busy photo can be measured on the wrong background.
+- Rules, terms and the AI prompts are in English. Hindi and other Indian scripts are checked for terms,
+  patterns and numbers, but there are no Hindi rules in the demo brands.
+- Video and audio are not reviewed.
+- No email notifications yet: the menu shows how many drafts wait for you.
+- The free server and AI plan limit how many checks can run at once; under heavy use the app asks you
+  to wait a minute rather than failing silently.
+- Dark mode is not built.
 
 ## Repository layout
 
 ```
 backend/
   app/
-    main.py            app, health, login
-    config.py          settings from environment variables
-    models.py          brands, users, rules, facts, terms, drafts, versions, findings, runs, comments, audit log
-    migrate.py         upgrades older databases in place on start
-    seed.py            the Lumio Payroll demo brand and accounts
-    reset_demo.py      wipes drafts and rebuilds the demo set (see Resetting the demo)
-    engine/            exact checks, AI checks, verification, review run, file text extraction
-    routers/           accounts and teams, Brand Library, draft/workflow and Brand health API
-  tests/
+    main.py, config.py, auth.py, limits.py   app, settings, sign-in, rate limits
+    models.py, migrate.py                    tables, and in-place upgrades on start
+    seed.py, samples.py, sandbox.py          demo brands, their images, private demo copies
+    reset_demo.py                            rebuilds the demo drafts
+    engine/   exact.py, ai.py, verify.py, image.py, run.py, extract.py
+    routers/  accounts (teams, demo), library (rules, facts, terms, colours, logo),
+              drafts (review, workflow, images, sharing), insights (Brand health, guideline gaps),
+              reliability
+  evals/      cases/ (80 test drafts), run.py (the scorer), load.py, results/
+  tests/      61 tests
 frontend/
-  src/pages/           Login, Drafts, NewDraft, DraftView, Record, Insights, Library, Team, Account
-  src/LiveText.jsx     the editor that checks while you type
-  src/diff.js          word-level version comparison
-  src/ui.jsx           shared components
+  src/pages/  Login, Drafts, NewDraft, DraftView, Record, Insights, Library, Reliability, Team, Account
+  src/        ImagePanel, GuidelineGaps, LiveText, Tour, CommandMenu, Resilience, ui, api
+  e2e/        browser tests
+scripts/      dev.sh, dev.ps1: one-command local setup
+docs/         TESTING.md, the Round 2 deck
 ```
 
 ## Disclosure
 
-- **External services:** Groq (AI checks), Supabase (database), Render and Vercel (hosting),
-  Google Fonts (Bricolage Grotesque, Public Sans, Caveat).
-- **What the AI receives:** the draft text, its channel, audience and purpose, the selected rules,
-  the approved facts and the terminology list. No names or email addresses are sent.
+- **External services:** Groq (AI checks and image reading), Supabase (database), Render and Vercel
+  (hosting), Google Fonts (Bricolage Grotesque, Public Sans, Caveat).
+- **What the AI receives:** the draft text, its channel, audience and purpose, the selected rules, the
+  approved facts and the terms; for images, the image and the brand's logo. No names or email addresses.
 - **AI tools used to build it:** the team used Claude Code (Anthropic) as a coding assistant for
   planning, code, tests and documentation. Every change was reviewed and tested by the team.
-- **Demo data:** the Lumio Payroll brand, its rules, facts, accounts and sample posts are
-  fictional.
+- **Demo data:** Lumio Payroll and Fizzbox, their rules, facts, people, posts, images and logos are
+  fictional, drawn in code.
 - Open-source libraries are listed in `backend/requirements.txt` and `frontend/package.json`.
 
 ## Team
