@@ -148,6 +148,38 @@ def check_facts(body: str, facts, today: date | None = None) -> list[dict]:
     return out
 
 
-def run_exact(body: str, rules, facts, terms, today: date | None = None) -> list[dict]:
+HASHTAG = re.compile(r"(?<![\w&])#[^\s#.,!?;:()\[\]\"']+", re.UNICODE)
+
+# Published platform limits. Over a hard limit, the post cannot be published as written.
+CHANNEL_LIMITS = {
+    "Instagram": [("CH-LENGTH", 2200, "high", "Instagram captions can be at most 2,200 characters (Instagram's limit)."),
+                  ("CH-HASHTAGS", 30, "high", "Instagram allows at most 30 hashtags on a post (Instagram's limit).")],
+    "LinkedIn": [("CH-LENGTH", 3000, "high", "LinkedIn posts can be at most 3,000 characters (LinkedIn's limit).")],
+    "Advertisement": [("CH-LENGTH", 125, "low", "Ad text over about 125 characters is cut off with \"See more\" in most "
+                                                 "social feeds (Meta's guidance for primary text).")],
+}
+
+
+def check_channel(body: str, channel: str) -> list[dict]:
+    """Limits of the channel the draft is for: length, and the number of hashtags."""
+    out = []
+    for code, limit, severity, text in CHANNEL_LIMITS.get(channel or "", []):
+        if code == "CH-LENGTH" and len(body) > limit:
+            out.append({"source": "exact", "category": "channel", "severity": severity,
+                        "quote": f"The whole text ({len(body):,} characters)", "ref_code": code, "ref_text": text,
+                        "reason": f"This {channel} text is {len(body):,} characters long; the limit is {limit:,}. "
+                                  f"Shorten it by {len(body) - limit:,} characters.", "suggestion": ""})
+        if code == "CH-HASHTAGS":
+            tags = HASHTAG.findall(body)
+            if len(tags) > limit:
+                out.append({"source": "exact", "category": "channel", "severity": severity,
+                            "quote": f"{len(tags)} hashtags", "ref_code": code, "ref_text": text,
+                            "reason": f"The post has {len(tags)} hashtags; {channel} allows {limit}. Remove {len(tags) - limit}.",
+                            "suggestion": ""})
+    return out
+
+
+def run_exact(body: str, rules, facts, terms, today: date | None = None, channel: str = "") -> list[dict]:
     pattern_rules = [r for r in rules if (r.patterns or "").strip()]
-    return check_terms(body, terms) + check_rule_patterns(body, pattern_rules) + check_facts(body, facts, today)
+    return (check_terms(body, terms) + check_rule_patterns(body, pattern_rules) + check_facts(body, facts, today)
+            + check_channel(body, channel))

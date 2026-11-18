@@ -1,8 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { resetTours } from '../Tour.jsx'
 import { api } from '../api.js'
 import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
 
 const ROLES = { creator: 'Creator', manager: 'Manager', reviewer: 'Brand owner' }
+
+// A bookmark that sends the text selected on any web page to a new draft here, to check it.
+// React does not render javascript: links, so the address is set on the element directly.
+function Bookmarklet() {
+  const ref = useRef(null)
+  useEffect(() => {
+    const code = `javascript:(()=>{const t=String(getSelection()).trim().slice(0,4000);if(!t){alert('Select some text on the page first, then click Check with BrandGuard.');return}open('${location.origin}/new?text='+encodeURIComponent(t),'_blank')})()`
+    ref.current?.setAttribute('href', code)
+  }, [])
+  return (
+    <Card className="mt-6 p-5">
+      <h2 className="font-display text-xl font-bold">Check text from any web page</h2>
+      <p className="mt-1 text-sm text-muted">
+        Drag this button to your browser's bookmarks bar. On any page (a CMS, a doc, an email), select some text and click the bookmark:
+        it opens here as a new draft, ready to check.
+      </p>
+      <a ref={ref} onClick={(e) => e.preventDefault()} draggable
+        className="mt-3 inline-flex cursor-grab items-center rounded-md border-2 border-ink bg-primary px-3.5 py-1.5 text-sm font-semibold text-white shadow-print-sm">
+        Check with BrandGuard
+      </a>
+    </Card>
+  )
+}
 
 export default function Account({ user }) {
   const [form, setForm] = useState({ current: '', new: '', again: '' })
@@ -63,6 +87,11 @@ export default function Account({ user }) {
             <div><Button kind="primary" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Change password'}</Button></div>
           </form>
         )}
+      </Card>
+      <Bookmarklet />
+      <Card className="mt-6 flex flex-wrap items-center justify-between gap-3 p-5">
+        <p className="text-sm"><span className="font-semibold">The guided tour</span> <span className="text-muted">· a short walk through the pages for your role.</span></p>
+        <Button onClick={() => { resetTours(); dispatchEvent(new Event('bg-tour')) }}>Take the tour again</Button>
       </Card>
     </div>
   )

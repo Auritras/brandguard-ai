@@ -54,7 +54,8 @@ def review_text(piece, rules, facts, terms) -> tuple[list[dict], dict, int]:
     """Exact checks, then AI checks, then verification, on one piece of text (`piece.body`).
     Returns (findings, ai result, number of AI findings dropped by verification)."""
     body = piece.body
-    exact = run_exact(body, rules, facts, terms)
+    # Channel limits (length, hashtags) apply to the post text, not to words inside an image.
+    exact = run_exact(body, rules, facts, terms, channel=(piece.channel or "") if getattr(piece, "limits", True) else "")
     ai_rules = [r for r in rules if not (r.patterns or "").strip()]
     pattern_rules = [r for r in rules if (r.patterns or "").strip()]
     style = [f"{r.code} {r.title}: {r.text}" for r in pattern_rules]
@@ -155,7 +156,7 @@ def review_images(db: Session, draft: Draft, rules, facts, terms) -> tuple[list[
         found = image_findings(a, img.alt_text, palette)
         text = image_text(a)
         if text:
-            piece = SimpleNamespace(body=text, purpose=draft.purpose, channel=draft.channel, audience=draft.audience)
+            piece = SimpleNamespace(body=text, purpose=draft.purpose, channel=draft.channel, audience=draft.audience, limits=False)
             from_text, result, d = review_text(piece, rules, facts, terms)
             dropped += d
             ai_count += sum(1 for f in from_text if f["source"] == "ai")

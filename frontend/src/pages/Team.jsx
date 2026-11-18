@@ -9,6 +9,35 @@ const ROLE_HELP = {
   reviewer: 'Owns the Brand Library and the team; decides high-risk findings.',
 }
 
+// Teammates removed earlier, with a way to add each back (same role and password as before).
+function Removed({ onRestored }) {
+  const [people, setPeople] = useState([])
+  const [error, setError] = useState('')
+  useEffect(() => { api('/team/removed').then(setPeople).catch(() => {}) }, [])
+  if (!people.length) return null
+  return (
+    <details className="mt-6 rounded-lg border-2 border-line bg-card p-4">
+      <summary className="cursor-pointer font-semibold">Removed teammates ({people.length})</summary>
+      <ErrorNote>{error}</ErrorNote>
+      <ul className="mt-3 grid gap-2 text-sm">
+        {people.map((m) => (
+          <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-white p-2.5">
+            <span className="flex-1"><span className="font-semibold">{m.name}</span> <span className="text-muted">· {m.email}</span></span>
+            <Button onClick={async () => {
+              try {
+                const team = await api(`/team/${m.id}/restore`, { method: 'POST' })
+                setPeople(people.filter((p) => p.id !== m.id))
+                onRestored(team)
+              } catch (e) { setError(e.message) }
+            }}>Add back</Button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-muted">They come back with the role and password they had. Their past work never left the record.</p>
+    </details>
+  )
+}
+
 export default function Team({ user }) {
   const [team, setTeam] = useState(null)
   const [error, setError] = useState('')
@@ -114,6 +143,7 @@ export default function Team({ user }) {
           {added && <p role="status" className="mt-3 text-sm font-semibold text-primary-deep">{added}</p>}
         </Card>
       )}
+      {owner && !user.demo_brand && <Removed key={team.length} onRestored={setTeam} />}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
-import { Button, Card, ErrorNote, PageLoading, StatusChip, timeAgo } from '../ui.jsx'
+import { Button, Card, ErrorNote, PageLoading, StatusChip, timeAgo, Term } from '../ui.jsx'
+import { dueLabel } from '../due.js'
 
 // Same order as the channel picker on the new draft form.
 const CHANNELS = ['LinkedIn', 'Instagram', 'Email', 'Advertisement', 'Blog', 'Website', 'Document']
@@ -14,6 +15,16 @@ const SORTS = {
   risk: ['Most high-risk', (a, b) => b.blocking - a.blocking || b.open - a.open || time(b) - time(a)],
   open: ['Most open findings', (a, b) => b.open - a.open || b.blocking - a.blocking || time(b) - time(a)],
   title: ['Title A to Z', (a, b) => a.title.localeCompare(b.title)],
+  due: ['Due soonest', (a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999') || time(b) - time(a)],
+}
+
+const STATUS_FILTER = { all: 'Any status', draft: 'Draft', in_review: 'In review', changes_requested: 'Changes requested',
+  authorised_review: 'Authorised review', approved: 'Approved' }
+
+// "waiting 3 h": how long a draft has sat in its current state (its last change).
+const waited = (d) => {
+  const h = (Date.now() - time(d)) / 3600000
+  return h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} days`
 }
 
 const WAITING = { manager: ['in_review'], reviewer: ['authorised_review', 'in_review'], creator: ['draft', 'changes_requested'] }
@@ -35,6 +46,8 @@ export default function Drafts({ user }) {
   const [params, setParams] = useSearchParams()
   const channel = params.get('channel') || 'All'
   const sort = SORTS[params.get('sort')] ? params.get('sort') : 'waiting'
+  const status = STATUS_FILTER[params.get('status')] ? params.get('status') : 'all'
+  const [query, setQuery] = useState(params.get('q') || '')
 
   const mine = (d) => WAITING[user.role].includes(d.status)
   // Orange marks what needs this person's action, and nothing else.
@@ -47,16 +60,20 @@ export default function Drafts({ user }) {
     ...[...CHANNELS, 'Other'].filter((c) => counts[c]).map((c) => [c, counts[c]]),
   ]
   const active = tabs.some(([c]) => c === channel) ? channel : 'All'
-  const shown = (drafts || []).filter((d) => active === 'All' || channelOf(d) === active)
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const shown = (drafts || []).filter((d) => (active === 'All' || channelOf(d) === active) && (status === 'all' || d.status === status)
+    && words.every((w) => `${d.title} ${d.creator} ${d.channel}`.toLowerCase().includes(w)))
   const rank = (d) => URGENCY[user.role]?.[d.status] ?? 9
   const byWaiting = (a, b) => rank(a) - rank(b) || time(b) - time(a)
   const sorted = [...shown].sort(SORTS[sort][1] || byWaiting)
   // Keep the address in step with the filters so Back returns to the same view.
   const setView = (next) => {
-    const v = { channel: active, sort, ...next }
+    const v = { channel: active, sort, status, q: query, ...next }
     const q = {}
     if (v.channel !== 'All') q.channel = v.channel
     if (v.sort !== 'waiting') q.sort = v.sort
+    if (v.status !== 'all') q.status = v.status
+    if (v.q.trim()) q.q = v.q.trim()
     setParams(q, { replace: true })
   }
 
@@ -71,17 +88,35 @@ export default function Drafts({ user }) {
               : 'Content from your team. Items waiting for you are listed first.'}
           </p>
         </div>
-        <Link to="/new">
+        <Link to="/new" data-tour="new-draft" className="rounded-md">
           <Button kind="primary">New draft</Button>
         </Link>
       </div>
 
       <FirstSteps user={user} />
+      <Recheck />
 
       {drafts?.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <ChannelMenu tabs={tabs} active={active} onPick={(c) => setView({ channel: c })}
             waitingIn={new Set((drafts || []).filter(waiting).map(channelOf))} />
+          <div className="flex flex-wrap items-center gap-2">
+          <label className="relative">
+            <span className="sr-only">Search drafts</span>
+            <input type="search" value={query} placeholder="Search title or writer" data-search
+              onChange={(e) => { setQuery(e.target.value); setView({ q: e.target.value }) }}
+              className="w-52 rounded-md border-2 border-line bg-card py-1.5 pl-8 pr-2 text-sm transition hover:border-ink focus:border-primary focus:outline-none" />
+            <svg aria-hidden="true" viewBox="0 0 16 16" className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted">
+              <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </label>
+          <label className="text-sm font-semibold">
+            <span className="sr-only">Status</span>
+            <select value={status} onChange={(e) => setView({ status: e.target.value })}
+              className="cursor-pointer rounded-md border-2 border-line bg-card px-2 py-1.5 font-semibold transition hover:border-ink">
+              {Object.entries(STATUS_FILTER).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          </label>
           <label className="flex items-center gap-2 text-sm font-semibold">
             Sort by
             <span className="relative">
@@ -99,10 +134,16 @@ export default function Drafts({ user }) {
               </svg>
             </span>
           </label>
+          </div>
         </div>
       )}
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" key={`${active}-${sort}`}>
+      <div data-tour="drafts" className="mt-4 grid gap-4 rounded-lg sm:grid-cols-2 lg:grid-cols-3" key={`${active}-${sort}-${status}`}>
+        {drafts?.length > 0 && sorted.length === 0 && (
+          <Card className="col-span-full p-6 text-center text-muted">
+            No drafts match. <button className="font-semibold text-primary hover:underline" onClick={() => { setQuery(''); setParams({}, { replace: true }) }}>Clear the filters</button>
+          </Card>
+        )}
         {error && <div className="col-span-full"><ErrorNote>{error}</ErrorNote></div>}
         {drafts === null && !error && <div className="col-span-full"><PageLoading kind="cards" /></div>}
         {drafts?.length === 0 && (
@@ -123,7 +164,8 @@ export default function Drafts({ user }) {
               </div>
               <p className="mt-3 line-clamp-2 font-display text-lg font-bold leading-snug">{d.title}</p>
               <p className="mb-4 mt-1 text-sm text-muted">
-                by {d.creator} · version {d.version} · {timeAgo(d.updated_at)}
+                by {d.creator} · version {d.version} · <span title={new Date(d.updated_at).toLocaleString()}>{timeAgo(d.updated_at)}</span>
+                {d.due_date && d.status !== 'approved' && <span className={`font-semibold ${dueLabel(d.due_date).cls}`}> · {dueLabel(d.due_date).text}</span>}
               </p>
               <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3 text-sm">
                 {d.blocking > 0 && <span className="font-semibold text-red-800">{d.blocking} high-risk</span>}
@@ -131,7 +173,7 @@ export default function Drafts({ user }) {
                 {waiting(d) && (
                   <span className="ml-auto flex items-center gap-1.5 font-semibold">
                     <span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />
-                    Waiting for you
+                    Waiting for you · {waited(d)}
                   </span>
                 )}
               </div>
@@ -140,6 +182,34 @@ export default function Drafts({ user }) {
         ))}
       </div>
     </div>
+  )
+}
+
+// Approved content that no longer matches the Brand Library: a fact it quotes expired or changed.
+function Recheck() {
+  const [items, setItems] = useState([])
+  const [open, setOpen] = useState(false)
+  useEffect(() => { api('/recheck').then(setItems).catch(() => {}) }, [])
+  if (!items.length) return null
+  return (
+    <Card className="mt-6 border-accent/50 bg-accent-soft p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm"><span className="font-semibold">{items.length} approved piece{items.length > 1 ? 's' : ''} may now be out of date.</span>{' '}
+          {items.length > 1 ? 'They quote' : 'It quotes'} an <Term name="approved fact" /> that has expired or changed since approval.</p>
+        <button className="text-sm font-semibold text-accent-deep hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Show which'}</button>
+      </div>
+      {open && (
+        <ul className="step-in mt-3 grid gap-2 text-sm">
+          {items.map((d) => (
+            <li key={d.id} className="rounded-md border border-accent/30 bg-white p-2.5">
+              <Link to={`/drafts/${d.id}`} className="font-semibold text-primary hover:underline">{d.title}</Link>
+              <span className="text-muted"> · {d.channel || 'No channel'}</span>
+              {d.issues.map((x, i) => <p key={i} className="mt-0.5 text-muted">{x.ref_code}: {x.reason}</p>)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   )
 }
 

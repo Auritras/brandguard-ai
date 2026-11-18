@@ -1,18 +1,32 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { ACTION_LABEL, Button, ErrorNote, FINDING_STATUS, PageLoading, SEVERITY } from '../ui.jsx'
 
 const when = (iso) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 
 // A one-page record of how a draft was reviewed, made to be printed or saved as PDF.
-export default function Record({ user }) {
+export default function Record({ user, shared = false }) {
   const { id } = useParams()
+  const [params] = useSearchParams()
   const [d, setD] = useState(null)
   const [error, setError] = useState('')
+  const [link, setLink] = useState('')
   useEffect(() => {
-    api(`/drafts/${id}`).then(setD).catch((e) => setError(e.message))
-  }, [id])
+    // A shared link opens the record without signing in, authorised by the token in the address.
+    api(shared ? `/public/record/${id}?t=${encodeURIComponent(params.get('t') || '')}` : `/drafts/${id}`, shared ? { token: 'none' } : undefined)
+      .then(setD).catch((e) => setError(e.message))
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const share = async () => {
+    try {
+      const out = await api(`/drafts/${id}/share`, { method: 'POST' })
+      const url = location.origin + out.path
+      setLink(url)
+      await navigator.clipboard.writeText(url).catch(() => {})
+    } catch (e) {
+      setError(e.message)
+    }
+  }
   if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const approved = d.status === 'approved'
@@ -25,9 +39,20 @@ export default function Record({ user }) {
   return (
     <article className="record mx-auto max-w-3xl">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <Link to={`/drafts/${d.id}`} className="text-sm font-semibold text-primary hover:underline">← Back to the draft</Link>
-        <Button kind="primary" onClick={() => window.print()}>Print or save as PDF</Button>
+        {shared
+          ? <p className="text-sm text-muted">A read-only copy of this review record, shared from BrandGuard AI.</p>
+          : <Link to={`/drafts/${d.id}`} className="text-sm font-semibold text-primary hover:underline">← Back to the draft</Link>}
+        <div className="flex flex-wrap gap-2">
+          {!shared && <Button onClick={share}>Share a read-only link</Button>}
+          <Button kind="primary" onClick={() => window.print()}>Print or save as PDF</Button>
+        </div>
       </div>
+      {link && (
+        <p role="status" className="step-in mt-3 rounded-lg border border-line bg-card p-3 text-sm print:hidden">
+          Link copied. Anyone with it can read this record for 30 days, without an account:{' '}
+          <input readOnly value={link} onFocus={(e) => e.target.select()} className="mt-1 w-full rounded border border-line bg-white px-2 py-1 font-mono text-xs" />
+        </p>
+      )}
 
       <div className="ticket mt-6">
       <header className="pb-5">
@@ -101,7 +126,7 @@ export default function Record({ user }) {
       </Section>
 
       <p className="mt-8 border-t border-line pt-3 text-xs text-muted">
-        Printed {when(new Date().toISOString())} by {user.name}. Taken from the append-only audit log. The automated check never approves; every decision above was made by a person.
+        Printed {when(new Date().toISOString())}{shared ? " from a shared link" : ` by ${user.name}`}. Taken from the append-only audit log. The automated check never approves; every decision above was made by a person.
       </p>
       </div>
     </article>

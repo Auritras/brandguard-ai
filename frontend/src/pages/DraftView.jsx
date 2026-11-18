@@ -4,7 +4,8 @@ import { api } from '../api.js'
 import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
 import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
-import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, SEVERITY, StatusChip, inputCls, timeAgo } from '../ui.jsx'
+import { dueLabel } from '../due.js'
+import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, SEVERITY, StatusChip, Term, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
@@ -120,6 +121,7 @@ export default function DraftView({ user }) {
   if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
+  const lowFixes = d.findings.filter((f) => f.status === 'open' && f.severity === 'low' && f.suggestion && !f.image_id && d.body.includes(f.quote)).length
   const active = d.findings.filter(isActive)
   const shown = active.map((f) => ({ f }))
   for (const { f, at } of leaving) if (!active.some((a) => a.id === f.id)) shown.splice(Math.min(at, shown.length), 0, { f, leaving: true })
@@ -143,11 +145,13 @@ export default function DraftView({ user }) {
         <h1 className="font-display text-3xl font-bold">{d.title}</h1>
         <span key={d.status} className={acted ? 'status-stamp inline-block' : 'inline-block'}><StatusChip status={d.status} /></span>
       </div>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 text-sm text-muted">
         {d.channel || 'No channel'} · by {d.creator} · version {d.version} ·{' '}
         <Link to={`/drafts/${d.id}/record`} className="font-semibold text-primary hover:underline">
           {d.status === 'approved' ? 'Approval record' : 'Review record'}
         </Link>
+        <span aria-hidden="true">·</span>
+        <DueDate d={d} busy={busy} act={act} />
       </p>
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>
@@ -188,6 +192,12 @@ export default function DraftView({ user }) {
         ) : (
           <Button kind="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
         ))}
+        {d.can.edit && lowFixes > 0 && (
+          <Button disabled={!!busy} onClick={() => act('accept-low', `/drafts/${d.id}/accept-low`)}
+            title="Terminology and other low-risk findings with a ready-made fix">
+            {busy === 'accept-low' ? 'Fixing…' : `Accept all ${lowFixes} low-risk fixes`}
+          </Button>
+        )}
         {d.can.request_changes && (
           <ReasonButton label="Request changes" placeholder="What should the creator change?" confirmLabel="Send back"
             onSubmit={(note) => act('changes', `/drafts/${d.id}/request-changes`, { note })} />
@@ -207,16 +217,19 @@ export default function DraftView({ user }) {
                 Approved
               </span>
             )}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-xl font-bold">Content</h2>
-              {d.can.edit && !editing && (
-                <Button onClick={() => { setText(d.body); setEditing(true) }}>Edit text</Button>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {!editing && <CopyText body={d.body} title={d.title} />}
+                {d.can.edit && !editing && (
+                  <Button onClick={() => { setText(d.body); setEditing(true) }}>Edit text</Button>
+                )}
+              </div>
             </div>
             {editing ? (
               <div className="mt-3">
                 <label className="sr-only" htmlFor="body">Content</label>
-                <LiveText id="body" value={text} onChange={(e) => setText(e.target.value)} minHeight="min-h-64" />
+                <LiveText id="body" value={text} onChange={(e) => setText(e.target.value)} minHeight="min-h-64" channel={d.channel} />
                 <div className="mt-2 flex gap-2">
                   <Button kind="dark" disabled={!!busy || !text.trim()}
                     onClick={async () => { if (await act('save', `/drafts/${d.id}`, { __method: 'PUT', data: { body: text } })) setEditing(false) }}>
@@ -315,7 +328,7 @@ export default function DraftView({ user }) {
         {/* Right: findings and disclosure */}
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <h2 className="font-display text-xl font-bold">
-            Findings <span className="text-base font-normal text-muted">(<RollNumber value={active.length} /> to handle)</span>
+            <Term name="finding">Findings</Term> <span className="text-base font-normal text-muted">(<RollNumber value={active.length} /> to handle)</span>
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
           {d.run && !d.run.ai_used && /failed|could not/i.test(d.run.ai_note) && (
@@ -378,6 +391,52 @@ export default function DraftView({ user }) {
   )
 }
 
+// When the draft is needed by. Anyone on the team can set it until it is approved.
+function DueDate({ d, busy, act }) {
+  const [open, setOpen] = useState(false)
+  const label = dueLabel(d.due_date)
+  if (d.status === 'approved' || d.shared) return d.due_date ? <span>{label.text}</span> : null
+  if (open) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <label className="sr-only" htmlFor="due">Needed by</label>
+        <input id="due" type="date" autoFocus defaultValue={d.due_date || ''} className="rounded border-2 border-line bg-white px-1.5 py-0.5 text-sm text-ink"
+          onChange={async (e) => { if (await act('due', `/drafts/${d.id}/due`, { __method: 'PUT', data: { due_date: e.target.value || null } })) setOpen(false) }} />
+        <button className="px-1 font-semibold" onClick={() => setOpen(false)}>Done</button>
+      </span>
+    )
+  }
+  return (
+    <button disabled={!!busy} onClick={() => setOpen(true)} className={`font-semibold hover:underline ${label.cls || 'text-primary'}`}>
+      {d.due_date ? label.text : 'Set a due date'}
+    </button>
+  )
+}
+
+// Copy the text, or save it as a file, to paste into the channel once it is approved.
+function CopyText({ body, title }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(body)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch { /* clipboard blocked: the Save option still works */ }
+  }
+  const save = () => {
+    const url = URL.createObjectURL(new Blob([body], { type: 'text/plain;charset=utf-8' }))
+    const a = Object.assign(document.createElement('a'), { href: url, download: `${title.replace(/[^\w\- ]+/g, '').trim() || 'draft'}.txt` })
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  return (
+    <span className="flex items-center gap-1">
+      <Button kind="ghost" onClick={copy} aria-live="polite">{copied ? 'Copied ✓' : 'Copy text'}</Button>
+      <Button kind="ghost" onClick={save}>Save as .txt</Button>
+    </span>
+  )
+}
+
 // Two versions side by side as one text: removed words struck out, new words highlighted.
 function CompareVersions({ versions }) {
   // versions arrive newest first
@@ -431,13 +490,14 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
   const imgIndex = f.image_id ? d.images.findIndex((x) => x.id === f.image_id) : -1
   const img = imgIndex >= 0 ? d.images[imgIndex] : null
   const inPixels = !!f.image_id && f.ref_code !== 'VIS-ALT' // only the description can be fixed from here
+  const wholeText = f.ref_code.startsWith('CH-') // channel limits: length, number of hashtags
   return (
     <Card ref={ref} id={leaving ? undefined : `finding-${f.id}`} className={`stamp-in scroll-mt-6 p-4 ${leaving ? 'fold-away' : ''}`} style={{ '--i': i }}
       inert={leaving || undefined} aria-hidden={leaving || undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip className={sev.chip}>{sev.label} risk</Chip>
         <Chip className="border-line bg-white capitalize text-ink">{f.category}</Chip>
-        <span className="text-xs text-muted">Found by {f.source === 'ai' ? 'AI, then verified' : f.ref_code.startsWith('VIS-') ? 'measuring the image' : 'an exact check'}</span>
+        <span className="text-xs text-muted">Found by {f.source === 'ai' ? <><Term name="AI check">AI</Term>, then verified</> : f.ref_code.startsWith('VIS-') ? 'measuring the image' : <>an <Term name="exact check" /></>}</span>
       </div>
       {img && (
         <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted">
@@ -448,7 +508,7 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
       <p className="mt-3 text-sm"><span className={`rounded px-1 ${sev.mark}`}>“{f.quote}”</span></p>
       <p className="mt-2 text-sm">{f.reason}</p>
       <p className="mt-2 rounded-lg bg-paper p-2 text-sm">
-        <span className="font-semibold">{f.ref_code === 'TERM' ? 'Terminology list' : f.ref_code.startsWith('VIS-') ? 'Image standard' : `${f.ref_code.startsWith('F-') ? 'Approved fact' : 'Rule'} ${f.ref_code}`}:</span>{' '}
+        <span className="font-semibold">{f.ref_code === 'TERM' ? 'Terminology list' : f.ref_code.startsWith('VIS-') ? 'Image standard' : f.ref_code.startsWith('CH-') ? `${d.channel} limit` : `${f.ref_code.startsWith('F-') ? 'Approved fact' : 'Rule'} ${f.ref_code}`}:</span>{' '}
         {f.ref_text}
       </p>
       {f.suggestion && !disputed && (
@@ -466,13 +526,14 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
       <div className="mt-3 flex flex-wrap gap-2">
         {d.can.edit && f.status === 'open' && (
           <>
+            {wholeText && <p className="w-full text-sm text-muted">This is about the whole text: shorten it with Edit text, then run the check again. Or dispute it.</p>}
             {inPixels && <p className="w-full text-sm text-muted">This is in the image itself: change the image, then remove this one and add the new one. Or dispute it.</p>}
-            {f.suggestion && !inPixels && (
+            {f.suggestion && !inPixels && !wholeText && (
               <Button kind="primary" disabled={busy} onClick={() => act('accept', `/findings/${f.id}/accept`)}>
                 {f.image_id ? 'Use this description' : 'Accept fix'}
               </Button>
             )}
-            {!inPixels && (
+            {!inPixels && !wholeText && (
               <ReasonButton label={f.image_id ? 'Write my own description' : 'Write my own fix'}
                 placeholder={f.image_id ? 'What does the image show?' : 'Replacement for the highlighted text'}
                 confirmLabel={f.image_id ? 'Save description' : 'Apply my fix'} initial={f.image_id ? f.suggestion : f.suggestion || f.quote}
@@ -494,8 +555,8 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
           <ReasonButton label="Waive" placeholder="Why is it acceptable to publish with this?" confirmLabel="Waive with this reason" hold pendingLabel="Waiving"
             onSubmit={(reason) => act('waive', `/findings/${f.id}/waive`, { reason })} />
         )}
-        {disputed && d.can.decide_disputes && !canDecide && (
-          <p className="text-sm text-muted">A high-risk dispute needs the authorised reviewer.</p>
+            {disputed && d.can.decide_disputes && !canDecide && (
+          <p className="text-sm text-muted">A high-risk <Term name="dispute" /> needs the <Term name="authorised reviewer" />.</p>
         )}
       </div>
     </Card>

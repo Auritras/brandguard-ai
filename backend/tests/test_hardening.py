@@ -56,3 +56,53 @@ def test_rate_limit(monkeypatch):
     with pytest.raises(HTTPException) as e:
         lim.check("a")
     assert e.value.status_code == 429 and "Slow down." in e.value.detail
+
+
+def test_channel_limits(client, creator):
+    tags = " ".join(f"#fizz{i}" for i in range(31))
+    d = client.post("/api/drafts", headers=creator, json={"title": "Too many tags", "channel": "Instagram", "body": "Summer! " + tags}).json()
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    ch = next(f for f in d["findings"] if f["ref_code"] == "CH-HASHTAGS")
+    assert ch["quote"] == "31 hashtags" and ch["severity"] == "high"
+    assert client.post(f"/api/findings/{ch['id']}/edit", headers=creator, json={"replacement": "x"}).status_code == 409
+    live = client.post("/api/check-text", headers=creator, json={"body": "x" * 3001, "channel": "LinkedIn"}).json()
+    assert any(f["ref_code"] == "CH-LENGTH" for f in live)
+
+
+def test_accept_all_low_risk_fixes_in_one_version(client, creator):
+    d = make(client, creator, "Our clients pay their staff with Lumio Pay. It is the best.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    d = client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).json()
+    assert d["body"] == "Our customers pay their employees with Lumio Payroll. It is the best." and d["version"] == 2
+    assert any(f["ref_code"] == "R-002" and f["status"] == "open" for f in d["findings"])  # high risk stays for a person
+    assert client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).status_code == 409
+
+
+def test_recheck_finds_approved_content_with_an_expired_fact(client, creator, manager):
+    d = make(client, creator, "Customers rated us 4.6 out of 5.")
+    client.post(f"/api/drafts/{d['id']}/check", headers=creator)
+    client.post(f"/api/drafts/{d['id']}/submit", headers=creator)
+    assert client.post(f"/api/drafts/{d['id']}/approve", headers=manager).json()["status"] == "approved"
+    alerts = client.get("/api/recheck", headers=manager).json()
+    hit = next(a for a in alerts if a["id"] == d["id"])
+    assert hit["issues"][0]["ref_code"] == "F-004" and "expired" in hit["issues"][0]["reason"]
+
+
+def test_share_link_opens_the_record_without_signing_in(client, creator):
+    d = make(client, creator, "A calm post.")
+    link = client.post(f"/api/drafts/{d['id']}/share", headers=creator).json()["path"]
+    did, token = link.split("/share/")[1].split("?t=")
+    r = client.get(f"/api/public/record/{did}?t={token}")
+    assert r.status_code == 200 and r.json()["title"] == "LinkedIn launch post" and not any(r.json()["can"].values())
+    assert client.get(f"/api/public/record/{did}?t=wrong").status_code == 401
+    assert client.get(f"/api/public/record/{int(did) + 1}?t={token}").status_code == 401  # one link, one record
+
+
+def test_due_date_and_csv_rules(client, creator, reviewer):
+    d = make(client, creator, "A calm post.")
+    d = client.put(f"/api/drafts/{d['id']}/due", headers=creator, json={"due_date": "2026-12-01"}).json()
+    assert d["due_date"] == "2026-12-01"
+    bad = client.post("/api/rules/bulk", headers=reviewer, json={"rules": [{"category": "tone", "title": "X", "text": "Some rule.", "patterns": "(["}]})
+    assert bad.status_code == 422
+    ok = client.post("/api/rules/bulk", headers=reviewer, json={"rules": [{"category": "tone", "title": "No slang", "text": "Avoid slang like 'lit'."}]})
+    assert ok.json()["rules"][0]["status"] == "proposed"

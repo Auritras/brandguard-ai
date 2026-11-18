@@ -7,7 +7,7 @@ const BOX = 'w-full rounded-md border-2 px-3 py-2 text-sm leading-6 whitespace-p
 
 // A text box that runs the exact checks while you type (after a short pause) and underlines
 // what they find. Only the instant code checks run here; AI checks run when the draft is saved.
-export default function LiveText({ id, value, onChange, required, placeholder, minHeight = 'min-h-56' }) {
+export default function LiveText({ id, value, onChange, required, placeholder, minHeight = 'min-h-56', channel = '' }) {
   const [found, setFound] = useState([])
   const [state, setState] = useState('idle') // idle | checking | done | error
   const ref = useRef(null)
@@ -21,12 +21,12 @@ export default function LiveText({ id, value, onChange, required, placeholder, m
     setState('checking')
     let stale = false
     const t = setTimeout(() => {
-      api('/check-text', { method: 'POST', body: { body: value } })
+      api('/check-text', { method: 'POST', body: { body: value, channel } })
         .then((r) => { if (!stale) { setFound(r); setState('done') } })
         .catch(() => { if (!stale) setState('error') })
     }, 600)
     return () => { stale = true; clearTimeout(t) }
-  }, [value])
+  }, [value, channel])
 
   // Grow with the text so the box never scrolls and the highlight layer stays aligned.
   useLayoutEffect(() => {

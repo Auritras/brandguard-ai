@@ -111,6 +111,7 @@ class Draft(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # when it needs to be approved by
     # Deleted drafts are hidden, not erased, so the append-only history stays whole.
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     creator: Mapped[User] = relationship()

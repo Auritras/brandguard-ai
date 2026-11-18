@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, BASE } from '../api.js'
+import { csvToRules, download, rulesToCsv } from '../csv.js'
 import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading, timeAgo } from '../ui.jsx'
 
 const EMPTY_RULE = { category: 'tone', title: '', text: '', severity: 'medium', patterns: '' }
@@ -76,8 +77,25 @@ export default function Library({ user }) {
             <div className="flex flex-wrap gap-2">
               <Button kind="primary" onClick={() => setRule(EMPTY_RULE)}>Add a rule</Button>
               <Button onClick={() => setImportText('')}>Import from guidelines</Button>
+              <label className="inline-flex cursor-pointer items-center rounded-md border-2 border-ink bg-card px-3.5 py-1.5 text-sm font-semibold shadow-[2px_2px_0_0_var(--color-ink)] hover:bg-primary-soft">
+                Import a spreadsheet (CSV)
+                <input type="file" accept=".csv,text/csv" className="sr-only" disabled={busy} onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (!file) return
+                  const { rules, problems } = csvToRules(await file.text())
+                  if (problems.length && !rules.length) return setError(problems.join(' '))
+                  const out = await run(() => api('/rules/bulk', { method: 'POST', body: { rules } }))
+                  if (out) setNote(`${out.rules.length} rule(s) from ${file.name} are proposed below, waiting for your approval.${problems.length ? ` Skipped: ${problems.join(' ')}` : ''}`)
+                }} />
+              </label>
             </div>
           )}
+          <div>
+            <Button kind="ghost" onClick={() => download(`${(user.brand || 'brand').replace(/[^\w\- ]+/g, '')} rules.csv`, rulesToCsv(lib.rules))}>
+              Download the rules as a spreadsheet (CSV)
+            </Button>
+          </div>
 
           {importText !== null && (
             <Card className="p-4">

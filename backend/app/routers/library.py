@@ -216,6 +216,25 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db), user: User = Depend
     return {"ok": True}
 
 
+class BulkIn(BaseModel):
+    rules: list[RuleIn] = Field(max_length=200)
+
+
+@router.post("/rules/bulk")
+def bulk_rules(body: BulkIn, db: Session = Depends(get_db), user: User = Depends(owner)):
+    """Rules from a spreadsheet (CSV). They arrive as PROPOSED, like imported guidelines, for the owner to approve."""
+    clean = [clean_rule(r) for r in body.rules]  # all or nothing: one bad row stops the import with its message
+    created = []
+    for data in clean:
+        rule = Rule(brand_id=user.brand_id, code=next_code(db, Rule, "R", user.brand_id), status="proposed", **data)
+        db.add(rule)
+        db.flush()
+        created.append(rule)
+    log(db, user, "rules_imported", f"{len(created)} rule(s) from a spreadsheet")
+    db.commit()
+    return {"rules": [rule_out(r) for r in created]}
+
+
 @router.post("/library/import")
 def import_guidelines(body: ImportIn, db: Session = Depends(get_db), user: User = Depends(owner)):
     """Turn pasted guideline text into PROPOSED rules. None is used in a review until the owner approves it."""

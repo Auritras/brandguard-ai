@@ -57,7 +57,7 @@ function readable(d) {
 export async function api(path, { method = 'GET', body, file, fields, token, rev } = {}) {
   const headers = {}
   const auth = token ? null : getAuth()
-  if (token) headers.Authorization = `Bearer ${token}`
+  if (token && token !== 'none') headers.Authorization = `Bearer ${token}`
   else if (auth?.token) headers.Authorization = `Bearer ${auth.token}`
   if (rev !== undefined && rev !== null) headers['X-Seen-Rev'] = String(rev)
   let payload

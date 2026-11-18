@@ -3,6 +3,8 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { api, getAuth, getDemoToken, setAuth, setDemoToken } from './api.js'
 import { Button } from './ui.jsx'
 import { ErrorBoundary } from './Resilience.jsx'
+import Tour, { tourDone } from './Tour.jsx'
+import CommandMenu from './CommandMenu.jsx'
 import Login from './pages/Login.jsx'
 import Drafts from './pages/Drafts.jsx'
 import NewDraft from './pages/NewDraft.jsx'
@@ -54,6 +56,19 @@ export default function App() {
     api('/waiting').then((w) => setWaiting(w.count)).catch(() => {})
   }, [auth?.token, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The tour opens by itself the first time someone uses a demo copy or a new brand, once per role.
+  const [touring, setTouring] = useState(false)
+  useEffect(() => {
+    if (!auth?.user || tourDone(auth.user)) return
+    const t = setTimeout(() => setTouring(true), 900)
+    return () => clearTimeout(t)
+  }, [auth?.user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const open = () => setTouring(true)
+    addEventListener('bg-tour', open)
+    return () => removeEventListener('bg-tour', open)
+  }, [])
+
   const [leaving, setLeaving] = useState(false)
   const [signedOut, setSignedOut] = useState(false)
   // Fade the workspace out, then show the sign-in page (straight away if motion is reduced).
@@ -98,6 +113,14 @@ export default function App() {
     }
   }
 
+  // A shared review record opens for anyone with the link, signed in or not.
+  if (location.pathname.startsWith('/share/')) {
+    return (
+      <main className="mx-3 my-6 max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:border-0 print:bg-white print:p-0 print:shadow-none">
+        <Routes><Route path="/share/:id" element={<Record shared />} /></Routes>
+      </main>
+    )
+  }
   if (!auth) return <Login onSignIn={signIn} signedOut={signedOut} />
   const user = auth.user
   const tab = ({ isActive }) =>
@@ -115,7 +138,7 @@ export default function App() {
             BrandGuard AI
           </Link>
           <nav aria-label="Main" className="order-last flex w-full gap-1 sm:order-none sm:w-auto">
-            <NavLink to="/" end className={tab} aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
+            <NavLink to="/" end className={tab} data-tour="nav-drafts" aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
               Drafts
               {waiting > 0 && (
                 <span key={waiting} aria-hidden="true" className="roll-in ml-1.5 inline-grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-xs font-bold text-white">
@@ -123,13 +146,13 @@ export default function App() {
                 </span>
               )}
             </NavLink>
-            <NavLink to="/insights" className={tab}>
+            <NavLink to="/insights" className={tab} data-tour="nav-insights">
               Brand health
             </NavLink>
-            <NavLink to="/library" className={tab}>
+            <NavLink to="/library" className={tab} data-tour="nav-library">
               Brand Library
             </NavLink>
-            <NavLink to="/reliability" className={tab}>
+            <NavLink to="/reliability" className={tab} data-tour="nav-reliability">
               Reliability
             </NavLink>
             <NavLink to="/team" className={tab}>
@@ -137,6 +160,10 @@ export default function App() {
             </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
+            <button onClick={() => dispatchEvent(new Event('bg-command'))} title="Go to a page or draft (Ctrl+K)"
+              className="hidden rounded-md border border-white/25 px-2 py-1 text-xs font-semibold text-white/80 hover:bg-white/10 md:inline-flex">
+              Go to… <kbd className="ml-1.5 font-sans text-white/60">Ctrl K</kbd>
+            </button>
             <Link to="/account" title="Your account" className="rounded px-1 font-semibold hover:bg-white/10">
               {user.name.split(' (')[0]}
               <span className="hidden font-normal text-white/70 sm:inline">
@@ -149,6 +176,8 @@ export default function App() {
           </div>
         </div>
       </header>
+      <Tour user={user} open={touring} onClose={() => setTouring(false)} />
+      <CommandMenu onTour={() => setTouring(true)} />
       {user.sandbox && (
         // Keyed by the copy's account, so the bar starts closed in a new copy.
         <DemoBar key={user.email} user={user} busy={demoBusy} note={demoNote}
@@ -195,7 +224,7 @@ function DemoBar({ user, busy, note, onSwitch, onRestart, onCompare }) {
     <div className="border-b-2 border-ink bg-accent-soft print:hidden">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2 text-sm">
         <p className="font-semibold text-accent-deep">Your private copy of {DEMO_BRANDS[key]}</p>
-        <div role="group" aria-label="Act as" className="flex flex-wrap items-center gap-1">
+        <div role="group" aria-label="Act as" data-tour="act-as" className="flex flex-wrap items-center gap-1">
           <span className="mr-1 text-muted">Act as</span>
           {DEMO_PEOPLE[key].map(([role, name, label]) => (
             <button key={role} disabled={!!busy} onClick={() => role !== user.role && onSwitch(role)} aria-pressed={role === user.role}
@@ -214,6 +243,7 @@ function DemoBar({ user, busy, note, onSwitch, onRestart, onCompare }) {
             Compare with {DEMO_BRANDS[other]} →
           </button>
         )}
+        <button className="font-semibold text-accent-deep hover:underline" onClick={() => dispatchEvent(new Event('bg-tour'))}>Take the tour</button>
         <div className="ml-auto flex items-center gap-2" aria-live="polite">
           {busy === 'switch' && <span role="status" className="flex items-center gap-2 font-semibold text-accent-deep"><span aria-hidden="true" className="spinner" /> Switching…</span>}
           {note && !busy && <span role="status" className="font-semibold text-accent-deep">{note}</span>}

@@ -39,7 +39,9 @@ export default function NewDraft({ user }) {
   const key = `bg_new_draft_${user?.id || 'x'}`
   const read = (k) => { try { return JSON.parse(localStorage.getItem(k)) } catch { return null } }
   const blank = { title: '', channel: 'LinkedIn', audience: '', purpose: '', body: '', ...(read('bg_last_channel') || {}) }
-  const saved = read(key)
+  // Text sent here by the "Check with BrandGuard" bookmarklet (see Account) comes in the address.
+  const incoming = new URLSearchParams(location.search).get('text')
+  const saved = incoming ? { body: incoming.slice(0, 20000), title: 'Checked from the web' } : read(key)
   const [form, setForm] = useState(saved?.body || saved?.title ? { ...blank, ...saved } : blank)
   const [restored, setRestored] = useState(!!(saved?.body || saved?.title))
   const dirty = !!(form.body.trim() || form.title.trim())
@@ -128,7 +130,7 @@ export default function NewDraft({ user }) {
 
       {restored && (
         <p role="status" className="step-in mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-card px-3 py-2 text-sm">
-          <span>Restored what you were writing before. It is kept in this browser until you save it.</span>
+          <span>{incoming ? 'The text you selected on the web page is ready to check. Add a title and channel, then save.' : 'Restored what you were writing before. It is kept in this browser until you save it.'}</span>
           <button type="button" className="font-semibold text-primary hover:underline"
             onClick={() => { setForm({ ...blank, title: '', body: '', purpose: '' }); setRestored(false) }}>Start blank instead</button>
         </p>
@@ -150,11 +152,15 @@ export default function NewDraft({ user }) {
               <input className={inputCls} value={form.audience} onChange={set('audience')} placeholder="Who will read it?" />
             </Field>
           </div>
+          <Field label="Needed by (optional)" hint="Reviewers see how close it is, and the drafts list can be sorted by it.">
+            <input type="date" className={`${inputCls} sm:w-56`} value={form.due_date || ''} min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setForm({ ...form, due_date: e.target.value || null })} />
+          </Field>
           <Field label="Purpose" hint="Suggested fixes are written to keep this purpose.">
             <input className={inputCls} value={form.purpose} onChange={set('purpose')} placeholder="What should this piece achieve?" />
           </Field>
           <Field label="Content">
-            <LiveText id="body" required value={form.body} onChange={set('body')} placeholder="Paste the text here…" />
+            <LiveText id="body" required value={form.body} onChange={set('body')} placeholder="Paste the text here…" channel={form.channel} />
           </Field>
           <Field label="Or upload a file" hint="Text, Markdown, Word (.docx) or PDF, up to 5 MB.">
             <input type="file" accept=".txt,.md,.docx,.pdf" onChange={upload} className="block text-sm" />

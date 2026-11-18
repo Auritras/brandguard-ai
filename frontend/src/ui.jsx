@@ -292,3 +292,31 @@ export const ACTION_LABEL = {
   approved: 'approved',
   comment_added: 'commented',
 }
+
+// Plain-language meanings of the words the workflow uses, shown on hover or keyboard focus.
+export const GLOSSARY = {
+  'finding': 'Something in the draft that breaks one of the brand\'s rules, facts or terms. Each one quotes the exact passage and the rule.',
+  'exact check': 'A check done by plain code: banned words, rule patterns, and numbers compared with approved facts. The same text always gives the same result.',
+  'AI check': 'A judgement made by the AI model (tone, positioning, unsupported claims). Every AI finding must quote the draft exactly and cite a real rule, or it is dropped.',
+  'approved fact': 'A number or claim the brand has approved, with its source and an end date. Drafts must use the approved figure.',
+  'dispute': 'The writer says a finding is wrong and gives a reason. A reviewer then dismisses the finding or rejects the dispute.',
+  'waive': 'The brand owner accepts a high-risk finding with a written reason, so the draft can be approved with it. The reason stays on the record.',
+  'escalate': 'When a manager approves a draft that still has high-risk findings open, it goes to the brand owner (the authorised reviewer) to decide.',
+  'four eyes': 'Nobody approves their own work: whoever wrote a draft, someone else on the team decides it.',
+  'authorised reviewer': 'The brand owner: the only person who can waive a high-risk finding or decide a high-risk dispute.',
+}
+
+export function Term({ name, children }) {
+  const text = GLOSSARY[name]
+  if (!text) return children || name
+  return (
+    <span className="group/term relative inline-block">
+      <span tabIndex={0} className="cursor-help underline decoration-dotted decoration-2 underline-offset-2 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-primary">
+        {children || name}
+      </span>
+      <span role="tooltip" className="pointer-events-none invisible absolute bottom-full left-1/2 z-40 mb-2 w-64 -translate-x-1/2 rounded-md border-2 border-ink bg-ink px-3 py-2 text-left text-xs font-normal leading-5 text-paper opacity-0 shadow-print-sm transition duration-150 group-hover/term:visible group-hover/term:opacity-100 group-focus-within/term:visible group-focus-within/term:opacity-100">
+        {text}
+      </span>
+    </span>
+  )
+}

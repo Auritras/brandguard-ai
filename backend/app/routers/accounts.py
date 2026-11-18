@@ -89,6 +89,25 @@ def team(db: Session = Depends(get_db), user: User = Depends(current_user)):
     return [{"id": m.id, "name": m.name, "email": m.email, "role": m.role, "you": m.id == user.id} for m in members]
 
 
+@router.get("/team/removed")
+def removed(db: Session = Depends(get_db), user: User = Depends(owner)):
+    gone = db.query(User).filter(User.brand_id == user.brand_id, User.active.is_(False)).order_by(User.name).all()
+    return [{"id": m.id, "name": m.name, "email": m.email, "role": m.role} for m in gone]
+
+
+@router.post("/team/{member_id}/restore")
+def restore(member_id: int, db: Session = Depends(get_db), user: User = Depends(owner)):
+    """Add a removed teammate back with the role and password they had."""
+    not_demo(user)
+    member = db.get(User, member_id)
+    if member is None or member.brand_id != user.brand_id or member.active is not False:
+        raise HTTPException(404, "No removed teammate with that id.")
+    member.active = True
+    log(db, user, "member_restored", f"{member.name} as {ROLES[member.role]}")
+    db.commit()
+    return team(db, user)
+
+
 @router.post("/team")
 def add_member(body: MemberIn, db: Session = Depends(get_db), user: User = Depends(owner)):
     not_demo(user)

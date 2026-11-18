@@ -4,9 +4,10 @@ States: draft -> in_review -> (changes_requested | authorised_review | approved)
 Only people move a draft forward. The automated check never approves anything.
 """
 import contextvars
+from types import SimpleNamespace
 import json
 import re
-from datetime import timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
@@ -47,10 +48,16 @@ class DraftIn(BaseModel):
     audience: str = Field("", max_length=200)
     purpose: str = Field("", max_length=1000)
     body: str = Field(min_length=1, max_length=MAX_BODY)
+    due_date: date | None = None
 
 
 class BodyIn(BaseModel):
     body: str = Field(min_length=1, max_length=MAX_BODY)
+    channel: str = Field("", max_length=60)  # only used by the live check, for channel limits
+
+
+class DueIn(BaseModel):
+    due_date: date | None = None
 
 
 class EditIn(BaseModel):
@@ -163,7 +170,8 @@ def image_out(img: DraftImage) -> dict:
 def summary(db: Session, d: Draft) -> dict:
     findings = db.query(Finding).filter(Finding.draft_id == d.id).all()
     return {"id": d.id, "title": d.title, "channel": d.channel, "status": d.status, "version": d.version,
-            "creator": d.creator.name, "updated_at": iso(d.updated_at),
+            "creator": d.creator.name, "updated_at": iso(d.updated_at), "created_at": iso(d.created_at),
+            "due_date": d.due_date.isoformat() if d.due_date else None,
             "open": sum(1 for f in findings if f.status == "open"),
             "disputed": sum(1 for f in findings if f.status == "disputed"),
             "blocking": sum(1 for f in findings if f.severity == "high" and f.status in BLOCKING)}
@@ -283,7 +291,8 @@ def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends
     text = body.body[:MAX_BODY]
     b = user.brand_id
     rules = db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all()
-    found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all())
+    found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all(),
+                      channel=body.channel)
     return [{"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
              "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
 
@@ -328,6 +337,8 @@ def check_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depen
 def apply_fix(db: Session, finding: Finding, draft: Draft, user: User, replacement: str, status: str) -> None:
     if finding.status != "open":
         raise HTTPException(409, "This finding has already been handled.")
+    if finding.ref_code.startswith("CH-"):
+        raise HTTPException(409, "This is about the whole text. Shorten it with Edit text, then run the check again.")
     if finding.image_id is not None:
         return apply_image_fix(db, finding, draft, user, replacement, status)
     if finding.quote not in draft.body:
@@ -356,6 +367,81 @@ def apply_image_fix(db: Session, finding: Finding, draft: Draft, user: User, rep
     finding.note = f"Description: {img.alt_text}"
     log(db, user, f"finding_{status}", f"VIS-ALT: image described as \"{img.alt_text[:120]}\"", draft.id)
     db.commit()
+
+
+@router.post("/drafts/{draft_id}/accept-low")
+def accept_low(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Accept every open low-risk suggested fix in the text at once, as one new version."""
+    draft = get_draft(db, draft_id, user, lock=True)
+    own_editable(draft, user)
+    todo = [f for f in db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status == "open",
+                                                 Finding.severity == "low", Finding.image_id.is_(None)).order_by(Finding.id)
+            if f.suggestion and f.quote in draft.body]
+    if not todo:
+        raise HTTPException(409, "There are no low-risk suggested fixes left to accept.")
+    body = draft.body
+    done = []
+    for f in todo:
+        if f.quote in body:
+            body = body.replace(f.quote, f.suggestion, 1)
+            f.status, f.decided_by, f.note = "accepted", user.id, f"Replaced with: {f.suggestion}"
+            done.append(f"{f.ref_code}: \"{f.quote}\" -> \"{f.suggestion}\"")
+    new_version(db, draft, user, body, f"Accepted {len(done)} low-risk fix(es)")
+    log(db, user, "finding_accepted", "; ".join(done)[:1000], draft.id)
+    db.commit()
+    return detail(db, draft, user)
+
+
+@router.put("/drafts/{draft_id}/due")
+def set_due(draft_id: int, body: DueIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    draft = get_draft(db, draft_id, user, lock=True)
+    if draft.status == "approved":
+        raise HTTPException(409, "This draft is approved already.")
+    draft.due_date = body.due_date
+    log(db, user, "due_date_set", body.due_date.isoformat() if body.due_date else "No due date", draft.id)
+    db.commit()
+    return detail(db, draft, user)
+
+
+@router.get("/recheck")
+def recheck(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Approved content that no longer matches the Brand Library: a fact it uses has expired, or its
+    approved number has changed since. Exact checks only, so this is instant and free."""
+    b = user.brand_id
+    q = db.query(Draft).filter(Draft.brand_id == b, Draft.deleted_at.is_(None), Draft.status == "approved")
+    if user.role == "creator":
+        q = q.filter(Draft.creator_id == user.id)
+    facts = db.query(Fact).filter(Fact.brand_id == b).all()
+    out = []
+    for d in q.order_by(Draft.updated_at.desc()):
+        issues = [x for x in run_exact(d.body, [], facts, []) if x["ref_code"].startswith("F-")]
+        if issues:
+            out.append({"id": d.id, "title": d.title, "channel": d.channel,
+                        "issues": [{"ref_code": x["ref_code"], "reason": x["reason"]} for x in issues]})
+    return out
+
+
+@router.post("/drafts/{draft_id}/share")
+def share(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """A read-only link to this draft's review record, valid for 30 days, for people without an account."""
+    draft = get_draft(db, draft_id, user)
+    token = make_file_token("record", draft.id, hours=24 * 30)
+    log(db, user, "record_shared", "Read-only link, valid 30 days", draft.id)
+    db.commit()
+    return {"path": f"/share/{draft.id}?t={token}", "days": 30}
+
+
+@router.get("/public/record/{draft_id}")
+def public_record(draft_id: int, t: str = "", db: Session = Depends(get_db)):
+    if read_file_token(t, "record") != draft_id:
+        raise HTTPException(401, "This link has expired or is not valid. Ask for a new one.")
+    draft = db.get(Draft, draft_id)
+    if draft is None or draft.deleted_at is not None:
+        raise HTTPException(404, "This record is no longer available.")
+    viewer = SimpleNamespace(id=-1, role="viewer", brand=None)
+    out = detail(db, draft, viewer)
+    out["shared"] = True
+    return out
 
 
 @router.post("/findings/{finding_id}/accept")
