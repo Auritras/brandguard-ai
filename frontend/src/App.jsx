@@ -11,6 +11,7 @@ import Record from './pages/Record.jsx'
 import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
 import Account from './pages/Account.jsx'
+import Reliability from './pages/Reliability.jsx'
 
 
 const ROLE_LABEL = { creator: 'Creator', manager: 'Manager', reviewer: 'Brand owner' }
@@ -127,6 +128,9 @@ export default function App() {
             <NavLink to="/library" className={tab}>
               Brand Library
             </NavLink>
+            <NavLink to="/reliability" className={tab}>
+              Reliability
+            </NavLink>
             <NavLink to="/team" className={tab}>
               Team
             </NavLink>
@@ -162,6 +166,7 @@ export default function App() {
           <Route path="/drafts/:id/record" element={<Record user={user} />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/library" element={<Library user={user} />} />
+          <Route path="/reliability" element={<Reliability user={user} />} />
           <Route path="/team" element={<Team user={user} />} />
           <Route path="/account" element={<Account user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />

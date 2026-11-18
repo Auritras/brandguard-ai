@@ -1,0 +1,24 @@
+[
+ {
+  "date": "2026-11-18T21:16:42+00:00",
+  "commit": "081014a",
+  "mode": "exact",
+  "brand": "fizzbox",
+  "catch_rate": 100.0,
+  "precision": 100.0,
+  "false_alarms": 0,
+  "planted": 29,
+  "caught": 29
+ },
+ {
+  "date": "2026-11-18T21:16:42+00:00",
+  "commit": "081014a",
+  "mode": "exact",
+  "brand": "lumio",
+  "catch_rate": 100.0,
+  "precision": 100.0,
+  "false_alarms": 0,
+  "planted": 27,
+  "caught": 27
+ }
+]

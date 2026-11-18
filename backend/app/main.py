@@ -28,13 +28,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="BrandGuard AI", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
-from .routers import accounts, drafts, insights, library  # noqa: E402
+from .routers import accounts, drafts, insights, library, reliability  # noqa: E402
 from .routers.accounts import user_out  # noqa: E402
 
 app.include_router(accounts.router)
 app.include_router(library.router)
 app.include_router(drafts.router)
 app.include_router(insights.router)
+app.include_router(reliability.router)
 
 
 @app.get("/api/ping")

@@ -1,0 +1,130 @@
+{
+ "mode": "exact",
+ "date": "2026-11-18T21:16:42+00:00",
+ "commit": "081014a",
+ "model": "",
+ "brands": [
+  {
+   "brand": "fizzbox",
+   "drafts": 40,
+   "planted": 29,
+   "caught": 29,
+   "catch_rate": 100.0,
+   "false_alarms": 0,
+   "precision": 100.0,
+   "clean_drafts": 10,
+   "clean_passed": 10,
+   "per_rule": [
+    {
+     "ref": "F-001",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "F-002",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "F-003",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-002",
+     "planted": 6,
+     "caught": 6
+    },
+    {
+     "ref": "R-003",
+     "planted": 8,
+     "caught": 8
+    },
+    {
+     "ref": "R-006",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "R-007",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "TERM",
+     "planted": 7,
+     "caught": 7
+    }
+   ],
+   "misses": [],
+   "false_alarm_list": [],
+   "ai_skipped": 0
+  },
+  {
+   "brand": "lumio",
+   "drafts": 40,
+   "planted": 27,
+   "caught": 27,
+   "catch_rate": 100.0,
+   "false_alarms": 0,
+   "precision": 100.0,
+   "clean_drafts": 10,
+   "clean_passed": 10,
+   "per_rule": [
+    {
+     "ref": "F-001",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "F-002",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "F-003",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "F-004",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-002",
+     "planted": 4,
+     "caught": 4
+    },
+    {
+     "ref": "R-003",
+     "planted": 3,
+     "caught": 3
+    },
+    {
+     "ref": "R-005",
+     "planted": 4,
+     "caught": 4
+    },
+    {
+     "ref": "R-006",
+     "planted": 1,
+     "caught": 1
+    },
+    {
+     "ref": "R-007",
+     "planted": 2,
+     "caught": 2
+    },
+    {
+     "ref": "TERM",
+     "planted": 8,
+     "caught": 8
+    }
+   ],
+   "misses": [],
+   "false_alarm_list": [],
+   "ai_skipped": 0
+  }
+ ]
+}
