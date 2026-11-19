@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, getDemoToken, setDemoToken } from '../api.js'
 import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
+import CompareBrands from '../CompareBrands.jsx'
 
 const ROLE_HELP = {
   creator: 'Writes a draft, runs the check, fixes or disputes findings.',
@@ -72,7 +73,7 @@ export default function Login({ onSignIn, signedOut }) {
   }
 
   return (
-    <main className="page-in mx-auto grid min-h-screen max-w-5xl items-center gap-10 px-5 py-10 md:grid-cols-2">
+    <main className="page-in mx-auto grid min-h-screen max-w-5xl items-center gap-x-10 gap-y-8 px-5 py-10 md:grid-cols-2">
       <div>
         <svg viewBox="0 0 32 32" aria-hidden="true" className="logo-draw h-14 w-14 rounded-md border-2 border-ink shadow-print-sm">
           <rect width="32" height="32" fill="#2f3bd9" />
@@ -83,10 +84,12 @@ export default function Login({ onSignIn, signedOut }) {
           Check a post, email or document against your approved brand rules and facts before it is published. Every
           issue names the rule it breaks and suggests a fix. People make the final approval.
         </p>
-        <p className="mt-6 max-w-md text-sm text-ink/80">
-          Try two fictional demo brands with opposite styles, Lumio Payroll and Fizzbox: paste the same text into both
-          and see each brand's own rules at work. All their rules, facts and content are made up. Or create your own
-          brand: it is private to you and the teammates you add.
+        <p className="mt-6 max-w-md text-lg font-bold">
+          Same text, two brands, different results: see it below, then try either brand.
+        </p>
+        <p className="mt-2 max-w-md text-ink">
+          Lumio Payroll and Fizzbox are fictional brands with opposite styles. Or create your own brand: it is private to
+          you and the teammates you add.
         </p>
       </div>
 
@@ -174,6 +177,7 @@ export default function Login({ onSignIn, signedOut }) {
           <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>
         </div>
       </Card>
+      <CompareBrands />
     </main>
   )
 }

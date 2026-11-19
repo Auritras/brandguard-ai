@@ -43,3 +43,4 @@ DEMO_COPIES = Limit(30, 3600, "Too many demo copies from this network in the las
 SIGN_UPS = Limit(10, 3600, "Too many new brands from this network in the last hour.")
 SIGN_INS = Limit(20, 600, "Too many sign-in attempts.")
 CHECKS = Limit(20, 60, "That is a lot of checks in one minute.")
+COMPARES = Limit(60, 60, "That is a lot of comparisons in one minute.")

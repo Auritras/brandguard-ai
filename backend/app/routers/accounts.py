@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..limits import DEMO_COPIES, SIGN_UPS, client_ip
+from ..limits import COMPARES, DEMO_COPIES, SIGN_UPS, client_ip
 from ..auth import current_user, hash_password, make_token, require, verify_password
 from ..db import get_db
 from ..models import AuditLog, Brand, Draft, User
@@ -230,6 +230,30 @@ def start_demo(body: DemoIn, request: Request, db: Session = Depends(get_db)):
     log(db, user, "demo_started")
     db.commit()
     return {"token": make_token(user), "user": user_out(user)}
+
+
+class CompareIn(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/demo/compare")
+def compare(body: CompareIn, request: Request, db: Session = Depends(get_db)):
+    """The sign-in page's pitch: the same text through each demo brand's exact checks, side by side.
+    No sign-in, no AI, nothing stored."""
+    COMPARES.check(client_ip(request))
+    from ..engine.exact import run_exact
+    from ..models import Fact, Rule, Term
+    from ..seed import demo_brand
+    from .drafts import spans
+    out = []
+    for key, (name, *_rest) in TEMPLATES.items():
+        b = demo_brand(db, key).id
+        found = run_exact(body.text, db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all(),
+                          db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all())
+        out.append({"key": key, "name": name, "findings": [
+            {"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
+             "spans": spans(body.text, f["quote"])} for f in found]})
+    return out
 
 
 @router.post("/demo/switch")

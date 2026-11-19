@@ -153,3 +153,10 @@ def test_my_activity_counts_only_my_own_actions(client, creator, manager):
     theirs = client.get("/api/me/activity", headers=manager).json()
     assert mine["totals"]["written"] >= 1 and theirs["totals"]["written"] == 0
     assert all(set(r) >= {"action", "draft", "at"} for r in mine["recent"])
+
+
+def test_compare_shows_each_demo_brand_flagging_differently(client):
+    out = client.post("/api/demo/compare", json={"text": "BUY NOW! It is the best and healthy."}).json()
+    by = {b["key"]: {f["ref_code"] for f in b["findings"]} for b in out}
+    assert "R-002" in by["lumio"] and "R-003" in by["fizzbox"]  # "the best" for Lumio, "healthy" for Fizzbox
+    assert client.post("/api/demo/compare", json={"text": "x" * 1001}).status_code == 422
