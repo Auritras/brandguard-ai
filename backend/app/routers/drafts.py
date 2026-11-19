@@ -22,7 +22,7 @@ from ..engine.run import run_review
 from ..models import now, AuditLog, Comment, Draft, DraftImage, DraftVersion, Fact, Finding, ReviewRun, Rule, Term, User
 from .. import config
 from ..limits import CHECKS
-from .common import iso, log
+from .common import iso, log, plural
 
 # The version of the draft page the person was looking at when they acted (the newest history line they
 # had seen). Set per request from the X-Seen-Rev header; see fresh() below.
@@ -370,7 +370,7 @@ def check_draft(draft_id: int, db: Session = Depends(get_db), user: User = Depen
     CHECKS.check(f"user:{user.id}")
     run = run_review(db, draft)
     log(db, user, "check_run",
-        f"Version {draft.version}: {run.exact_count} exact, {run.ai_count} AI, {run.dropped_count} AI finding(s) dropped by verification",
+        f"Version {draft.version}: {run.exact_count} exact, {run.ai_count} AI, {plural(run.dropped_count, 'AI finding')} dropped by verification",
         draft.id)
     db.commit()
     return detail(db, draft, user)
@@ -606,7 +606,7 @@ def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(r
         if blocking:
             draft.status = "authorised_review"
             log(db, user, "sent_to_authorised_review",
-                f"Manager approved; {len(blocking)} high-severity finding(s) still need an authorised reviewer", draft.id)
+                f"Manager approved; {plural(len(blocking), 'high-severity finding')} still {'needs' if len(blocking) == 1 else 'need'} an authorised reviewer", draft.id)
         else:
             draft.status = "approved"
             log(db, user, "approved", f"Version {draft.version} approved and locked", draft.id)
@@ -614,7 +614,7 @@ def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(r
         if draft.status not in ("in_review", "authorised_review"):
             raise HTTPException(409, "This draft is not waiting for review.")
         if blocking:
-            raise HTTPException(409, f"{len(blocking)} high-severity finding(s) are still open. Waive each with a reason, "
+            raise HTTPException(409, f"{plural(len(blocking), 'high-severity finding')} {'is' if len(blocking) == 1 else 'are'} still open. Waive each with a reason, "
                                      "decide the dispute, or request changes.")
         draft.status = "approved"
         log(db, user, "approved", f"Version {draft.version} approved and locked", draft.id)

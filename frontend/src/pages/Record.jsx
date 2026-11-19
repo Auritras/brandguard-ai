@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
-import { ACTION_LABEL, Button, ErrorNote, FINDING_STATUS, PageLoading, SEVERITY } from '../ui.jsx'
+import { ACTION_LABEL, Button, ErrorNote, FINDING_STATUS, PageLoading, SEVERITY, plural } from '../ui.jsx'
 
 const when = (iso) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -93,9 +93,9 @@ export default function Record({ user, shared = false }) {
         <Section title="How the last check was run">
           <ul className="grid gap-1 text-sm">
             <li>Version {d.run.version}, checked {when(d.run.created_at)}.</li>
-            <li>{d.run.exact_count} finding(s) from exact checks in code.</li>
+            <li>{plural(d.run.exact_count, 'finding')} from exact checks in code.</li>
             <li>{d.run.ai_used
-              ? `${d.run.ai_count} finding(s) from AI (${d.run.ai_provider}, ${d.run.ai_model}); ${d.run.dropped_count} dropped by verification.`
+              ? `${plural(d.run.ai_count, 'finding')} from AI (${d.run.ai_provider}, ${d.run.ai_model}); ${d.run.dropped_count} dropped by verification.`
               : 'AI was not used.'}</li>
             <li>{d.run.ai_note}</li>
           </ul>

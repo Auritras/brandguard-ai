@@ -13,7 +13,7 @@ export function Button({ kind = 'secondary', className = '', ...props }) {
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-md border-2 px-3.5 py-1.5 text-sm font-semibold transition duration-100 disabled:cursor-not-allowed disabled:opacity-50 ${kinds[kind]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border-2 px-3.5 py-1.5 text-sm font-semibold sm:min-h-0 transition duration-100 disabled:cursor-not-allowed disabled:opacity-50 ${kinds[kind]} ${className}`}
     />
   )
 }
@@ -29,7 +29,7 @@ export function Card({ heavy = false, className = '', ...props }) {
 const STATUS = {
   draft: ['Draft', 'bg-black/5 text-ink'],
   in_review: ['In review', 'bg-primary-soft text-primary-deep'],
-  changes_requested: ['Changes requested', 'bg-accent-soft text-accent-deep'],
+  changes_requested: ['Changes requested', 'bg-white text-accent-deep !border-accent'], // outlined: pink fills are kept for risk
   authorised_review: ['Authorised review', 'bg-primary text-white'],
   approved: ['Approved', 'bg-ink text-paper'],
 }
@@ -314,7 +314,7 @@ export function Term({ name, children }) {
       <span tabIndex={0} className="cursor-help underline decoration-dotted decoration-2 underline-offset-2 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-primary">
         {children || name}
       </span>
-      <span role="tooltip" className="pointer-events-none invisible absolute bottom-full left-1/2 z-40 mb-2 w-64 -translate-x-1/2 rounded-md border-2 border-ink bg-ink px-3 py-2 text-left text-xs font-normal leading-5 text-paper opacity-0 shadow-print-sm transition duration-150 group-hover/term:visible group-hover/term:opacity-100 group-focus-within/term:visible group-focus-within/term:opacity-100">
+      <span role="tooltip" className="pointer-events-none absolute bottom-full left-0 z-40 mb-2 hidden w-[min(16rem,80vw)] rounded-md border-2 border-ink bg-ink px-3 py-2 text-left text-xs font-normal leading-5 text-paper shadow-print-sm group-hover/term:block group-focus-within/term:block sm:left-1/2 sm:-translate-x-1/2">
         {text}
       </span>
     </span>
@@ -338,3 +338,8 @@ export function ScoreRing({ value, size = 44 }) {
   )
 }
 
+
+// "1 finding", "16 findings".
+export function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many || `${one}s`}`
+}

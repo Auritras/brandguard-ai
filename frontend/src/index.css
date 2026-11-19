@@ -419,3 +419,13 @@ mark.mark-picked { outline: 2px solid var(--color-ink); outline-offset: 2px; }
 
 /* Hovering a finding lights up its phrase in the text. */
 mark.mark-hover { outline: 2px dashed var(--color-ink); outline-offset: 2px; }
+
+/* Phones: every control is at least 44px tall, so it is easy to hit with a thumb. Links inside sentences
+   are exempt (as WCAG allows for inline text). */
+@media (max-width: 639px) {
+  main button, main summary, main select,
+  main input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]) {
+    min-height: 44px;
+  }
+  main summary { display: flex; align-items: center; }
+}

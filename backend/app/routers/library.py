@@ -12,7 +12,7 @@ from ..db import get_db
 from ..engine.ai import propose_rules
 from ..engine.image import parse_palette, prepare
 from ..models import Brand, Fact, Rule, RuleVersion, Term, User
-from .common import iso, log
+from .common import iso, log, plural
 
 router = APIRouter(prefix="/api", tags=["library"])
 owner = require("reviewer")
@@ -230,7 +230,7 @@ def bulk_rules(body: BulkIn, db: Session = Depends(get_db), user: User = Depends
         db.add(rule)
         db.flush()
         created.append(rule)
-    log(db, user, "rules_imported", f"{len(created)} rule(s) from a spreadsheet")
+    log(db, user, "rules_imported", f"{plural(len(created), 'rule')} from a spreadsheet")
     db.commit()
     return {"rules": [rule_out(r) for r in created]}
 
@@ -252,7 +252,7 @@ def import_guidelines(body: ImportIn, db: Session = Depends(get_db), user: User 
         db.add(rule)
         db.flush()
         created.append(rule)
-    log(db, user, "guidelines_imported", f"{len(created)} rule(s) proposed")
+    log(db, user, "guidelines_imported", f"{plural(len(created), 'rule')} proposed")
     db.commit()
     return {"note": note, "rules": [rule_out(r) for r in created]}
 

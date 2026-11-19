@@ -10,6 +10,7 @@ import time
 import httpx
 
 from .. import config
+from ..routers.common import plural
 
 MAX_RULES = 12
 
@@ -125,7 +126,7 @@ def ai_review(draft, rules, facts, exact_findings, style=()) -> dict:
                 "note": "AI checks were skipped: no AI key is configured on this server. Only exact checks ran."}
     chosen = select_rules(draft.body, draft.purpose, rules)
     sent = (f"Sent to {config.AI_PROVIDER_NAME} ({config.AI_MODEL}): the draft text, its channel, audience and purpose, "
-            f"{len(chosen)} rule(s) ({', '.join(r.code for r in chosen) or 'none'}), {len(facts)} approved fact(s)"
+            f"{plural(len(chosen), 'rule')} ({', '.join(r.code for r in chosen) or 'none'}), {plural(len(facts), 'approved fact')}"
             f"{' and the writing rules and preferred terms its suggestions must follow' if style else ''}. "
             "Nothing else from the Brand Library, and no user names or emails, was sent.")
     try:

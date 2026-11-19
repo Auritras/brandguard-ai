@@ -18,3 +18,8 @@ def iso(dt):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.isoformat()
+
+
+def plural(n: int, one: str, many: str = "") -> str:
+    """"1 finding", "3 findings"."""
+    return f"{n} {one if n == 1 else (many or one + 's')}"

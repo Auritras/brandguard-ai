@@ -68,7 +68,7 @@ export default function LiveText({ id, value, onChange, required, placeholder, m
         {state === 'done' && found.length > 0 && (
           <details className="rounded-md border-2 border-line bg-card p-3" open={found.length <= 4}>
             <summary className="cursor-pointer font-semibold">
-              <RollNumber value={found.length} /> issue(s) found while typing{high > 0 && <span className="text-red-800"> · <RollNumber value={high} /> high-risk</span>}
+              <RollNumber value={found.length} /> {found.length === 1 ? 'issue' : 'issues'} found while typing{high > 0 && <span className="text-red-800"> · <RollNumber value={high} /> high-risk</span>}
             </summary>
             <ul className="mt-2 grid gap-1.5">
               {found.map((f, i) => (

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from './api.js'
 import { diffWords } from './diff.js'
-import { Button, Card, ErrorNote, Field, inputCls, timeAgo } from './ui.jsx'
+import { Button, Card, ErrorNote, Field, inputCls, timeAgo, plural } from './ui.jsx'
 
 export default function GuidelineGaps({ user }) {
   const [g, setG] = useState(null)
@@ -55,7 +55,7 @@ export default function GuidelineGaps({ user }) {
             <p>Read {found.notes} review notes: every recurring problem is already covered by a rule.</p>
           ) : (
             <>
-              <p className="font-semibold">From {found.notes} review notes, {found.rules.length} rule(s) seem to be missing. They are now proposed in the Brand Library, waiting for your approval.</p>
+              <p className="font-semibold">From {found.notes} review notes, {plural(found.rules.length, 'rule')} {found.rules.length === 1 ? 'seems' : 'seem'} to be missing. {found.rules.length === 1 ? 'It is' : 'They are'} now proposed in the Brand Library, waiting for your approval.</p>
               <ul className="mt-2 grid gap-1.5">
                 {found.rules.map((r) => <li key={r.code}><span className="font-semibold">{r.code} {r.title}:</span> {r.text} <span className="text-muted">{r.because}</span></li>)}
               </ul>

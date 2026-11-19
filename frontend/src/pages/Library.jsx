@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, BASE } from '../api.js'
 import { csvToRules, download, rulesToCsv } from '../csv.js'
-import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading, timeAgo } from '../ui.jsx'
+import { Button, Card, Chip, ErrorNote, Field, SEVERITY, inputCls, PageLoading, timeAgo, plural } from '../ui.jsx'
 
 const EMPTY_RULE = { category: 'tone', title: '', text: '', severity: 'medium', patterns: '' }
 const EMPTY_FACT = { statement: '', keywords: '', value: '', source: '', valid_until: '' }
@@ -86,7 +86,7 @@ export default function Library({ user }) {
                   const { rules, problems } = csvToRules(await file.text())
                   if (problems.length && !rules.length) return setError(problems.join(' '))
                   const out = await run(() => api('/rules/bulk', { method: 'POST', body: { rules } }))
-                  if (out) setNote(`${out.rules.length} rule(s) from ${file.name} are proposed below, waiting for your approval.${problems.length ? ` Skipped: ${problems.join(' ')}` : ''}`)
+                  if (out) setNote(`${plural(out.rules.length, 'rule')} from ${file.name} ${out.rules.length === 1 ? 'is' : 'are'} proposed below, waiting for your approval.${problems.length ? ` Skipped: ${problems.join(' ')}` : ''}`)
                 }} />
               </label>
             </div>
@@ -117,7 +117,7 @@ export default function Library({ user }) {
                 <Button kind="dark" disabled={busy || importText.trim().length < 20}
                   onClick={async () => {
                     const out = await run(() => api('/library/import', { method: 'POST', body: { text: importText } }))
-                    if (out) { setNote(`${out.rules.length} rule(s) proposed. ${out.note}`); setImportText(null) }
+                    if (out) { setNote(`${plural(out.rules.length, 'rule')} proposed. ${out.note}`); setImportText(null) }
                   }}>
                   {busy ? 'Reading…' : 'Propose rules'}
                 </Button>
@@ -163,7 +163,7 @@ export default function Library({ user }) {
           )}
 
           {proposed.length > 0 && (
-            <Card className="!border-accent/50 bg-accent-soft p-4">
+            <Card className="border-l-[6px] !border-l-accent p-4">
               <h2 className="font-semibold">Proposed rules waiting for approval ({proposed.length})</h2>
               <p className="text-sm text-muted">These are not used in any check yet.</p>
               <div className="mt-3 grid gap-2">

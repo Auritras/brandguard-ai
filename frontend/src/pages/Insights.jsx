@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { Card, CountUp, ErrorNote, PageLoading, SEVERITY } from '../ui.jsx'
+import { Card, CountUp, ErrorNote, PageLoading, SEVERITY, plural } from '../ui.jsx'
 import GuidelineGaps from '../GuidelineGaps.jsx'
 
 const OUTCOME_LABEL = {
@@ -44,7 +44,7 @@ export default function Insights({ user }) {
             <Card className="p-5">
               <h2 className="font-display text-lg font-bold">Findings per draft, by channel</h2>
               <p className="mt-1 text-sm text-muted">Average number of findings in one draft for each channel.</p>
-              <Bars rows={s.channels.map((c) => ({ key: c.channel, label: c.channel, sub: `${c.drafts} draft(s), ${c.findings} finding(s)`, value: c.per_draft }))}
+              <Bars rows={s.channels.map((c) => ({ key: c.channel, label: c.channel, sub: `${plural(c.drafts, 'draft')}, ${plural(c.findings, 'finding')}`, value: c.per_draft }))}
                 unit="per draft" />
             </Card>
             <Card className="p-5">

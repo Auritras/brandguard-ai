@@ -11,12 +11,14 @@ async function startDemo(page, brand, person) {
   await page.goto('/')
   await page.getByRole('radio', { name: new RegExp(brand) }).click()
   await page.getByRole('button', { name: new RegExp(person) }).click()
-  await expect(page.getByText(`Your private copy of ${brand}`)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Demo menu' })).toBeVisible()
+  await expect(page.getByRole('button', { name: new RegExp(`Account menu: ${person}`) })).toBeVisible()
 }
 
 async function actAs(page, person) {
+  await page.getByRole('button', { name: /Account menu/ }).click()
   await page.getByRole('group', { name: 'Act as' }).getByRole('button', { name: new RegExp(person) }).click()
-  await expect(page.getByRole('group', { name: 'Act as' }).getByRole('button', { name: new RegExp(person) })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: new RegExp(`Account menu: ${person}`) })).toBeVisible()
 }
 
 // Press and hold a hold-to-confirm button, then let the undo countdown run out.
@@ -42,7 +44,7 @@ test('Lumio: write, fix, send, escalate, waive and approve, with an image', asyn
 
   await page.getByRole('link', { name: 'New draft' }).click()
   await page.getByRole('button', { name: 'Load a sample post' }).click()
-  await expect(page.getByText(/issue\(s\) found while typing/)).toBeVisible() // live check while typing
+  await expect(page.getByText(/issues? found while typing/)).toBeVisible() // live check while typing
   await page.getByRole('button', { name: 'Add the sample image' }).click()
   await expect(page.getByRole('button', { name: /Remove payroll-banner.png/ })).toBeVisible()
   await page.getByRole('textbox', { name: 'Title' }).fill('E2E: onboarding post')
@@ -100,7 +102,7 @@ test('Fizzbox: hype is on-brand, health claims are not', async ({ page }) => {
   await page.getByRole('link', { name: 'New draft' }).click()
   await page.getByRole('textbox', { name: 'Title' }).fill('E2E: mango drop')
   await page.locator('#body').fill('BUY NOW! The new mango fizz is here. Healthy and fun for everyone.')
-  await expect(page.getByText(/issue\(s\) found while typing/)).toBeVisible()
+  await expect(page.getByText(/issues? found while typing/)).toBeVisible()
   await expect(page.locator('mark.live-mark', { hasText: 'Healthy' })).toHaveCount(1)
   await expect(page.locator('mark.live-mark', { hasText: 'BUY NOW' })).toHaveCount(0) // capitals for a short call to action are fine here
 })
@@ -133,6 +135,7 @@ test('A new brand: sign up, add a teammate, write, and have it approved by someo
   await page.getByRole('button', { name: 'Send for review' }).click()
   await expect(page.getByText(/You wrote this draft, so someone else/)).toBeVisible() // nobody approves their own work
 
+  await page.getByRole('button', { name: /Account menu/ }).click()
   await page.getByRole('button', { name: 'Sign out' }).click()
   await page.getByRole('tab', { name: /Sign in/ }).click()
   await page.getByRole('textbox', { name: 'Email' }).fill(`manny${stamp}@e2e.test`)

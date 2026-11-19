@@ -22,7 +22,7 @@ const EXTRA_LABEL = {
 }
 
 const read = (k) => { try { return localStorage.getItem(k) } catch { return null } }
-const write = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch { /* private window */ } }
+const write = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v) } catch { /* private window */ } }
 
 export default function Account({ user }) {
   const name = user.name.split(' (')[0]
@@ -45,7 +45,7 @@ export default function Account({ user }) {
             <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-full bg-ink px-2.5 py-0.5 font-semibold text-paper">{ROLES[user.role]}</span>
               <span className="font-semibold">{user.brand || 'Lumio Payroll'}</span>
-              {user.sandbox && <span className="rounded-full border border-accent/40 bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent-deep">Private demo copy</span>}
+              {user.sandbox && <span className="rounded-full border border-primary/30 bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary-deep">Private demo copy</span>}
             </p>
           </div>
         </div>

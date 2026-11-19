@@ -11,7 +11,7 @@ from ..auth import current_user, require
 from ..db import get_db
 from ..engine.ai import find_missing_rules, suggest_rewrite
 from ..models import AuditLog, Comment, Draft, Fact, Finding, Rule, Term, User
-from .common import log
+from .common import log, plural
 from .library import CATEGORIES, SEVERITIES, next_code
 
 router = APIRouter(prefix="/api", tags=["insights"])
@@ -191,6 +191,6 @@ def missing(db: Session = Depends(get_db), user: User = Depends(require("reviewe
         db.add(rule)
         db.flush()
         created.append({"code": rule.code, "title": rule.title, "text": rule.text, "because": str(p.get("because") or "")[:300]})
-    log(db, user, "missing_rules_found", f"{len(created)} rule(s) proposed from {len(notes)} review notes")
+    log(db, user, "missing_rules_found", f"{plural(len(created), 'rule')} proposed from {plural(len(notes), 'review note')}")
     db.commit()
     return {"rules": created, "notes": len(notes)}

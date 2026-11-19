@@ -5,7 +5,7 @@ import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
 import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
 import { dueLabel } from '../due.js'
-import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, ScoreRing, SEVERITY, StatusChip, Term, inputCls, timeAgo } from '../ui.jsx'
+import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, ScoreRing, SEVERITY, StatusChip, Term, inputCls, timeAgo, plural } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
@@ -63,7 +63,7 @@ function nextStep(d, user) {
   const isOwner = d.can.edit
   if (d.status === 'approved') return 'Approved. This version is locked and ready to publish.'
   if (isOwner && d.needs_check) return 'The text has changed since the last check. Run the check again before sending it for review.'
-  if (isOwner && d.open > 0) return `${d.open} finding(s) to handle. Accept the fix, write your own, or dispute. You can also send it for review as it is.`
+  if (isOwner && d.open > 0) return `${plural(d.open, 'finding')} to handle. Accept the fix, write your own, or dispute. You can also send it for review as it is.`
   if (isOwner) return 'Nothing left to handle. Send it for review.'
   // You wrote it: someone else on the team decides it, whatever your role.
   if (d.mine && d.status === 'authorised_review') return 'With the brand owner. You wrote this draft, so someone else decides it.'
@@ -71,7 +71,7 @@ function nextStep(d, user) {
   if (d.mine && d.status === 'changes_requested') return 'Changes were requested. Edit the text, run the check again, then send it back.'
   if (d.status === 'in_review' && user.role === 'manager')
     return d.blocking > 0
-      ? `${d.blocking} high-risk finding(s) are still open. If you approve, the draft goes to the authorised reviewer.`
+      ? `${plural(d.blocking, 'high-risk finding')} ${d.blocking === 1 ? 'is' : 'are'} still open. If you approve, the draft goes to the authorised reviewer.`
       : 'Read the draft, then approve it or request changes.'
   if (d.status === 'authorised_review' && user.role === 'reviewer')
     return 'High-risk findings need your decision: waive each with a reason, decide the dispute, or request changes.'
@@ -227,7 +227,7 @@ export default function DraftView({ user }) {
 
   return (
     <div>
-      <Link to="/" className="text-sm font-semibold text-primary hover:underline">
+      <Link to="/" className="inline-flex min-h-11 items-center sm:min-h-0 text-sm font-semibold text-primary hover:underline">
         ← All drafts
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -236,7 +236,7 @@ export default function DraftView({ user }) {
       </div>
       <p className="mt-1 flex flex-wrap items-center gap-x-1 text-sm text-muted">
         {d.channel || 'No channel'} · by {d.creator} · version {d.version} ·{' '}
-        <Link to={`/drafts/${d.id}/record`} className="font-semibold text-primary hover:underline">
+        <Link to={`/drafts/${d.id}/record`} className="inline-flex min-h-11 items-center sm:min-h-0 font-semibold text-primary hover:underline">
           {d.status === 'approved' ? 'Approval record' : 'Review record'}
         </Link>
         <span aria-hidden="true">·</span>
@@ -265,28 +265,23 @@ export default function DraftView({ user }) {
             {busy === 'approve' ? 'Approving…' : user.role === 'manager' && d.blocking > 0 ? 'Hold to approve and escalate' : 'Hold to approve'}
           </HoldButton>
         )}
-        {d.can.delete && (confirmDelete ? (
-          <span className="flex items-center gap-2">
-            <Button kind="dark" disabled={!!busy} onClick={async () => {
-              setBusy('delete')
-              try {
-                await api(`/drafts/${d.id}`, { method: 'DELETE' })
-                navigate('/')
-              } catch (e) {
-                setError(e.message)
-                setBusy('')
-              }
-            }}>Delete this draft</Button>
-            <Button kind="ghost" onClick={() => setConfirmDelete(false)}>Keep it</Button>
-          </span>
-        ) : (
-          <Button kind="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
-        ))}
         {d.can.edit && certainFixes > 0 && (
           <Button disabled={!!busy} onClick={applyCertain}
             title="Preferred terms and approved figures: fixes made by code, not AI. AI rewrites stay for you to accept one by one.">
             {busy === 'certain' ? 'Fixing…' : `Apply all ${certainFixes} certain fix${certainFixes > 1 ? 'es' : ''}`}
           </Button>
+        )}
+        {d.can.delete && (
+          <MoreMenu confirm={confirmDelete} setConfirm={setConfirmDelete} busy={busy} onDelete={async () => {
+            setBusy('delete')
+            try {
+              await api(`/drafts/${d.id}`, { method: 'DELETE' })
+              navigate('/')
+            } catch (e) {
+              setError(e.message)
+              setBusy('')
+            }
+          }} />
         )}
         {d.can.request_changes && (
           <ReasonButton label="Request changes" placeholder="What should the creator change?" confirmLabel="Send back"
@@ -372,7 +367,7 @@ export default function DraftView({ user }) {
             <div role="tablist" aria-label="Draft record" className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
               {[['comments', `Comments (${d.comments.length})`], ['history', 'History'], ['versions', `Versions (${d.versions.length})`]].map(([k, label]) => (
                 <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                  className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === k ? 'bg-ink text-paper' : 'hover:bg-black/5'}`}>
+                  className={`inline-flex min-h-11 items-center sm:min-h-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === k ? 'bg-ink text-paper' : 'hover:bg-black/5'}`}>
                   {label}
                 </button>
               ))}
@@ -427,7 +422,7 @@ export default function DraftView({ user }) {
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
           {d.run && !d.run.ai_used && /failed|could not/i.test(d.run.ai_note) && (
-            <Card className="border-accent/50 bg-accent-soft p-4 text-sm">
+            <Card className="border-l-[6px] !border-l-accent p-4 text-sm">
               <p><span className="font-semibold">The AI part of the check did not run this time.</span> Only the exact checks ran, so tone, positioning and unsupported claims were not judged.</p>
               {d.can.edit && (
                 <Button className="mt-2" kind="dark" disabled={!!busy} onClick={runCheck}>
@@ -471,7 +466,7 @@ export default function DraftView({ user }) {
                     <span className="font-semibold">{live} findings on {g.key.startsWith('img') ? 'this image' : g.key === 'whole' ? 'the whole text' : 'this sentence'}</span>
                     {text && <span className="mt-1 block text-muted">“{text}”</span>}
                   </p>
-                  <button className="shrink-0 text-sm font-semibold text-primary hover:underline" onClick={() => showInText(g.key)}>Show in text</button>
+                  <button className="inline-flex min-h-11 items-center sm:min-h-0 shrink-0 text-sm font-semibold text-primary hover:underline" onClick={() => showInText(g.key)}>Show in text</button>
                 </div>
                 <div className="grid gap-3">
                   {g.items.map(({ f, leaving: out }, i) => (
@@ -502,10 +497,10 @@ export default function DraftView({ user }) {
               <h3 className="font-semibold">How this was checked</h3>
               <ul className="mt-2 grid gap-1 text-muted">
                 <li>Version {d.run.version}, checked {timeAgo(d.run.created_at)}.</li>
-                <li>{d.run.exact_count} finding(s) from exact checks in code (terms, rule patterns, numbers against approved facts).</li>
+                <li>{plural(d.run.exact_count, 'finding')} from exact checks in code (terms, rule patterns, numbers against approved facts).</li>
                 <li>
                   {d.run.ai_used
-                    ? `${d.run.ai_count} finding(s) from AI (${d.run.ai_provider}, ${d.run.ai_model}). ${d.run.dropped_count} more were dropped because the quote or the rule could not be verified.`
+                    ? `${plural(d.run.ai_count, 'finding')} from AI (${d.run.ai_provider}, ${d.run.ai_model}). ${d.run.dropped_count} more were dropped because the quote or the rule could not be verified.`
                     : 'AI was not used for this check.'}
                 </li>
                 <li>{d.run.ai_note}</li>
@@ -515,6 +510,42 @@ export default function DraftView({ user }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Rarely needed, destructive actions live behind "⋯", away from the everyday buttons.
+function MoreMenu({ confirm, setConfirm, busy, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (e) => { if (!box.current?.contains(e.target)) { setOpen(false); setConfirm(false) } }
+    const esc = (e) => { if (e.key === 'Escape') { setOpen(false); setConfirm(false) } }
+    addEventListener('mousedown', away)
+    addEventListener('keydown', esc)
+    return () => { removeEventListener('mousedown', away); removeEventListener('keydown', esc) }
+  }, [open, setConfirm])
+  return (
+    <div ref={box} className="relative ml-auto">
+      <Button kind="ghost" aria-label="More actions" aria-expanded={open} onClick={() => setOpen(!open)} className="min-h-11 min-w-11 text-lg sm:min-h-0">⋯</Button>
+      {open && (
+        <div className="toast-in absolute right-0 top-full z-40 mt-2 w-64 rounded-lg border-2 border-ink bg-card p-1.5 shadow-print">
+          {confirm ? (
+            <div className="p-2 text-sm">
+              <p>Delete this draft? It was never sent for review, so it leaves no record behind.</p>
+              <div className="mt-2 flex gap-2">
+                <Button kind="dark" disabled={!!busy} onClick={onDelete}>Delete</Button>
+                <Button kind="ghost" onClick={() => setConfirm(false)}>Keep it</Button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setConfirm(true)} className="flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm font-semibold text-red-800 hover:bg-red-50 sm:min-h-9">
+              Delete draft…
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -620,7 +651,7 @@ function DueDate({ d, busy, act }) {
     )
   }
   return (
-    <button disabled={!!busy} onClick={() => setOpen(true)} className={`font-semibold hover:underline ${label.cls || 'text-primary'}`}>
+    <button disabled={!!busy} onClick={() => setOpen(true)} className={`inline-flex min-h-11 items-center sm:min-h-0 font-semibold hover:underline ${label.cls || 'text-primary'}`}>
       {d.due_date ? label.text : 'Set a due date'}
     </button>
   )
@@ -722,7 +753,7 @@ function FindingCard({ i, f, d, user, busy, act, leaving, nested = false, hideQu
         <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
           <span className={`rounded px-1 ${sev.mark}`}>“{f.quote}”</span>
           {onShow && !f.image_id && !f.ref_code.startsWith('CH-') && (
-            <button className="text-xs font-semibold text-primary hover:underline" onClick={onShow}>Show in text</button>
+            <button className="inline-flex min-h-11 items-center sm:min-h-0 text-xs font-semibold text-primary hover:underline" onClick={onShow}>Show in text</button>
           )}
         </p>
       )}
@@ -737,7 +768,7 @@ function FindingCard({ i, f, d, user, busy, act, leaving, nested = false, hideQu
         </p>
       )}
       {disputed && (
-        <p className="mt-2 rounded-lg border border-accent/40 bg-accent-soft p-2 text-sm">
+        <p className="mt-2 rounded-lg border border-line border-l-4 border-l-accent bg-white p-2 text-sm">
           <span className="font-semibold">Disputed by the creator:</span> {f.note}
         </p>
       )}

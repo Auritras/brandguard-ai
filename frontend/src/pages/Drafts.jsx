@@ -200,7 +200,7 @@ function Recheck() {
   useEffect(() => { api('/recheck').then(setItems).catch(() => {}) }, [])
   if (!items.length) return null
   return (
-    <Card className="mt-6 border-accent/50 bg-accent-soft p-4">
+    <Card className="mt-6 border-l-[6px] !border-l-accent p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm"><span className="font-semibold">{items.length} approved piece{items.length > 1 ? 's' : ''} may now be out of date.</span>{' '}
           {items.length > 1 ? 'They quote' : 'It quotes'} an <Term name="approved fact" /> that has expired or changed since approval.</p>
