@@ -50,7 +50,7 @@ export function PersonMenu({ user, busy, onSwitch, onSignOut }) {
       button={<>
         <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full bg-primary text-xs font-bold text-white">{name.slice(0, 1)}</span>
         <span>{name}</span>
-        <span className="hidden font-normal text-white/70 md:inline">· {ROLE_LABEL[user.role]}</span>
+        <span className="hidden font-normal text-white/70 xl:inline">· {ROLE_LABEL[user.role]}</span>
       </>}>
       {(close) => (
         <>
