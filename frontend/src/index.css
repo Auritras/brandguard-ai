@@ -74,13 +74,19 @@ mark.live-mark { padding: 0; border-radius: 2px; animation: sweep 0.45s cubic-be
 
 /* ---------- Motion: only where something happens ---------- */
 
-/* Highlight colours as variables so the marker can sweep across the text. */
-.mark-high { --m: #fecaca; }
-.mark-medium { --m: #fef08a; }
-.mark-low { --m: #e2e8f0; }
+/* Highlights: a pale tint, with the severity carried by a coloured underline (solid red, amber, grey).
+   The tint is a variable so the marker can sweep across the text. */
+.mark-high { --m: #fdeaea; --u: #c0262d; }
+.mark-medium { --m: #fdf4cf; --u: #b7790f; }
+.mark-low { --m: #eef1f5; --u: #7b8798; }
 .mark-high, .mark-medium, .mark-low {
   background: linear-gradient(var(--m), var(--m)) no-repeat 0 0 / 100% 100%;
+  box-shadow: inset 0 -2px 0 var(--u);
 }
+/* Solid severity colours, for the Brand health bar and the dots on chips. */
+.sev-high { background: #c0262d; }
+.sev-medium { background: #d9a21b; }
+.sev-low { background: #94a0b2; }
 .sweep {
   animation: sweep 0.7s cubic-bezier(0.3, 0.7, 0.2, 1) both;
   animation-delay: calc(var(--i, 0) * 140ms + 200ms);

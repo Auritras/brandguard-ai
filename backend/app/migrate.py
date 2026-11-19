@@ -25,7 +25,7 @@ def migrate(engine) -> None:
         extra = [("users", "active", "BOOLEAN DEFAULT TRUE"), ("drafts", "deleted_at", "TIMESTAMP WITH TIME ZONE"),
                  ("brands", "sandbox", "BOOLEAN DEFAULT FALSE"), ("brands", "palette", "VARCHAR(300) DEFAULT ''"),
                  ("brands", "logo", blob), ("brands", "logo_type", "VARCHAR(40) DEFAULT ''"),
-                 ("findings", "image_id", "INTEGER"), ("drafts", "due_date", "DATE")]
+                 ("findings", "image_id", "INTEGER"), ("drafts", "due_date", "DATE"), ("findings", "focus", "VARCHAR(120) DEFAULT ''")]
         for table, col, kind in extra:
             if insp.has_table(table) and col not in {c["name"] for c in insp.get_columns(table)}:
                 if engine.dialect.name != "postgresql":

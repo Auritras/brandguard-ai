@@ -40,9 +40,10 @@ export function StatusChip({ status }) {
 }
 
 export const SEVERITY = {
-  high: { label: 'High', chip: 'bg-red-50 text-red-800 border-red-200', mark: 'mark-high' },
-  medium: { label: 'Medium', chip: 'bg-yellow-100 text-yellow-900 border-yellow-300', mark: 'mark-medium' },
-  low: { label: 'Low', chip: 'bg-slate-100 text-slate-700 border-slate-200', mark: 'mark-low' },
+  // Chips are neutral, with a small coloured dot for the severity; colour is kept for small, meaningful marks.
+  high: { label: 'High', chip: 'bg-white text-ink border-line before:mr-1.5 before:inline-block before:h-2 before:w-2 before:rounded-full before:bg-[#c0262d] before:content-[""]', mark: 'mark-high', dot: 'sev-high' },
+  medium: { label: 'Medium', chip: 'bg-white text-ink border-line before:mr-1.5 before:inline-block before:h-2 before:w-2 before:rounded-full before:bg-[#d9a21b] before:content-[""]', mark: 'mark-medium', dot: 'sev-medium' },
+  low: { label: 'Low', chip: 'bg-white text-ink border-line before:mr-1.5 before:inline-block before:h-2 before:w-2 before:rounded-full before:bg-[#94a0b2] before:content-[""]', mark: 'mark-low', dot: 'sev-low' },
 }
 
 export function Chip({ className = '', children }) {

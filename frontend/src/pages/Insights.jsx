@@ -49,7 +49,7 @@ export default function Insights({ user }) {
             </Card>
             <Card className="p-5">
               <h2 className="font-display text-lg font-bold">Findings by risk</h2>
-              <Split total={s.findings} parts={['high', 'medium', 'low'].map((k) => ({ key: k, label: `${SEVERITY[k].label} risk`, value: s.severity[k], cls: SEVERITY[k].mark }))} />
+              <Split total={s.findings} parts={['high', 'medium', 'low'].map((k) => ({ key: k, label: `${SEVERITY[k].label} risk`, value: s.severity[k], cls: SEVERITY[k].dot }))} />
             </Card>
             <Card className="p-5">
               <h2 className="font-display text-lg font-bold">What happened to each finding</h2>

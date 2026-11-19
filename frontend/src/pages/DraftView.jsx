@@ -14,7 +14,10 @@ function highlight(body, findings) {
     if (!['open', 'disputed'].includes(f.status) || f.image_id) continue
     const at = findQuote(body, f.quote)
     if (at === -1) continue
-    spans.push({ start: at, end: at + f.quote.length, f })
+    // A wrong or expired figure: the fix covers the sentence, but only the number is highlighted.
+    const inner = f.focus ? f.quote.indexOf(f.focus) : -1
+    if (inner !== -1) spans.push({ start: at + inner, end: at + inner + f.focus.length, f })
+    else spans.push({ start: at, end: at + f.quote.length, f })
   }
   spans.sort((a, b) => a.start - b.start || b.end - a.end)
   const out = []

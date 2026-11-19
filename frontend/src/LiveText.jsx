@@ -37,7 +37,11 @@ export default function LiveText({ id, value, onChange, required, placeholder, m
   }, [value])
 
   const marks = []
-  for (const f of found) for (const [start, end] of f.spans) marks.push({ start, end, f })
+  for (const f of found) for (const [start, end] of f.spans) {
+    // A wrong or expired figure: only the number is highlighted, not the whole sentence.
+    const inner = f.focus ? value.slice(start, end).indexOf(f.focus) : -1
+    marks.push(inner === -1 ? { start, end, f } : { start: start + inner, end: start + inner + f.focus.length, f })
+  }
   marks.sort((a, b) => a.start - b.start || b.end - a.end)
   const pieces = []
   let pos = 0

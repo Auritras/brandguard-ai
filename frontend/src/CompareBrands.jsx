@@ -16,7 +16,11 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
 function marked(text, findings, lit) {
   const marks = []
-  for (const f of findings) for (const [start, end] of f.spans) marks.push({ start, end, f })
+  for (const f of findings) for (const [start, end] of f.spans) {
+    // A wrong or expired figure: only the number is highlighted, not the whole sentence.
+    const inner = f.focus ? text.slice(start, end).indexOf(f.focus) : -1
+    marks.push(inner === -1 ? { start, end, f } : { start: start + inner, end: start + inner + f.focus.length, f })
+  }
   marks.sort((a, b) => a.start - b.start || b.end - a.end)
   // Touching marks of the same finding ("!" and "!" in "!!") become one mark.
   for (let i = marks.length - 1; i > 0; i--) {
@@ -43,7 +47,7 @@ function label(f) {
   const rule = f.reason.match(/breaks the rule "([^"]+)"/)
   if (rule) return `"${f.quote}" · ${rule[1]}`
   if (f.ref_code === 'TERM') return `"${f.quote}" → ${f.suggestion || 'another word'}`
-  if (f.ref_code.startsWith('F-')) return 'Wrong figure'
+  if (f.ref_code.startsWith('F-')) return f.focus ? `"${f.focus}" · Not the approved figure` : 'Wrong figure'
   return f.ref_code
 }
 
@@ -88,7 +92,8 @@ export default function CompareBrands() {
             <div key={b.key} className="rounded-lg border-2 border-line bg-white p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="min-w-0"><span className="font-display text-lg font-bold">{b.name}</span> <span className="text-sm text-muted">· {STYLE[b.key]}</span></p>
-                <span key={b.findings.length} className={`roll-in shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${b.findings.length ? 'bg-red-50 text-red-800' : 'bg-primary-soft text-primary-deep'}`}>
+                <span key={b.findings.length} className={`roll-in flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-bold ${b.findings.length ? 'text-ink' : 'text-good'}`}>
+                  {b.findings.some((f) => f.severity === 'high') && <span aria-hidden="true" className="sev-high h-2 w-2 rounded-full" />}
                   {result ? (b.findings.length ? plural(b.findings.length, 'problem', 'problems') : 'Fine as it is') : '…'}
                 </span>
               </div>

@@ -118,9 +118,10 @@ def check_facts(body: str, facts, today: date | None = None) -> list[dict]:
             if approved in found:
                 if fact.valid_until and fact.valid_until < today:
                     seen.add((sentence, fact.code))
+                    value_at = next((n.group(0) for n in numbers if _norm(n.group(0)) == approved), "")
                     out.append({
                         "source": "exact", "category": "claims", "severity": "medium",
-                        "quote": sentence, "ref_code": fact.code,
+                        "quote": sentence, "focus": value_at, "ref_code": fact.code,
                         "ref_text": f"{fact.statement} (Source: {fact.source}; valid until {fact.valid_until.isoformat()})",
                         "reason": f"This figure comes from an approved fact that expired on {fact.valid_until.isoformat()}. It may be out of date.",
                         "suggestion": "",
@@ -140,7 +141,7 @@ def check_facts(body: str, facts, today: date | None = None) -> list[dict]:
             seen.add((sentence, fact.code))
             out.append({
                 "source": "exact", "category": "claims", "severity": "high",
-                "quote": sentence, "ref_code": fact.code,
+                "quote": sentence, "focus": nearest.group(0), "ref_code": fact.code,
                 "ref_text": f"{fact.statement} (Source: {fact.source})",
                 "reason": f"The draft says {nearest.group(0)}, but the approved figure is {fact.value}.",
                 "suggestion": fixed,

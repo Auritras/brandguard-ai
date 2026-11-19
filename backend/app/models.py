@@ -154,6 +154,7 @@ class Finding(Base):
     category: Mapped[str] = mapped_column(String(40))
     severity: Mapped[str] = mapped_column(String(10))
     quote: Mapped[str] = mapped_column(Text)
+    focus: Mapped[str] = mapped_column(String(120), default="")  # the part of the quote to highlight (a number)
     ref_code: Mapped[str] = mapped_column(String(20))  # rule code, fact code, or TERM
     ref_text: Mapped[str] = mapped_column(Text, default="")  # the rule/fact wording at the time
     reason: Mapped[str] = mapped_column(Text)

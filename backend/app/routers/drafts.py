@@ -183,6 +183,7 @@ def refresh_siblings(db: Session, draft: Draft, before: str, after: str, start: 
                     and any(a < hi and lo < z for a, z in spans(body, x["quote"]))]
             if same:
                 f.quote, f.suggestion, f.reason = same[0]["quote"], same[0]["suggestion"], same[0]["reason"]
+                f.focus = same[0].get("focus", "")
                 continue
         elif contains:
             f.quote = before[p:start] + new + before[end:p + len(f.quote)]
@@ -209,7 +210,7 @@ def blocking_findings(db: Session, draft: Draft) -> list[Finding]:
 def finding_out(f: Finding) -> dict:
     return {"id": f.id, "version": f.version, "source": f.source, "category": f.category, "severity": f.severity,
             "quote": f.quote, "ref_code": f.ref_code, "ref_text": f.ref_text, "reason": f.reason,
-            "suggestion": f.suggestion, "status": f.status, "note": f.note, "image_id": f.image_id,
+            "suggestion": f.suggestion, "status": f.status, "note": f.note, "image_id": f.image_id, "focus": f.focus or "",
             "certain": is_certain(f)}
 
 
@@ -368,7 +369,7 @@ def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends
     rules = db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all()
     found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all(),
                       channel=body.channel)
-    return [{"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
+    return [{"quote": f["quote"], "focus": f.get("focus", ""), "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
              "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
 
 
