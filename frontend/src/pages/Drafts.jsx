@@ -152,7 +152,7 @@ export default function Drafts({ user }) {
         </>
       )}
 
-      <div ref={grid} data-tour="drafts" className="mt-4 grid gap-4 rounded-lg sm:grid-cols-2 lg:grid-cols-3">
+      <div ref={grid} data-tour="drafts" data-loaded={drafts !== null} className="mt-4 grid gap-4 rounded-lg sm:grid-cols-2 lg:grid-cols-3">
         {drafts?.length > 0 && sorted.length === 0 && (
           <Card className="col-span-full p-6 text-center text-muted">
             No drafts match. <button className="font-semibold text-primary hover:underline" onClick={() => { setQuery(''); setParams({}, { replace: true }) }}>Clear the filters</button>

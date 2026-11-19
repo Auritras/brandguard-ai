@@ -56,8 +56,11 @@ export default function Tour({ user, open, onClose }) {
       const r = el.getBoundingClientRect()
       setSpot({ left: r.left - 8, top: r.top - 8, width: r.width + 16, height: r.height + 16 })
     }
-    const t = setTimeout(() => {
+    // Wait for the page to draw the target (and for the drafts to load), up to a few seconds.
+    let tries = 0
+    let t = setTimeout(function find() {
       el = document.querySelector(`[data-tour="${step.target}"]`)
+      if ((!el || el.dataset.loaded === 'false') && ++tries < 12) { el = null; t = setTimeout(find, 300); return }
       if (!el) return setSpot(null)
       // A whole list is too big to spotlight: point at its first item instead.
       if (el.getBoundingClientRect().height > innerHeight * 0.6 && el.firstElementChild) el = el.querySelector('[data-flip]') || el.firstElementChild

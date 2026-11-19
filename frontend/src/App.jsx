@@ -61,11 +61,15 @@ export default function App() {
 
   // The tour opens by itself the first time someone uses a demo copy or a new brand, once per role.
   const [touring, setTouring] = useState(false)
+  // Only on the Drafts page, once its drafts have loaded (not over another page or a loading draft).
   useEffect(() => {
-    if (!auth?.user || tourDone(auth.user)) return
-    const t = setTimeout(() => setTouring(true), 900)
+    if (!auth?.user || touring || location.pathname !== '/' || tourDone(auth.user)) return
+    let t = setTimeout(function wait() {
+      if (document.querySelector('[data-tour="drafts"][data-loaded="true"]')) setTouring(true)
+      else t = setTimeout(wait, 300)
+    }, 900)
     return () => clearTimeout(t)
-  }, [auth?.user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [auth?.user?.id, auth?.user?.role, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const open = () => setTouring(true)
     addEventListener('bg-tour', open)
@@ -171,7 +175,7 @@ export default function App() {
           {demoNote}
         </p>
       )}
-      <Tour user={user} open={touring} onClose={() => setTouring(false)} />
+      <Tour key={`${user.id}-${user.role}`} user={user} open={touring} onClose={() => setTouring(false)} />
       <CommandMenu onTour={() => setTouring(true)} />
       <main id="main" aria-busy={!!demoBusy} className={`${demoBusy ? 'pointer-events-none opacity-50' : ''} transition-opacity duration-300 mx-3 my-6 min-h-[calc(100vh-7.5rem)] max-w-7xl rounded-xl border-2 border-ink bg-paper px-5 py-8 shadow-print sm:mx-5 sm:px-8 xl:mx-auto print:m-0 print:min-h-0 print:bg-white print:border-0 print:p-0 print:shadow-none`}>
         {/* Each screen fades up when you move to it; filters on the same screen do not count. It is also
