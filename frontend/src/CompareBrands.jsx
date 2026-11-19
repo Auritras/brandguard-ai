@@ -1,11 +1,12 @@
 // The pitch, shown rather than told: the same text through both demo brands' rules, side by side.
 // Exact checks only (instant, no AI, nothing stored), re-run a moment after you stop typing.
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api } from './api.js'
 import { SEVERITY } from './ui.jsx'
 
 // Ready-made sentences, so nobody has to type to see the difference.
 const PRESETS = [
+  ['Hype post', "OMG!! Our new mango fizz is the most fun you'll have all week. Grab yours today!"],
   ['Drink ad', 'BUY NOW!! Our healthy new mango fizz is the best drink in town. Click here to grab yours.'],
   ['Payroll ad', "Lumio Pay is India's #1 payroll app, trusted by 10,000 companies. Guaranteed accuracy. Click here!"],
   ['Neutral', 'Something new is coming this summer. Sign up on our website to hear about it first.'],
@@ -47,13 +48,19 @@ function label(f) {
   const rule = f.reason.match(/breaks the rule "([^"]+)"/)
   if (rule) return `"${f.quote}" · ${rule[1]}`
   if (f.ref_code === 'TERM') return `"${f.quote}" → ${f.suggestion || 'another word'}`
-  if (f.ref_code.startsWith('F-')) return f.focus ? `"${f.focus}" · Not the approved figure` : 'Wrong figure'
+  if (f.ref_code.startsWith('F-')) {
+    const approved = f.reason.match(/approved figure is ([\d,]+(?:\.\d+)?)/)
+    return `"${f.focus || f.quote}" · Wrong figure${approved ? ` (approved: ${approved[1]})` : ''}`
+  }
   return f.ref_code
 }
 
-export default function CompareBrands() {
+export default function CompareBrands({ onTryDemo }) {
   const [text, setText] = useState(SAMPLE)
+  const [checked, setChecked] = useState('') // the text the verdicts below belong to
+  const [quick, setQuick] = useState(true) // a preset was picked: check at once, without waiting for typing to pause
   const [result, setResult] = useState(null)
+  const pending = text !== checked
   const [error, setError] = useState('')
   const [lit, setLit] = useState(null) // the finding whose chip is hovered: its passage lights up
   useEffect(() => {
@@ -61,10 +68,25 @@ export default function CompareBrands() {
     let stale = false
     const t = setTimeout(() => {
       api('/demo/compare', { method: 'POST', body: { text }, token: 'none' })
-        .then((r) => { if (!stale) { setResult(r); setError('') } })
+        .then((r) => { if (!stale) { setResult(r); setChecked(text); setError('') } })
         .catch((e) => { if (!stale) setError(e.message) })
-    }, 450)
+    }, quick ? 0 : 350)
     return () => { stale = true; clearTimeout(t) }
+  }, [text, quick])
+  const pick = (t) => { setQuick(true); setText(t) }
+  const type = (t) => { setQuick(false); setText(t) }
+  // The box grows with the text, so a long sentence is never cut off behind a scrollbar.
+  const box = useRef(null)
+  useLayoutEffect(() => {
+    const fit = () => {
+      const el = box.current
+      if (!el) return
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight + 4}px`
+    }
+    fit()
+    addEventListener('resize', fit) // a narrower screen wraps the text onto more lines
+    return () => removeEventListener('resize', fit)
   }, [text])
 
   return (
@@ -75,29 +97,29 @@ export default function CompareBrands() {
         <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Example sentences">
           <span className="text-sm text-muted">Try:</span>
           {PRESETS.map(([name, t]) => (
-            <button key={name} type="button" onClick={() => setText(t)} aria-pressed={text === t}
-              className={`min-h-9 rounded-full border-2 px-3 text-sm font-semibold transition ${text === t ? 'border-ink bg-ink text-paper' : 'border-line bg-white hover:border-ink'}`}>
+            <button key={name} type="button" onClick={() => pick(t)} aria-pressed={text === t}
+              className={`min-h-9 rounded-full border-2 px-3 text-sm font-semibold transition ${text === t ? 'border-ink bg-white shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-line bg-white/70 text-muted hover:border-ink hover:text-ink'}`}>
               {name}
             </button>
           ))}
         </div>
         <label htmlFor="compare-text" className="sr-only">Text to compare</label>
         <div className="mt-4">
-          <textarea id="compare-text" aria-describedby="compare-help" value={text} maxLength={1000} rows={2} onChange={(e) => setText(e.target.value)}
-            className="w-full resize-y rounded-md border-2 border-line bg-white px-3 py-2 text-base leading-7 focus:border-primary focus:outline-none" />
+          <textarea id="compare-text" aria-describedby="compare-help" ref={box} value={text} maxLength={1000} rows={2} onChange={(e) => type(e.target.value)}
+            className="w-full resize-none overflow-hidden rounded-md border-2 border-line bg-white px-3 py-2 text-base leading-7 focus:border-primary focus:outline-none" />
         </div>
         {error && <p role="alert" className="mt-2 text-sm text-red-800">{error}</p>}
-        <div className="mt-4 grid gap-3 md:grid-cols-2" aria-live="polite">
+        <div className={`mt-4 grid gap-3 transition-opacity duration-150 md:grid-cols-2 ${pending ? 'opacity-40' : ''}`} aria-live="polite" aria-busy={pending}>
           {(result || [{ key: 'lumio', name: 'Lumio Payroll', findings: [] }, { key: 'fizzbox', name: 'Fizzbox', findings: [] }]).map((b) => (
             <div key={b.key} className="rounded-lg border-2 border-line bg-white p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="min-w-0"><span className="font-display text-lg font-bold">{b.name}</span> <span className="text-sm text-muted">· {STYLE[b.key]}</span></p>
-                <span key={b.findings.length} className={`roll-in flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-bold ${b.findings.length ? 'text-ink' : 'text-good'}`}>
+                <span key={b.findings.length} className={`roll-in flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${b.findings.length ? 'border-line bg-white text-ink' : 'border-good bg-good text-white'}`}>
                   {b.findings.some((f) => f.severity === 'high') && <span aria-hidden="true" className="sev-high h-2 w-2 rounded-full" />}
-                  {result ? (b.findings.length ? plural(b.findings.length, 'problem', 'problems') : 'Fine as it is') : '…'}
+                  {result ? (b.findings.length ? plural(b.findings.length, 'problem', 'problems') : '✓ Passes') : '…'}
                 </span>
               </div>
-              <p key={JSON.stringify(b.findings.map((f) => f.quote))} className="mt-3 text-[15px] leading-7">{result ? marked(text, b.findings, lit) : text}</p>
+              <p key={JSON.stringify(b.findings.map((f) => f.quote))} className="mt-3 text-[15px] leading-7">{result ? marked(checked, b.findings, lit) : text}</p>
               {b.findings.length > 0 && (
                 <ul className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3">
                   {b.findings.slice(0, 5).map((f, i) => (
@@ -110,7 +132,15 @@ export default function CompareBrands() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-xs text-muted">Instant exact checks only here. Inside the demo, the AI also judges tone, claims and images.</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted">Instant exact checks only here. Inside the demo, the AI also judges tone, claims and images.</p>
+          {onTryDemo && (
+            <button type="button" onClick={onTryDemo}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border-2 border-ink bg-primary px-3.5 text-sm font-semibold text-white shadow-print-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none md:hidden">
+              Try the full demo →
+            </button>
+          )}
+        </div>
       </div>
     </section>
   )

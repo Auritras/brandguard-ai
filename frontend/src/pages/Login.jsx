@@ -28,11 +28,6 @@ function Facts() {
       {f?.exact && <li className={item}><span className="font-display text-2xl font-bold">{f.exact.caught}/{f.exact.planted}</span> planted problems caught by the exact checks</li>}
       {f?.ai && <li className={item}><span className="font-display text-2xl font-bold">{f.ai.caught}/{f.ai.planted}</span> caught by the full check with AI</li>}
       {f && <li className={item}><span className="font-display text-2xl font-bold">{f.cases}</span> public test drafts, run on every change</li>}
-      <li className={item}>
-        <a href="https://github.com/Auritras/brandguard-ai" target="_blank" rel="noreferrer" className="font-semibold underline decoration-2 underline-offset-2 hover:text-primary-deep">
-          Open source on GitHub →
-        </a>
-      </li>
     </ul>
   )
 }
@@ -109,12 +104,12 @@ export default function Login({ onSignIn, signedOut }) {
         </p>
       </div>
 
-      <Card heavy className="order-3 p-5 md:order-none md:col-start-2 md:row-span-2 md:row-start-1">
+      <Card id="try-demo" heavy className="order-3 scroll-mt-4 p-5 md:order-none md:col-start-2 md:row-span-2 md:row-start-1">
         {signedOut && <p role="status" className="mb-4 rounded-md bg-primary-soft px-3 py-2 text-sm font-semibold text-primary-deep">You've signed out. Pick how to carry on.</p>}
         <div role="tablist" aria-label="How to sign in" className="grid grid-cols-3 gap-1 rounded-lg border-2 border-line bg-white p-1">
           {TABS.map(([k, label]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => pick(k)}
-              className={`rounded-md px-2 py-1.5 text-sm font-semibold transition-colors ${tab === k ? 'bg-ink text-paper' : 'hover:bg-black/5'}`}>
+              className={`rounded-md px-2 py-1.5 text-sm font-semibold transition-colors ${tab === k ? 'bg-white text-ink shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'text-muted hover:bg-black/5 hover:text-ink'}`}>
               {label}
             </button>
           ))}
@@ -126,9 +121,12 @@ export default function Login({ onSignIn, signedOut }) {
               <div role="radiogroup" aria-label="Demo brand" className="grid grid-cols-2 gap-2">
                 {brands.map((b) => (
                   <button key={b.key} role="radio" aria-checked={demoBrand === b.key} onClick={() => setDemoBrand(b.key)}
-                    className={`rounded-md border-2 p-2.5 text-left transition ${demoBrand === b.key ? 'border-ink bg-ink text-paper' : 'border-line bg-white hover:border-ink'}`}>
+                    className={`relative rounded-md border-2 p-2.5 pr-8 text-left transition ${demoBrand === b.key ? 'border-ink bg-white shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-line bg-white/60 hover:border-ink'}`}>
                     <span className="block font-display font-bold">{b.name}</span>
-                    <span className={`block text-xs ${demoBrand === b.key ? 'text-paper/75' : 'text-muted'}`}>{ABOUT[b.key]}</span>
+                    <span className="block text-xs text-muted">{ABOUT[b.key]}</span>
+                    {demoBrand === b.key && (
+                      <span aria-hidden="true" className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-good text-xs font-bold text-white">✓</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -199,8 +197,19 @@ export default function Login({ onSignIn, signedOut }) {
       <Facts />
       {/* Full width under both, so each brand's result has room; on a phone it comes before the picker. */}
       <div className="order-2 md:order-none md:col-span-2 md:row-start-3">
-        <CompareBrands />
+        <CompareBrands onTryDemo={() => {
+          const el = document.getElementById('try-demo')
+          el?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+          el?.querySelector('button')?.focus({ preventScroll: true })
+        }} />
       </div>
+      <p className="order-5 md:order-none md:col-span-2 md:row-start-4">
+        <a href="https://github.com/Auritras/brandguard-ai" target="_blank" rel="noreferrer"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-primary-deep sm:min-h-0">
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.5.8 1.2.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.5.8.5 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z" /></svg>
+          GitHub
+        </a>
+      </p>
     </main>
   )
 }
