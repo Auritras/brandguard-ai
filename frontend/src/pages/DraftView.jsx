@@ -116,6 +116,7 @@ export default function DraftView({ user }) {
   const [hovered, setHovered] = useState(null) // the group under the pointer: its phrase lights up
   const [stages, setStages] = useState(null) // the check, step by step: { exact, full, exactCount, images }
   const [preview, setPreview] = useState(null) // exact findings shown while the full check is still running
+  const [trying, setTrying] = useState(null) // a fix being hovered: shown in the text, not yet applied
   const [view, setView] = useState('Text') // the text, or the draft as it would look in a channel
   const [compare, setCompare] = useState(null) // { before, after, count } after applying all certain fixes
   const location = useLocation()
@@ -411,6 +412,14 @@ export default function DraftView({ user }) {
                       : <span key={i} className="rewrite-in">{p.text}</span>,
                 )}
               </p>
+              ) : trying && view === 'Text' ? (
+                <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8" aria-live="polite">
+                  <span className="sr-only">Preview of the fix: </span>
+                  {diffWords(d.body, trying).map((p, i) =>
+                    p.type === 'same' ? <span key={i}>{p.text}</span>
+                      : p.type === 'added' ? <ins key={i} className="diff-added">{p.text}</ins>
+                        : <del key={i} className="diff-removed">{p.text}</del>)}
+                </p>
               ) : view !== 'Text' ? (
                 <ChannelPreview view={view} d={d} pieces={pieces} brand={user.brand} />
               ) : (
@@ -532,7 +541,7 @@ export default function DraftView({ user }) {
               const { f, leaving: out } = g.items[0]
               return (
                 <div key={g.key} id={`group-${g.key}`} {...link} className={`scroll-mt-24 cursor-pointer rounded-lg transition-shadow ${on ? 'picked' : ''}`}>
-                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} leaving={out} onShow={() => showInText(g.key)} />
+                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} setTrying={setTrying} leaving={out} onShow={() => showInText(g.key)} />
                 </div>
               )
             }
@@ -549,7 +558,7 @@ export default function DraftView({ user }) {
                 </div>
                 <div className="grid gap-3">
                   {g.items.map(({ f, leaving: out }, i) => (
-                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} leaving={out} nested hideQuote={f.quote === text} />
+                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} setTrying={setTrying} leaving={out} nested hideQuote={f.quote === text} />
                   ))}
                 </div>
               </section>
@@ -801,7 +810,7 @@ function CompareVersions({ versions }) {
   )
 }
 
-function FindingCard({ i, f, d, user, busy, act, guessFix, leaving, nested = false, hideQuote = false, onShow }) {
+function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, leaving, nested = false, hideQuote = false, onShow }) {
   const ref = useRef(null)
   // Fold from the card's real height so the collapse is smooth at any size.
   useLayoutEffect(() => {
@@ -859,7 +868,14 @@ function FindingCard({ i, f, d, user, busy, act, guessFix, leaving, nested = fal
             {wholeText && <p className="w-full text-sm text-muted">This is about the whole text: shorten it with Edit text, then run the check again. Or dispute it.</p>}
             {inPixels && <p className="w-full text-sm text-muted">This is in the image itself: change the image, then remove this one and add the new one. Or dispute it.</p>}
             {f.suggestion && !inPixels && !wholeText && (
-              <Button kind="primary" disabled={busy} onClick={() => act('accept', `/findings/${f.id}/accept`, undefined, guessFix(f, f.suggestion, 'accepted'))}>
+              <Button kind="primary" disabled={busy}
+                onClick={() => { setTrying?.(null); act('accept', `/findings/${f.id}/accept`, undefined, guessFix(f, f.suggestion, 'accepted')) }}
+                {...(!f.image_id && setTrying ? {
+                  // Hovering (or focusing) shows the fix in the text: old words struck through, new ones marked.
+                  onMouseEnter: () => setTrying(guessFix(f, f.suggestion, 'accepted')(d).body),
+                  onFocus: () => setTrying(guessFix(f, f.suggestion, 'accepted')(d).body),
+                  onMouseLeave: () => setTrying(null), onBlur: () => setTrying(null),
+                } : {})}>
                 {f.image_id ? 'Use this description' : 'Accept fix'}
               </Button>
             )}
