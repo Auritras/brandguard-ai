@@ -45,7 +45,7 @@ test('Lumio: write, fix, send, escalate, waive and approve, with an image', asyn
   await page.getByRole('link', { name: 'New draft' }).click()
   await page.getByRole('button', { name: 'Load a sample post' }).click()
   await expect(page.getByText(/issues? found while typing/)).toBeVisible() // live check while typing
-  await page.getByRole('button', { name: 'Add the sample image' }).click()
+  await page.getByRole('button', { name: 'Try the sample image' }).click()
   await expect(page.getByRole('button', { name: /Remove payroll-banner.png/ })).toBeVisible()
   await page.getByRole('textbox', { name: 'Title' }).fill('E2E: onboarding post')
   await noSeriousA11yProblems(page, 'new draft')

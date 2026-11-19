@@ -61,6 +61,7 @@ export default function NewDraft({ user }) {
     return () => removeEventListener('beforeunload', warn)
   }, [dirty, busy])
   const [images, setImages] = useState([]) // { file, alt, url } to upload after the draft is saved
+  const [dragging, setDragging] = useState(false) // an image is being dragged over the drop zone
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
   const addImages = (files) => {
@@ -162,12 +163,9 @@ export default function NewDraft({ user }) {
           <Field label="Content">
             <LiveText id="body" required value={form.body} onChange={set('body')} placeholder="Paste the text here…" channel={form.channel} />
           </Field>
-          <Field label="Or upload a file" hint="Text, Markdown, Word (.docx) or PDF, up to 5 MB.">
-            <input type="file" accept=".txt,.md,.docx,.pdf" onChange={upload} className="block text-sm" />
-          </Field>
+          {/* Images come straight after the text, as a drop zone, so image review is hard to miss. */}
           <fieldset className="grid gap-2">
             <legend className="mb-1 text-sm font-semibold">Images <span className="font-normal text-muted">(optional, up to 4)</span></legend>
-            <p className="text-xs text-muted">The check reviews each image's colours against your brand palette, the contrast of any text in it, the logo, the text itself, and its description.</p>
             {images.map((img, i) => (
               <div key={img.url} className="flex items-start gap-3 rounded-md border-2 border-line bg-white p-2">
                 <img src={img.url} alt="" className="h-16 w-24 shrink-0 rounded object-cover" />
@@ -182,13 +180,26 @@ export default function NewDraft({ user }) {
               </div>
             ))}
             {images.length < 4 && (
-              <div className="flex flex-wrap items-center gap-3">
-                <input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" className="block text-sm"
-                  aria-label="Add images" onChange={(e) => { addImages(e.target.files || []); e.target.value = '' }} />
-                {user?.demo_brand && <Button type="button" onClick={loadSampleImage}>Add the sample image</Button>}
+              <div onDragOver={(e) => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setDragging(false); addImages(e.dataTransfer.files || []) }}
+                className={`flex flex-wrap items-center gap-4 rounded-lg border-2 border-dashed p-4 transition ${dragging ? 'border-primary bg-primary-soft' : 'border-line bg-white'}`}>
+                <svg aria-hidden="true" viewBox="0 0 32 32" className="h-10 w-10 shrink-0 text-muted">
+                  <rect x="3" y="6" width="26" height="20" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <circle cx="11" cy="13" r="2.5" fill="currentColor" /><path d="M5 24l7-7 5 5 4-4 7 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                </svg>
+                <div className="min-w-0 flex-1 basis-56">
+                  <p className="text-sm font-semibold">Drop an image here, or <label className="cursor-pointer text-primary underline">choose files
+                    <input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only"
+                      aria-label="Add images" onChange={(e) => { addImages(e.target.files || []); e.target.value = '' }} /></label></p>
+                  <p className="mt-0.5 text-xs text-muted">The check measures its colours against your brand palette, the contrast of any text in it and the logo, reads the text inside it, and suggests a description.</p>
+                </div>
+                {user?.demo_brand && <Button type="button" onClick={loadSampleImage}>Try the sample image</Button>}
               </div>
             )}
           </fieldset>
+          <Field label="Or upload the text as a file" hint="Text, Markdown, Word (.docx) or PDF, up to 5 MB.">
+            <input type="file" accept=".txt,.md,.docx,.pdf" onChange={upload} className="block text-sm" />
+          </Field>
           <ErrorNote>{error}</ErrorNote>
           <div className="flex gap-2">
             <Button kind="primary" type="submit" disabled={busy}>

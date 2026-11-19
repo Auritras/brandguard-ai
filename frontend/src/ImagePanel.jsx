@@ -9,7 +9,7 @@ export const imageSrc = (url) => BASE + url
 export default function ImagePanel({ d, busy, act, onError }) {
   if (!d.images.length && !d.can.edit) return null
   return (
-    <Card className="p-5">
+    <Card id="images" className="scroll-mt-24 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-xl font-bold">Images <span className="text-base font-normal text-muted">({d.images.length})</span></h2>
         {d.can.edit && d.images.length < 4 && <AddImage d={d} busy={busy} act={act} onError={onError} />}

@@ -6,7 +6,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 const STEPS = {
   creator: [
     { path: '/', target: 'drafts', title: 'You are the writer', text: 'Your drafts are here. An orange bar means one is waiting for you, such as a draft sent back with changes requested.' },
-    { path: '/', target: 'new-draft', title: 'Write and check a draft', text: 'Start a new draft: paste text or load the sample post, and add the sample image. Problems are underlined as you type; the full check runs when you save.' },
+    { path: '/', target: 'new-draft', title: 'Write and check a draft', text: 'Start a new draft: paste text or load the sample post. Problems are underlined as you type; the full check runs when you save.' },
+    { path: '/', target: 'drafts', title: 'Images are checked too', text: 'Add an image to a draft and the check measures its colours against the brand palette, the contrast of any text in it, and the logo, reads the text inside it, and suggests a description. Drafts with an image show it on their card.' },
     { path: '/', target: 'drafts', title: 'Handle what it finds', text: 'Open a draft. For each finding, accept the suggested fix, write your own, or dispute it with a reason. Then send it for review.' },
     { path: '/', target: 'act-as', title: 'See the other side', text: 'Use "Act as" to become the manager and review what you sent. Your work stays in this private copy.' },
   ],

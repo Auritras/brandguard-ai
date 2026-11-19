@@ -215,6 +215,10 @@ export default function DraftView({ user }) {
     setStages((x) => (next ? { ...x, full: 'done', ai: next.run?.ai_used } : null))
     setTimeout(() => setStages((x) => (x?.full === 'done' ? null : x)), 4000)
   }
+  useEffect(() => {
+    if (d && location.hash === '#images') setTimeout(() => document.getElementById('images')?.scrollIntoView({ block: 'start' }), 400)
+  }, [!!d]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Arriving from "Save and run check": run it here, so the writer watches it happen.
   useEffect(() => {
     if (!d || autoChecked.current || !location.state?.autoCheck) return
@@ -284,6 +288,16 @@ export default function DraftView({ user }) {
         </Link>
         <span aria-hidden="true">·</span>
         <DueDate d={d} busy={busy} act={act} />
+        {d.images.length > 0 && (
+          <>
+            <span aria-hidden="true">·</span>
+            <a href="#images" onClick={(e) => { e.preventDefault(); document.getElementById('images')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}
+              className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline sm:min-h-0">
+              {d.images.length === 1 ? '1 image' : `${d.images.length} images`}
+              {d.image_findings > 0 && <span className="text-ink">· {d.image_findings} image finding{d.image_findings > 1 ? 's' : ''}</span>}
+            </a>
+          </>
+        )}
       </p>
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>

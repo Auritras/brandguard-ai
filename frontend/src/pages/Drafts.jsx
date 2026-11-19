@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { api } from '../api.js'
+import { api, BASE } from '../api.js'
 import { Button, Card, ErrorNote, PageLoading, ScoreRing, StatusChip, timeAgo, Term } from '../ui.jsx'
 import { dueLabel } from '../due.js'
 
@@ -95,6 +95,7 @@ export default function Drafts({ user }) {
 
       <FirstSteps user={user} />
       <Recheck />
+      {user.demo_brand && drafts && <ImageCallout drafts={drafts} user={user} />}
 
       {drafts?.length > 0 && (
         <>
@@ -170,7 +171,18 @@ export default function Drafts({ user }) {
                   {d.score !== null && d.status !== 'approved' && <ScoreRing value={d.score} size={34} />}
                 </span>
               </div>
-              <p className="mt-3 line-clamp-2 font-display text-lg font-bold leading-snug">{d.title}</p>
+              <div className="mt-3 flex items-start gap-3">
+                <p className="line-clamp-2 min-w-0 flex-1 font-display text-lg font-bold leading-snug">{d.title}</p>
+                {d.thumb && (
+                  <span className="relative shrink-0">
+                    <img src={BASE + d.thumb} alt="" className="h-12 w-16 rounded border-2 border-line object-cover" />
+                    {d.image_findings > 0 && (
+                      <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full border-2 border-card bg-ink px-1 text-[10px] font-bold text-paper"
+                        title={`${d.image_findings} open finding${d.image_findings > 1 ? 's' : ''} in the image`}>{d.image_findings}</span>
+                    )}
+                  </span>
+                )}
+              </div>
               <p className="mb-4 mt-1 text-sm text-muted">
                 by {d.creator} · version {d.version} · <span title={new Date(d.updated_at).toLocaleString()}>{timeAgo(d.updated_at)}</span>
                 {d.due_date && d.status !== 'approved' && <span className={`font-semibold ${dueLabel(d.due_date).cls}`}> · {dueLabel(d.due_date).text}</span>}
@@ -190,6 +202,30 @@ export default function Drafts({ user }) {
         ))}
       </div>
     </div>
+  )
+}
+
+// Image review is easy to miss, so demo visitors are pointed at the draft whose image has the most to find.
+function ImageCallout({ drafts, user }) {
+  const key = `bg_image_tip_hidden_${user.demo_key || 'demo'}`
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
+  const best = [...drafts].filter((d) => d.thumb).sort((a, b) => b.image_findings - a.image_findings)[0]
+  if (hidden || !best) return null
+  return (
+    <Card className="deal-in mt-6 flex flex-wrap items-center gap-4 p-4">
+      <img src={BASE + best.thumb} alt="" className="h-16 w-24 rounded border-2 border-ink object-cover shadow-print-sm" />
+      <div className="min-w-0 flex-1 basis-60">
+        <p className="font-display text-lg font-bold">Image review</p>
+        <p className="text-sm">
+          BrandGuard also checks images: brand colours, text contrast, the logo, any text inside them, and their description.
+          {best.image_findings > 0 && <> The banner on <span className="font-semibold">{best.title}</span> has {best.image_findings} problems planted in it.</>}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Link to={`/drafts/${best.id}#images`}><Button kind="primary">See it →</Button></Link>
+        <Button kind="ghost" onClick={() => { try { localStorage.setItem(key, '1') } catch { /* private window */ } setHidden(true) }}>Hide</Button>
+      </div>
+    </Card>
   )
 }
 

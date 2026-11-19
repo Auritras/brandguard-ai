@@ -231,7 +231,14 @@ def summary(db: Session, d: Draft) -> dict:
             "open": sum(1 for f in findings if f.status == "open"),
             "disputed": sum(1 for f in findings if f.status == "disputed"),
             "blocking": sum(1 for f in findings if f.severity == "high" and f.status in BLOCKING),
-            "score": score(d, findings)}
+            "score": score(d, findings), **image_summary(db, d, findings)}
+
+
+def image_summary(db: Session, d: Draft, findings: list) -> dict:
+    """How many images a draft has, a link to the first (for a thumbnail), and its open image findings."""
+    ids = [i for (i,) in db.query(DraftImage.id).filter(DraftImage.draft_id == d.id).order_by(DraftImage.id)]
+    return {"image_count": len(ids), "thumb": f"/api/images/{ids[0]}?t={make_file_token('img', ids[0])}" if ids else None,
+            "image_findings": sum(1 for f in findings if f.image_id and f.status in BLOCKING)}
 
 
 WEIGHT = {"high": 15, "medium": 6, "low": 2}

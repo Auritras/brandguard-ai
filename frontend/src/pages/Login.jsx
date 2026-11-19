@@ -104,7 +104,7 @@ export default function Login({ onSignIn, signedOut }) {
           <h1 className="font-display text-5xl font-extrabold leading-none sm:text-6xl">BrandGuard AI</h1>
         </div>
         <p className="mt-4 max-w-xl text-lg">
-          Checks every post, email and document against your brand's rules and approved facts before it goes out.
+          Checks every post, email, document and image against your brand's rules and approved facts before it goes out.
           <span className="font-bold"> People make the final call.</span>
         </p>
       </div>
