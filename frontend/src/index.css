@@ -398,3 +398,8 @@ mark.live-mark { padding: 0; border-radius: 2px; animation: sweep 0.45s cubic-be
   animation: tour-pulse 1.6s ease-in-out infinite;
 }
 @keyframes tour-pulse { 50% { outline-color: color-mix(in srgb, var(--color-primary) 35%, transparent); } }
+
+/* A highlight and its findings, selected together: the group keeps a solid outline until something
+   else is picked, so it is clear without relying on motion. */
+.picked { box-shadow: 0 0 0 3px var(--color-paper), 0 0 0 6px var(--color-accent); }
+mark.mark-picked { outline: 2px solid var(--color-ink); outline-offset: 2px; }

@@ -49,7 +49,7 @@ function OneImage({ n, img, d, busy, act }) {
   const failing = (a?.lines || []).filter((l) => l.contrast && !l.contrast.passes).length
   const off = (a?.colours || []).filter((c) => c.off).length
   return (
-    <figure className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,17rem)]">
+    <figure id={`image-${img.id}`} className="scroll-mt-24 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,17rem)]">
       <div>
         <div className="relative overflow-hidden rounded-lg border-2 border-line bg-white">
           <img src={imageSrc(img.url)} alt={img.alt_text || `Image ${n}, not described yet`} className="block h-auto w-full" />

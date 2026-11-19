@@ -31,6 +31,34 @@ function highlight(body, findings) {
 
 const isActive = (f) => f.status === 'open' || f.status === 'disputed'
 
+// Which sentence each finding sits in, so findings on the same sentence are shown together.
+// Image findings group by image; channel limits (about the whole text) group together.
+function groupKeys(body, findings) {
+  const bounds = []
+  const re = /[^.!?\n]+(?:[.!?]+|$)/g
+  let m
+  while ((m = re.exec(body))) {
+    if (!m[0].trim()) { re.lastIndex++; continue }
+    bounds.push([m.index, m.index + m[0].length])
+  }
+  const keys = {}
+  for (const f of findings) {
+    if (f.image_id) keys[f.id] = `img${f.image_id}`
+    else if (f.ref_code.startsWith('CH-')) keys[f.id] = 'whole'
+    else {
+      const at = body.indexOf(f.quote)
+      const b = at === -1 ? null : bounds.find(([a, z]) => at < z && at + f.quote.length > a)
+      keys[f.id] = b ? `s${b[0]}` : `f${f.id}`
+    }
+  }
+  const sentence = (key) => {
+    if (!key.startsWith('s')) return ''
+    const b = bounds.find(([a]) => `s${a}` === key)
+    return b ? body.slice(b[0], b[1]).trim() : ''
+  }
+  return { keys, sentence }
+}
+
 function nextStep(d, user) {
   const isOwner = d.can.edit
   if (d.status === 'approved') return 'Approved. This version is locked and ready to publish.'
@@ -67,6 +95,7 @@ export default function DraftView({ user }) {
   const [leaving, setLeaving] = useState([]) // findings just handled, folding out of the list
   const [acted, setActed] = useState(false) // status and next-step only animate after an action here
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [picked, setPicked] = useState(null) // the group of findings selected from the text or a card
   const navigate = useNavigate()
   const contentRef = useRef(null)
   const rewriteTimer = useRef()
@@ -126,13 +155,27 @@ export default function DraftView({ user }) {
   const shown = active.map((f) => ({ f }))
   for (const { f, at } of leaving) if (!active.some((a) => a.id === f.id)) shown.splice(Math.min(at, shown.length), 0, { f, leaving: true })
   const settled = d.findings.filter((f) => !['open', 'disputed'].includes(f.status))
+  // Findings on the same sentence (or image) are one group; a highlight and its group point at each other.
+  const { keys, sentence } = groupKeys(d.body, [...d.findings, ...leaving.map((l) => l.f)])
+  const groups = []
+  for (const item of shown) {
+    const k = keys[item.f.id] || `f${item.f.id}`
+    const g = groups.find((x) => x.key === k)
+    if (g) g.items.push(item)
+    else groups.push({ key: k, items: [item] })
+  }
+  const smooth = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth')
+  // Text -> findings: select the group (it stays outlined) and bring it into view.
   const focus = (fid) => {
-    const el = document.getElementById(`finding-${fid}`)
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    el.classList.remove('flash')
-    void el.offsetWidth // restart the animation if it is clicked twice
-    el.classList.add('flash')
+    const key = keys[fid]
+    setPicked(key)
+    document.getElementById(`group-${key}`)?.scrollIntoView({ behavior: smooth(), block: 'nearest' })
+  }
+  // Findings -> text: select the group and bring its highlight into view.
+  const showInText = (key) => {
+    setPicked(key)
+    const el = document.querySelector(`[data-group="${key}"]`) || (key.startsWith('img') && document.getElementById(`image-${key.slice(3)}`))
+    el?.scrollIntoView({ behavior: smooth(), block: 'center' })
   }
   let markIndex = 0
 
@@ -251,8 +294,9 @@ export default function DraftView({ user }) {
               <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8">
                 {pieces.map((p, i) =>
                   p.f ? (
-                    <mark key={`f${p.f.id}`} tabIndex={0} role="button" className={`${SEVERITY[p.f.severity].mark} sweep`} style={{ '--i': markIndex++ }}
-                      aria-label={`${SEVERITY[p.f.severity].label} risk finding: ${p.text}`}
+                    <mark key={`f${p.f.id}`} tabIndex={0} role="button" data-group={keys[p.f.id]} aria-pressed={picked === keys[p.f.id]}
+                      className={`${SEVERITY[p.f.severity].mark} sweep cursor-pointer ${picked === keys[p.f.id] ? 'mark-picked' : ''}`} style={{ '--i': markIndex++ }}
+                      aria-label={`${SEVERITY[p.f.severity].label} risk finding: ${p.text}. Show its findings`}
                       onClick={() => focus(p.f.id)} onKeyDown={(e) => e.key === 'Enter' && focus(p.f.id)}>
                       {p.text}
                     </mark>
@@ -350,9 +394,36 @@ export default function DraftView({ user }) {
               <p><span className="font-semibold">No open findings.</span> {d.needs_check ? 'Run the check again to confirm.' : 'The latest version passed the check.'}</p>
             </Card>
           )}
-          {shown.map(({ f, leaving: out }, i) => (
-            <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} />
-          ))}
+          {groups.map((g, gi) => {
+            const live = g.items.filter((x) => !x.leaving).length
+            const on = picked === g.key
+            if (g.items.length === 1) {
+              const { f, leaving: out } = g.items[0]
+              return (
+                <div key={g.key} id={`group-${g.key}`} className={`scroll-mt-24 rounded-lg transition-shadow ${on ? 'picked' : ''}`}>
+                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} onShow={() => showInText(g.key)} />
+                </div>
+              )
+            }
+            const text = sentence(g.key)
+            return (
+              <section key={g.key} id={`group-${g.key}`} aria-label={`${live} findings on one ${g.key.startsWith('img') ? 'image' : 'sentence'}`}
+                className={`stamp-in scroll-mt-24 rounded-xl border-2 border-dashed border-line bg-black/[0.02] p-3 transition-shadow ${on ? 'picked' : ''}`} style={{ '--i': gi }}>
+                <div className="flex items-start justify-between gap-3 px-1 pb-2">
+                  <p className="text-sm">
+                    <span className="font-semibold">{live} findings on {g.key.startsWith('img') ? 'this image' : g.key === 'whole' ? 'the whole text' : 'this sentence'}</span>
+                    {text && <span className="mt-1 block text-muted">“{text}”</span>}
+                  </p>
+                  <button className="shrink-0 text-sm font-semibold text-primary hover:underline" onClick={() => showInText(g.key)}>Show in text</button>
+                </div>
+                <div className="grid gap-3">
+                  {g.items.map(({ f, leaving: out }, i) => (
+                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} nested hideQuote={f.quote === text} />
+                  ))}
+                </div>
+              </section>
+            )
+          })}
 
           {settled.length > 0 && (
             <details className="rounded-2xl border border-line bg-card p-4">
@@ -478,7 +549,7 @@ function CompareVersions({ versions }) {
   )
 }
 
-function FindingCard({ i, f, d, user, busy, act, leaving }) {
+function FindingCard({ i, f, d, user, busy, act, leaving, nested = false, hideQuote = false, onShow }) {
   const ref = useRef(null)
   // Fold from the card's real height so the collapse is smooth at any size.
   useLayoutEffect(() => {
@@ -492,7 +563,7 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
   const inPixels = !!f.image_id && f.ref_code !== 'VIS-ALT' // only the description can be fixed from here
   const wholeText = f.ref_code.startsWith('CH-') // channel limits: length, number of hashtags
   return (
-    <Card ref={ref} id={leaving ? undefined : `finding-${f.id}`} className={`stamp-in scroll-mt-6 p-4 ${leaving ? 'fold-away' : ''}`} style={{ '--i': i }}
+    <Card ref={ref} id={leaving ? undefined : `finding-${f.id}`} className={`${nested ? '' : 'stamp-in'} scroll-mt-6 p-4 ${leaving ? 'fold-away' : ''}`} style={{ '--i': i }}
       inert={leaving || undefined} aria-hidden={leaving || undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip className={sev.chip}>{sev.label} risk</Chip>
@@ -505,7 +576,14 @@ function FindingCard({ i, f, d, user, busy, act, leaving }) {
           In image {imgIndex + 1}
         </p>
       )}
-      <p className="mt-3 text-sm"><span className={`rounded px-1 ${sev.mark}`}>“{f.quote}”</span></p>
+      {!hideQuote && (
+        <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+          <span className={`rounded px-1 ${sev.mark}`}>“{f.quote}”</span>
+          {onShow && !f.image_id && !f.ref_code.startsWith('CH-') && (
+            <button className="text-xs font-semibold text-primary hover:underline" onClick={onShow}>Show in text</button>
+          )}
+        </p>
+      )}
       <p className="mt-2 text-sm">{f.reason}</p>
       <p className="mt-2 rounded-lg bg-paper p-2 text-sm">
         <span className="font-semibold">{f.ref_code === 'TERM' ? 'Terminology list' : f.ref_code.startsWith('VIS-') ? 'Image standard' : f.ref_code.startsWith('CH-') ? `${d.channel} limit` : `${f.ref_code.startsWith('F-') ? 'Approved fact' : 'Rule'} ${f.ref_code}`}:</span>{' '}
