@@ -93,9 +93,12 @@ export default function Drafts({ user }) {
               : 'Content from your team. Items waiting for you are listed first.'}
           </p>
         </div>
-        <Link to="/new" data-tour="new-draft" className="rounded-md">
-          <Button kind="primary">New draft</Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to="/check-many"><Button kind="ghost">Check many posts</Button></Link>
+          <Link to="/new" data-tour="new-draft" className="rounded-md">
+            <Button kind="primary">New draft</Button>
+          </Link>
+        </div>
       </div>
 
       <FirstSteps user={user} />

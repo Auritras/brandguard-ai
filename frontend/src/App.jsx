@@ -16,6 +16,7 @@ import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
 import Account from './pages/Account.jsx'
 import Reliability from './pages/Reliability.jsx'
+import Bulk from './pages/Bulk.jsx'
 
 
 
@@ -180,6 +181,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Drafts user={user} />} />
           <Route path="/new" element={<NewDraft user={user} />} />
+          <Route path="/check-many" element={<Bulk />} />
           <Route path="/drafts/:id" element={<DraftView user={user} />} />
           <Route path="/drafts/:id/record" element={<Record user={user} />} />
           <Route path="/insights" element={<Insights user={user} />} />

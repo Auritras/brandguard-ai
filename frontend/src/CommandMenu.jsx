@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from './api.js'
 
 const PAGES = [
-  ['Drafts', '/'], ['New draft', '/new'], ['Brand health', '/insights'], ['Guideline gaps', '/insights#gaps-title'],
+  ['Drafts', '/'], ['New draft', '/new'], ['Check many posts', '/check-many'], ['Brand health', '/insights'], ['Guideline gaps', '/insights#gaps-title'],
   ['Brand Library', '/library'], ['Reliability', '/reliability'], ['Team', '/team'], ['Your account', '/account'],
 ]
 
