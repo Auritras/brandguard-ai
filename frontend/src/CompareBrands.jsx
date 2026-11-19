@@ -60,6 +60,7 @@ export default function CompareBrands({ onTryDemo }) {
   const [checked, setChecked] = useState('') // the text the verdicts below belong to
   const [quick, setQuick] = useState(true) // a preset was picked: check at once, without waiting for typing to pause
   const [result, setResult] = useState(null)
+  const [retry, setRetry] = useState(0)
   const pending = text !== checked
   const [error, setError] = useState('')
   const [lit, setLit] = useState(null) // the finding whose chip is hovered: its passage lights up
@@ -68,11 +69,15 @@ export default function CompareBrands({ onTryDemo }) {
     let stale = false
     const t = setTimeout(() => {
       api('/demo/compare', { method: 'POST', body: { text }, token: 'none' })
-        .then((r) => { if (!stale) { setResult(r); setChecked(text); setError('') } })
-        .catch((e) => { if (!stale) setError(e.message) })
-    }, quick ? 0 : 350)
+        .then((r) => { if (!stale) { setResult(r); setChecked(text); setError(''); setRetry(0) } })
+        .catch((e) => {
+          if (stale) return
+          setError(e.status === 429 ? e.message : 'Waking the server… the verdicts will appear in a moment.')
+          if (e.status !== 429) setRetry((n) => n + 1) // try again shortly while the server starts
+        })
+    }, retry ? 3000 : quick ? 0 : 350)
     return () => { stale = true; clearTimeout(t) }
-  }, [text, quick])
+  }, [text, quick, retry])
   const pick = (t) => { setQuick(true); setText(t) }
   const type = (t) => { setQuick(false); setText(t) }
   // The box grows with the text, so a long sentence is never cut off behind a scrollbar.
@@ -98,7 +103,7 @@ export default function CompareBrands({ onTryDemo }) {
           <span className="text-sm text-muted">Try:</span>
           {PRESETS.map(([name, t]) => (
             <button key={name} type="button" onClick={() => pick(t)} aria-pressed={text === t}
-              className={`min-h-9 rounded-full border-2 px-3 text-sm font-semibold transition ${text === t ? 'border-ink bg-white shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-line bg-white/70 text-muted hover:border-ink hover:text-ink'}`}>
+              className={`min-h-9 rounded-full border-2 px-3 text-sm font-semibold transition ${text === t ? 'border-olive-deep bg-olive-deep text-paper' : 'border-line bg-white text-muted hover:border-ink hover:text-ink'}`}>
               {name}
             </button>
           ))}
@@ -114,7 +119,7 @@ export default function CompareBrands({ onTryDemo }) {
             <div key={b.key} className="rounded-lg border-2 border-line bg-white p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="min-w-0"><span className="font-display text-lg font-bold">{b.name}</span> <span className="text-sm text-muted">· {STYLE[b.key]}</span></p>
-                <span key={b.findings.length} className={`roll-in flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${b.findings.length ? 'border-line bg-white text-ink' : 'border-good bg-good text-white'}`}>
+                <span key={b.findings.length} className={`roll-in flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${!result || b.findings.length ? 'border-line bg-white text-ink' : 'border-good bg-good text-white'}`}>
                   {b.findings.some((f) => f.severity === 'high') && <span aria-hidden="true" className="sev-high h-2 w-2 rounded-full" />}
                   {result ? (b.findings.length ? plural(b.findings.length, 'problem', 'problems') : '✓ Passes') : '…'}
                 </span>
