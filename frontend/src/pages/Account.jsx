@@ -181,10 +181,11 @@ function Password({ user }) {
 // React does not render javascript: links, so the address is set on the element directly.
 function Bookmarklet() {
   const ref = useRef(null)
+  const [nudge, setNudge] = useState(0)
   useEffect(() => {
     const code = `javascript:(()=>{const t=String(getSelection()).trim().slice(0,4000);if(!t){alert('Select some text on the page first, then click Check with BrandGuard.');return}open('${location.origin}/new?text='+encodeURIComponent(t),'_blank')})()`
     ref.current?.setAttribute('href', code)
-  }, [])
+  }, [nudge]) // the button is re-created for each nudge, so set its address again
   return (
     <Card className="p-5">
       <h2 className="font-display text-xl font-bold">Check text from any web page</h2>
@@ -197,11 +198,22 @@ function Bookmarklet() {
           </li>
         ))}
       </ol>
-      <a ref={ref} onClick={(e) => e.preventDefault()} draggable title="Drag me to your bookmarks bar"
-        className="mt-4 inline-flex cursor-grab items-center gap-2 rounded-md border-2 border-ink bg-primary px-3.5 py-1.5 text-sm font-semibold text-white shadow-print-sm active:cursor-grabbing">
-        <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4"><path d="M4 2h8v12l-4-3-4 3z" fill="currentColor" /></svg>
-        Check with BrandGuard
-      </a>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {/* Clicking it here does nothing useful (it works from the bookmarks bar), so a click explains that. */}
+        <a key={nudge} ref={ref} draggable title="Drag me to your bookmarks bar"
+          onClick={(e) => { e.preventDefault(); setNudge((n) => n + 1) }}
+          className={`${nudge ? 'nudge-up' : ''} inline-flex min-h-11 cursor-grab items-center gap-2 rounded-md border-2 border-ink bg-primary px-3.5 py-1.5 text-sm font-semibold text-white shadow-print-sm active:cursor-grabbing sm:min-h-0`}>
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4"><path d="M4 2h8v12l-4-3-4 3z" fill="currentColor" /></svg>
+          Check with BrandGuard
+        </a>
+        <Link to="/new" className="text-sm font-semibold text-primary hover:underline">Or paste text into a new draft →</Link>
+      </div>
+      {nudge > 0 && (
+        <p role="status" className="step-in mt-3 rounded-md border border-line bg-white px-3 py-2 text-sm">
+          <span className="font-semibold">Drag it, rather than click it:</span> hold the button and drop it on your browser's bookmarks
+          bar (show the bar with Ctrl+Shift+B). Then, on any page, select some text and click the bookmark there.
+        </p>
+      )}
     </Card>
   )
 }

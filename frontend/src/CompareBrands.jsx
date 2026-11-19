@@ -43,12 +43,12 @@ export default function CompareBrands() {
     <section aria-labelledby="compare-title" className="md:col-span-2">
       <div className="rounded-xl border-2 border-ink bg-card p-5 shadow-print sm:p-6">
         <h2 id="compare-title" className="font-display text-2xl font-bold sm:text-3xl">Same words. Two brands. Different verdicts.</h2>
-        <p className="mt-1 text-muted">Edit the sentence: each brand checks it against its own rules as you type.</p>
-        <label className="mt-4 block">
-          <span className="sr-only">Text to compare</span>
-          <textarea value={text} maxLength={1000} rows={2} onChange={(e) => setText(e.target.value)}
+        <p id="compare-help" className="mt-1 text-muted">Edit the sentence: each brand checks it against its own rules as you type.</p>
+        <label htmlFor="compare-text" className="sr-only">Text to compare</label>
+        <div className="mt-4">
+          <textarea id="compare-text" aria-describedby="compare-help" value={text} maxLength={1000} rows={2} onChange={(e) => setText(e.target.value)}
             className="w-full resize-y rounded-md border-2 border-line bg-white px-3 py-2 text-base leading-7 focus:border-primary focus:outline-none" />
-        </label>
+        </div>
         {error && <p role="alert" className="mt-2 text-sm text-red-800">{error}</p>}
         <div className="mt-4 grid gap-4 md:grid-cols-2" aria-live="polite">
           {(result || [{ key: 'lumio', name: 'Lumio Payroll', findings: [] }, { key: 'fizzbox', name: 'Fizzbox', findings: [] }]).map((b) => (

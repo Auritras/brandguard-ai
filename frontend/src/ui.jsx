@@ -324,10 +324,10 @@ export function Term({ name, children }) {
 // 0 to 100: how ready the draft is to send. The ring fills as findings are handled.
 export function ScoreRing({ value, size = 44 }) {
   const r = 17, len = 2 * Math.PI * r
-  const colour = value >= 85 ? 'var(--color-good)' : value >= 50 ? 'var(--color-primary)' : 'var(--color-accent)'
+  const colour = value >= 85 ? 'var(--color-good)' : value >= 70 ? 'var(--color-primary)' : value >= 40 ? 'var(--color-accent)' : '#b42318'
   return (
     <span className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}
-      title={`Ready to send: ${value} of 100. It starts at 100 and drops 15 for each open high-risk finding, 6 for each medium and 2 for each low.`}>
+      title={`Ready to send: ${value} of 100. It is 100 when nothing is open; each open finding lowers it, a high-risk one most, and every fix raises it.`}>
       <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx="20" cy="20" r={r} fill="none" stroke="var(--color-line)" strokeWidth="4" />
         <circle cx="20" cy="20" r={r} fill="none" stroke={colour} strokeWidth="4" strokeLinecap="round"

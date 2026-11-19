@@ -12,7 +12,7 @@ function highlight(body, findings) {
   const spans = []
   for (const f of findings) {
     if (!['open', 'disputed'].includes(f.status) || f.image_id) continue
-    const at = body.indexOf(f.quote)
+    const at = findQuote(body, f.quote)
     if (at === -1) continue
     spans.push({ start: at, end: at + f.quote.length, f })
   }
@@ -31,6 +31,19 @@ function highlight(body, findings) {
 
 const isActive = (f) => f.status === 'open' || f.status === 'disputed'
 
+// Where a quote is in the text, as a whole word or phrase ("Lumio Pay" is not inside "Lumio Payroll").
+function findQuote(body, quote) {
+  if (!quote) return -1
+  const esc = quote.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp((/^\w/.test(quote) ? '(?<![\\w-])' : '') + esc + (/\w$/.test(quote) ? '(?![\\w-])' : ''))
+  const m = re.exec(body)
+  return m ? m.index : -1
+}
+
+// The same ready-to-send score as the server, to show a fix's effect before the server replies.
+const WEIGHT = { high: 15, medium: 6, low: 2 }
+const scoreOf = (findings) => Math.round(3000 / (30 + findings.filter(isActive).reduce((n, f) => n + (WEIGHT[f.severity] || 0), 0)))
+
 // Which sentence each finding sits in, so findings on the same sentence are shown together.
 // Image findings group by image; channel limits (about the whole text) group together.
 function groupKeys(body, findings) {
@@ -46,7 +59,7 @@ function groupKeys(body, findings) {
     if (f.image_id) keys[f.id] = `img${f.image_id}`
     else if (f.ref_code.startsWith('CH-')) keys[f.id] = 'whole'
     else {
-      const at = body.indexOf(f.quote)
+      const at = findQuote(body, f.quote)
       const b = at === -1 ? null : bounds.find(([a, z]) => at < z && at + f.quote.length > a)
       keys[f.id] = b ? `s${b[0]}` : `f${f.id}`
     }
@@ -114,35 +127,62 @@ export default function DraftView({ user }) {
     load()
   }, [load])
 
+  const animate = (from, to) => {
+    if (from.body !== to.body && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      clearTimeout(rewriteTimer.current)
+      setRewrite(diffWords(from.body, to.body))
+      rewriteTimer.current = setTimeout(() => setRewrite(null), 2600)
+    }
+    const still = new Set(to.findings.filter(isActive).map((f) => f.id))
+    const gone = from.findings.filter(isActive).map((f, at) => ({ f, at })).filter(({ f }) => !still.has(f.id))
+    if (gone.length) {
+      setLeaving(gone)
+      setTimeout(() => setLeaving([]), 700)
+    }
+  }
+
+  // A fix applied on screen before the server replies: the quote replaced (whole word), the finding handled.
+  const guessFix = (f, replacement, status) => (cur) => {
+    if (f.image_id) {
+      return { ...cur, findings: cur.findings.map((x) => (x.id === f.id ? { ...x, status } : x)),
+        images: cur.images.map((im) => (im.id === f.image_id ? { ...im, alt_text: replacement } : im)) }
+    }
+    const at = findQuote(cur.body, f.quote)
+    if (at === -1) return cur
+    const body = cur.body.slice(0, at) + replacement + cur.body.slice(at + f.quote.length)
+    return { ...cur, body, needs_check: true, version: cur.version + 1,
+      findings: cur.findings.map((x) => (x.id === f.id ? { ...x, status } : x)) }
+  }
+
   // Run one action against the API and show the refreshed draft.
-  const act = async (name, path, body) => {
+  const act = async (name, path, body, guess) => {
     setBusy(name)
     setError('')
+    const before = latest.current
+    if (guess && before) {
+      // Show the result straight away: the text rewrites, the card folds away, the counts move. The server
+      // then confirms it; if it refuses, the page goes back to what it was and says why.
+      const g = guess(before)
+      g.score = scoreOf(g.findings)
+      g.open = g.findings.filter((f) => f.status === 'open').length
+      animate(before, g)
+      latest.current = g
+      setD(g)
+    }
     try {
       const d = latest.current
       const opts = body === undefined ? { method: 'POST' }
         : body.__form ? { method: 'POST', file: body.__form.file, fields: body.__form.fields }
           : body.__method ? { method: body.__method, body: body.data } : { method: 'POST', body }
       const next = await api(path, { ...opts, rev: latest.current?.rev })
-      // When the text changes (a fix accepted or written), show the change being made before settling.
-      if (d && next.body !== d.body && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        clearTimeout(rewriteTimer.current)
-        setRewrite(diffWords(d.body, next.body))
-        rewriteTimer.current = setTimeout(() => setRewrite(null), 2600)
-      }
-      // Findings that were just handled fold away instead of vanishing.
-      if (d) {
-        const still = new Set(next.findings.filter(isActive).map((f) => f.id))
-        const gone = d.findings.filter(isActive).map((f, at) => ({ f, at })).filter(({ f }) => !still.has(f.id))
-        if (gone.length) {
-          setLeaving(gone)
-          setTimeout(() => setLeaving([]), 700)
-        }
-      }
+      // When the text changes (a fix accepted or written), show the change being made before settling, and
+      // findings that were just handled fold away instead of vanishing.
+      if (d) animate(d, next)
       setActed(true)
       setD(next)
       return next
     } catch (e) {
+      if (guess && before) setD(before)
       setError(e.message)
       // Someone else acted first, or the draft moved on: show the latest instead of a stale page.
       if (e.status === 409 || e.status === 404) load()
@@ -453,7 +493,7 @@ export default function DraftView({ user }) {
               const { f, leaving: out } = g.items[0]
               return (
                 <div key={g.key} id={`group-${g.key}`} {...link} className={`scroll-mt-24 cursor-pointer rounded-lg transition-shadow ${on ? 'picked' : ''}`}>
-                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} onShow={() => showInText(g.key)} />
+                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} leaving={out} onShow={() => showInText(g.key)} />
                 </div>
               )
             }
@@ -470,7 +510,7 @@ export default function DraftView({ user }) {
                 </div>
                 <div className="grid gap-3">
                   {g.items.map(({ f, leaving: out }, i) => (
-                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} nested hideQuote={f.quote === text} />
+                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} leaving={out} nested hideQuote={f.quote === text} />
                   ))}
                 </div>
               </section>
@@ -722,7 +762,7 @@ function CompareVersions({ versions }) {
   )
 }
 
-function FindingCard({ i, f, d, user, busy, act, leaving, nested = false, hideQuote = false, onShow }) {
+function FindingCard({ i, f, d, user, busy, act, guessFix, leaving, nested = false, hideQuote = false, onShow }) {
   const ref = useRef(null)
   // Fold from the card's real height so the collapse is smooth at any size.
   useLayoutEffect(() => {
@@ -780,7 +820,7 @@ function FindingCard({ i, f, d, user, busy, act, leaving, nested = false, hideQu
             {wholeText && <p className="w-full text-sm text-muted">This is about the whole text: shorten it with Edit text, then run the check again. Or dispute it.</p>}
             {inPixels && <p className="w-full text-sm text-muted">This is in the image itself: change the image, then remove this one and add the new one. Or dispute it.</p>}
             {f.suggestion && !inPixels && !wholeText && (
-              <Button kind="primary" disabled={busy} onClick={() => act('accept', `/findings/${f.id}/accept`)}>
+              <Button kind="primary" disabled={busy} onClick={() => act('accept', `/findings/${f.id}/accept`, undefined, guessFix(f, f.suggestion, 'accepted'))}>
                 {f.image_id ? 'Use this description' : 'Accept fix'}
               </Button>
             )}
@@ -788,7 +828,7 @@ function FindingCard({ i, f, d, user, busy, act, leaving, nested = false, hideQu
               <ReasonButton label={f.image_id ? 'Write my own description' : 'Write my own fix'}
                 placeholder={f.image_id ? 'What does the image show?' : 'Replacement for the highlighted text'}
                 confirmLabel={f.image_id ? 'Save description' : 'Apply my fix'} initial={f.image_id ? f.suggestion : f.suggestion || f.quote}
-                onSubmit={(replacement) => act('edit', `/findings/${f.id}/edit`, { replacement })} />
+                onSubmit={(replacement) => act('edit', `/findings/${f.id}/edit`, { replacement }, guessFix(f, replacement, 'edited'))} />
             )}
             <ReasonButton label="Dispute" placeholder="Why is this finding wrong?" confirmLabel="Send dispute"
               onSubmit={(reason) => act('dispute', `/findings/${f.id}/dispute`, { reason })} />

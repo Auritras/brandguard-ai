@@ -90,7 +90,7 @@ export function DemoMenu({ user, busy, onRestart, onCompare }) {
         <>
           <p className="px-3 pb-2 pt-1.5 text-sm">
             <span className="font-semibold">Your private copy of {DEMO_BRANDS[key]}.</span>{' '}
-            <span className="text-muted">Nothing you do here reaches anyone else.</span>
+            <span className="mt-0.5 block text-muted">Nothing you do here reaches anyone else.</span>
           </p>
           <div className="border-t border-line pt-1.5">
             <button disabled={!!busy} className={ITEM} onClick={() => { close(); onCompare(other) }}>
