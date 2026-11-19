@@ -152,18 +152,47 @@ def replace_at(body: str, start: int, old: str, new: str) -> str:
     return body[:start] + new + body[start + len(old):]
 
 
-def carry_over(db: Session, draft: Draft, before: str, start: int, old: str, new: str, done: Finding) -> None:
-    """A fix replaced `old` at `start` in `before` with `new`. Other open findings whose quoted passage
-    contains that spot (a term inside a sentence flagged for its number, say) follow the change, so their
-    own fixes still apply."""
+def refresh_siblings(db: Session, draft: Draft, before: str, after: str, start: int, old: str, new: str, done: Finding) -> None:
+    """A fix replaced `old` at `start` in `before` with `new`. Every other
+    open finding on that passage (`after` is the new text) is brought up to date, so no finding points at text that is gone and no
+    suggested fix can put old text back:
+    - exact findings are checked again on the new text: still a problem, they move to where it now is, with
+      a fresh fix; fixed by the change, they are closed with a note;
+    - AI findings follow a change inside their passage, and are closed if their passage was rewritten."""
     end = start + len(old)
+    body = after
+    region = (start, start + len(new))  # where the change is in the new text
+    fresh = None
     for f in db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status == "open", Finding.image_id.is_(None)):
-        p = before.find(f.quote)
-        if f is done or p == -1 or not (p <= start and end <= p + len(f.quote)) or f.quote == old:
+        if f is done:
             continue
-        f.quote = before[p:start] + new + before[end:p + len(f.quote)]
-        if f.suggestion:
-            f.suggestion = re.sub(r"(?<![\w-])" + re.escape(old) + r"(?![\w-])", new.replace("\\", "\\\\"), f.suggestion, count=1)
+        hits = spans(before, f.quote) or ([[before.find(f.quote), before.find(f.quote) + len(f.quote)]] if f.quote in before else [])
+        p = next((a for a, z in hits if a < end and start < z), None) if hits else None
+        if p is None:
+            continue  # not on the changed passage
+        contains = p <= start and end <= p + len(f.quote)
+        lo, hi = min(p, start), max(p + len(f.quote), end) + len(new) - len(old)
+        if f.source == "exact":
+            if fresh is None:
+                b = draft.brand_id
+                fresh = run_exact(body, db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all(),
+                                  db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all(),
+                                  channel=draft.channel or "")
+            same = [x for x in fresh if x["ref_code"] == f.ref_code
+                    and (f.ref_code != "TERM" or x["ref_text"] == f.ref_text)
+                    and any(a < hi and lo < z for a, z in spans(body, x["quote"]))]
+            if same:
+                f.quote, f.suggestion, f.reason = same[0]["quote"], same[0]["suggestion"], same[0]["reason"]
+                continue
+        elif contains:
+            f.quote = before[p:start] + new + before[end:p + len(f.quote)]
+            if f.suggestion:
+                f.suggestion = re.sub(r"(?<![\w-])" + re.escape(old) + r"(?![\w-])", new.replace("\\", "\\\\"), f.suggestion, count=1)
+            continue
+        elif find_quote(body, f.quote) != -1 and not (region[0] < p + len(f.quote) and p < region[1]):
+            continue
+        f.status, f.decided_by = "edited", done.decided_by
+        f.note = f"Fixed along with {done.ref_code}: the passage was rewritten."
 
 
 def new_version(db: Session, draft: Draft, user: User, body: str, note: str) -> None:
@@ -208,12 +237,14 @@ WEIGHT = {"high": 15, "medium": 6, "low": 2}
 
 
 def score(d: Draft, findings: list) -> int | None:
-    """How ready the draft is to send, 0 to 100: 100, less 15 for each open high-risk finding, 6 for each
-    medium and 2 for each low. A summary of what is left to handle, not a judgement of the writing.
+    """How ready the draft is to send, 0 to 100. 100 when nothing is open; each open finding lowers it, a
+    high-risk one most (weights 15, 6 and 2), as 100 x 30 / (30 + open weight). It never sits at 0, so
+    every fix visibly raises it. A summary of what is left to handle, not a judgement of the writing.
     None until the draft has been checked."""
     if not d.checked_version:
         return None
-    return max(0, 100 - sum(WEIGHT.get(f.severity, 0) for f in findings if f.status in BLOCKING))
+    weight = sum(WEIGHT.get(f.severity, 0) for f in findings if f.status in BLOCKING)
+    return round(100 * 30 / (30 + weight))
 
 
 def is_certain(f: Finding) -> bool:
@@ -390,7 +421,7 @@ def apply_fix(db: Session, finding: Finding, draft: Draft, user: User, replaceme
         raise HTTPException(409, "The quoted text is no longer in the draft. Run the check again.")
     new_version(db, draft, user, replace_at(draft.body, start, finding.quote, replacement),
                 f"{'Accepted' if status == 'accepted' else 'Own fix for'} {finding.ref_code}")
-    carry_over(db, draft, before, start, finding.quote, replacement, finding)
+    refresh_siblings(db, draft, before, draft.body, start, finding.quote, replacement, finding)
     finding.status, finding.decided_by = status, user.id
     finding.note = f"Replaced with: {replacement}"
     log(db, user, f"finding_{status}", f"{finding.ref_code}: \"{finding.quote}\" -> \"{replacement}\"", draft.id)
@@ -429,12 +460,12 @@ def accept_certain(draft_id: int, db: Session = Depends(get_db), user: User = De
     body = draft.body
     done = []
     for f in todo:
-        start = find_quote(body, f.quote)
+        start = find_quote(body, f.quote) if f.status == "open" else -1  # a sibling fix may have closed it
         if start != -1:
             before = body
             body = replace_at(body, start, f.quote, f.suggestion)
             f.status, f.decided_by, f.note = "accepted", user.id, f"Replaced with: {f.suggestion}"
-            carry_over(db, draft, before, start, f.quote, f.suggestion, f)
+            refresh_siblings(db, draft, before, body, start, f.quote, f.suggestion, f)
             done.append(f"{f.ref_code}: \"{f.quote}\" -> \"{f.suggestion}\"")
     new_version(db, draft, user, body, f"Applied {len(done)} certain fix(es)")
     log(db, user, "finding_accepted", "; ".join(done)[:1000], draft.id)

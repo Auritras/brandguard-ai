@@ -136,3 +136,28 @@ def test_certain_fixes_include_figures_but_never_ai_rewrites_and_score_follows(c
     assert "customers" in d["body"] and "8,200 companies" in d["body"]
     assert any(f["ref_code"] == "R-002" and f["status"] == "open" for f in d["findings"])  # left for a person
     assert d["score"] > before
+
+
+def test_rewriting_a_sentence_rechecks_every_other_finding_on_it(client, creator):
+    """The case from the critique: one fix rewrites the whole sentence. The term and the wrong figure in it
+    must not stay open with fixes that would put the old text (and "#1") back."""
+    d = make(client, creator, "Lumio Pay is now India's #1 payroll app, trusted by 10,000 companies. Book a demo.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    fact = next(f for f in d["findings"] if f["ref_code"] == "F-001")
+    d = client.post(f"/api/findings/{fact['id']}/edit", headers=creator,
+                    json={"replacement": "Lumio Payroll is trusted by 8,200 companies in India."}).json()
+    still = {f["ref_code"]: f for f in d["findings"] if f["status"] == "open"}
+    assert "TERM" not in still and "R-002" not in still  # both fixed by the rewrite, so closed
+    closed = [f for f in d["findings"] if f["ref_code"] in ("TERM", "R-002")]
+    assert all("Fixed along with F-001" in f["note"] for f in closed)
+
+
+def test_a_rewrite_that_keeps_a_problem_keeps_its_finding_at_the_new_place(client, creator):
+    d = make(client, creator, "Lumio Pay is now India's #1 payroll app, trusted by 10,000 companies.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    fact = next(f for f in d["findings"] if f["ref_code"] == "F-001")
+    d = client.post(f"/api/findings/{fact['id']}/accept", headers=creator).json()  # fixes the figure only
+    still = {f["ref_code"]: f for f in d["findings"] if f["status"] == "open"}
+    assert still["TERM"]["quote"] == "Lumio Pay" and still["R-002"]["quote"] == "#1"
+    for f in still.values():
+        assert "10,000" not in (f["suggestion"] or "")  # no stale fix that would undo the accepted one
