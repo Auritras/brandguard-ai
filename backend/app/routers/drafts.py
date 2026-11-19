@@ -180,7 +180,8 @@ def blocking_findings(db: Session, draft: Draft) -> list[Finding]:
 def finding_out(f: Finding) -> dict:
     return {"id": f.id, "version": f.version, "source": f.source, "category": f.category, "severity": f.severity,
             "quote": f.quote, "ref_code": f.ref_code, "ref_text": f.ref_text, "reason": f.reason,
-            "suggestion": f.suggestion, "status": f.status, "note": f.note, "image_id": f.image_id}
+            "suggestion": f.suggestion, "status": f.status, "note": f.note, "image_id": f.image_id,
+            "certain": is_certain(f)}
 
 
 def image_out(img: DraftImage) -> dict:
@@ -199,7 +200,25 @@ def summary(db: Session, d: Draft) -> dict:
             "due_date": d.due_date.isoformat() if d.due_date else None,
             "open": sum(1 for f in findings if f.status == "open"),
             "disputed": sum(1 for f in findings if f.status == "disputed"),
-            "blocking": sum(1 for f in findings if f.severity == "high" and f.status in BLOCKING)}
+            "blocking": sum(1 for f in findings if f.severity == "high" and f.status in BLOCKING),
+            "score": score(d, findings)}
+
+
+WEIGHT = {"high": 15, "medium": 6, "low": 2}
+
+
+def score(d: Draft, findings: list) -> int | None:
+    """How ready the draft is to send, 0 to 100: 100, less 15 for each open high-risk finding, 6 for each
+    medium and 2 for each low. A summary of what is left to handle, not a judgement of the writing.
+    None until the draft has been checked."""
+    if not d.checked_version:
+        return None
+    return max(0, 100 - sum(WEIGHT.get(f.severity, 0) for f in findings if f.status in BLOCKING))
+
+
+def is_certain(f: Finding) -> bool:
+    """Fixes made by plain code, not by AI: a preferred term, or the approved figure for a wrong number."""
+    return bool(f.suggestion) and f.image_id is None and (f.ref_code == "TERM" or f.ref_code.startswith("F-"))
 
 
 def detail(db: Session, d: Draft, user: User) -> dict:
@@ -396,16 +415,17 @@ def apply_image_fix(db: Session, finding: Finding, draft: Draft, user: User, rep
     db.commit()
 
 
-@router.post("/drafts/{draft_id}/accept-low")
-def accept_low(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    """Accept every open low-risk suggested fix in the text at once, as one new version."""
+@router.post("/drafts/{draft_id}/accept-certain")
+@router.post("/drafts/{draft_id}/accept-low")  # the earlier name
+def accept_certain(draft_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Apply every certain fix at once, as one new version: preferred terms and approved figures, which come
+    from code, not AI. AI-written rewrites are still accepted one by one by a person."""
     draft = get_draft(db, draft_id, user, lock=True)
     own_editable(draft, user)
-    todo = [f for f in db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status == "open",
-                                                 Finding.severity == "low", Finding.image_id.is_(None)).order_by(Finding.id)
-            if f.suggestion and find_quote(draft.body, f.quote) != -1]
+    todo = [f for f in db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status == "open").order_by(Finding.id)
+            if is_certain(f) and find_quote(draft.body, f.quote) != -1]
     if not todo:
-        raise HTTPException(409, "There are no low-risk suggested fixes left to accept.")
+        raise HTTPException(409, "There are no certain fixes left to apply.")
     body = draft.body
     done = []
     for f in todo:
@@ -416,7 +436,7 @@ def accept_low(draft_id: int, db: Session = Depends(get_db), user: User = Depend
             f.status, f.decided_by, f.note = "accepted", user.id, f"Replaced with: {f.suggestion}"
             carry_over(db, draft, before, start, f.quote, f.suggestion, f)
             done.append(f"{f.ref_code}: \"{f.quote}\" -> \"{f.suggestion}\"")
-    new_version(db, draft, user, body, f"Accepted {len(done)} low-risk fix(es)")
+    new_version(db, draft, user, body, f"Applied {len(done)} certain fix(es)")
     log(db, user, "finding_accepted", "; ".join(done)[:1000], draft.id)
     db.commit()
     return detail(db, draft, user)

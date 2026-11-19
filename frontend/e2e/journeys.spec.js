@@ -56,10 +56,10 @@ test('Lumio: write, fix, send, escalate, waive and approve, with an image', asyn
   await noSeriousA11yProblems(page, 'draft')
 
   // fix what can be fixed: all low-risk terms at once, the number, and the image description
-  await page.getByRole('button', { name: /Accept all \d+ low-risk fixes/ }).click()
+  // (the check ran on the draft page in two steps)
+  await page.getByRole('button', { name: /Apply all \d+ certain fixes/ }).click()
+  await expect(page.getByRole('heading', { name: /Applied \d+ certain fixes/ })).toBeVisible() // before and after
   await expect(page.getByText('Lumio Payroll is now India').first()).toBeVisible()
-  const fact = page.locator('[id^=finding-]').filter({ hasText: 'the approved figure is 8,200' })
-  await fact.getByRole('button', { name: 'Accept fix' }).click()
   await expect(page.getByRole('heading', { name: 'Content' }).locator('xpath=../../..')).toContainText('trusted by 8,200 companies')
   const alt = page.locator('[id^=finding-]').filter({ hasText: 'This image has no description' })
   await alt.getByRole('button', { name: 'Write my own description' }).click()

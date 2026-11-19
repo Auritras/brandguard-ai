@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
-import { Button, Card, ErrorNote, PageLoading, StatusChip, timeAgo, Term } from '../ui.jsx'
+import { Button, Card, ErrorNote, PageLoading, ScoreRing, StatusChip, timeAgo, Term } from '../ui.jsx'
 import { dueLabel } from '../due.js'
 
 // Same order as the channel picker on the new draft form.
@@ -165,7 +165,10 @@ export default function Drafts({ user }) {
               {waiting(d) && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-accent" />}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-muted">{d.channel || 'No channel'}</span>
-                <StatusChip status={d.status} />
+                <span className="flex items-center gap-2">
+                  <StatusChip status={d.status} />
+                  {d.score !== null && d.status !== 'approved' && <ScoreRing value={d.score} size={34} />}
+                </span>
               </div>
               <p className="mt-3 line-clamp-2 font-display text-lg font-bold leading-snug">{d.title}</p>
               <p className="mb-4 mt-1 text-sm text-muted">

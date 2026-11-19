@@ -72,7 +72,7 @@ def test_channel_limits(client, creator):
 def test_accept_all_low_risk_fixes_in_one_version(client, creator):
     d = make(client, creator, "Our clients pay their staff with Lumio Pay. It is the best.")
     d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
-    d = client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).json()
+    d = client.post(f"/api/drafts/{d['id']}/accept-certain", headers=creator).json()
     assert d["body"] == "Our customers pay their employees with Lumio Payroll. It is the best." and d["version"] == 2
     assert any(f["ref_code"] == "R-002" and f["status"] == "open" for f in d["findings"])  # high risk stays for a person
     assert client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).status_code == 409
@@ -111,7 +111,8 @@ def test_due_date_and_csv_rules(client, creator, reviewer):
 def test_a_fix_inside_a_flagged_sentence_keeps_the_sentence_fix_working(client, creator):
     d = make(client, creator, "Lumio Pay is trusted by 10,000 companies.")
     d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
-    d = client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).json()  # "Lumio Pay" -> "Lumio Payroll"
+    term = next(f for f in d["findings"] if f["ref_code"] == "TERM")
+    d = client.post(f"/api/findings/{term['id']}/accept", headers=creator).json()  # "Lumio Pay" -> "Lumio Payroll"
     fact = next(f for f in d["findings"] if f["ref_code"] == "F-001")
     assert fact["quote"] == "Lumio Payroll is trusted by 10,000 companies."
     d = client.post(f"/api/findings/{fact['id']}/accept", headers=creator).json()
@@ -121,7 +122,17 @@ def test_a_fix_inside_a_flagged_sentence_keeps_the_sentence_fix_working(client, 
 def test_carry_over_does_not_touch_a_longer_word(client, creator):
     d = make(client, creator, "Lumio Payroll, not Lumio Pay, has 10,000 companies.")
     d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
-    d = client.post(f"/api/drafts/{d['id']}/accept-low", headers=creator).json()
-    fact = next(f for f in d["findings"] if f["ref_code"] == "F-001")
-    assert fact["quote"] == "Lumio Payroll, not Lumio Payroll, has 10,000 companies." == d["body"]
-    assert "Payrollroll" not in fact["suggestion"]
+    d = client.post(f"/api/drafts/{d['id']}/accept-certain", headers=creator).json()
+    assert d["body"] == "Lumio Payroll, not Lumio Payroll, has 8,200 companies."
+    assert "Payrollroll" not in d["body"]
+
+
+def test_certain_fixes_include_figures_but_never_ai_rewrites_and_score_follows(client, creator):
+    d = make(client, creator, "Our clients love it. Trusted by 10,000 companies. It is the best.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    before = d["score"]
+    assert before < 100
+    d = client.post(f"/api/drafts/{d['id']}/accept-certain", headers=creator).json()
+    assert "customers" in d["body"] and "8,200 companies" in d["body"]
+    assert any(f["ref_code"] == "R-002" and f["status"] == "open" for f in d["findings"])  # left for a person
+    assert d["score"] > before

@@ -5,7 +5,7 @@ import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
 import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
 import { dueLabel } from '../due.js'
-import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, SEVERITY, StatusChip, Term, inputCls, timeAgo } from '../ui.jsx'
+import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, ScoreRing, SEVERITY, StatusChip, Term, inputCls, timeAgo } from '../ui.jsx'
 
 // Split the text into plain and highlighted pieces, one highlight per open or disputed finding.
 function highlight(body, findings) {
@@ -85,7 +85,7 @@ function nextStep(d, user) {
 export default function DraftView({ user }) {
   const { id } = useParams()
   const [d, setD] = useState(null)
-  const [error, setError] = useState(useLocation().state?.note || '')
+  const [error, setError] = useState(window.history.state?.usr?.note || '')
   const [busy, setBusy] = useState('')
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
@@ -96,6 +96,12 @@ export default function DraftView({ user }) {
   const [acted, setActed] = useState(false) // status and next-step only animate after an action here
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [picked, setPicked] = useState(null) // the group of findings selected from the text or a card
+  const [hovered, setHovered] = useState(null) // the group under the pointer: its phrase lights up
+  const [stages, setStages] = useState(null) // the check, step by step: { exact, full, exactCount, images }
+  const [preview, setPreview] = useState(null) // exact findings shown while the full check is still running
+  const [compare, setCompare] = useState(null) // { before, after, count } after applying all certain fixes
+  const location = useLocation()
+  const autoChecked = useRef(false)
   const navigate = useNavigate()
   const contentRef = useRef(null)
   const rewriteTimer = useRef()
@@ -135,7 +141,7 @@ export default function DraftView({ user }) {
       }
       setActed(true)
       setD(next)
-      return true
+      return next
     } catch (e) {
       setError(e.message)
       // Someone else acted first, or the draft moved on: show the latest instead of a stale page.
@@ -146,11 +152,48 @@ export default function DraftView({ user }) {
     }
   }
 
-  const pieces = useMemo(() => (d ? highlight(d.body, d.findings) : []), [d])
+  // The check in two real steps: the instant exact checks first (shown at once), then the full check with
+  // AI and images. The strip says which step is running; nothing is shown as done before it is.
+  const runCheck = async () => {
+    const cur = latest.current
+    if (!cur) return
+    setPicked(null)
+    setStages({ exact: 'running', full: 'waiting', images: cur.images.length > 0, exactCount: 0 })
+    setBusy('check')
+    try {
+      const found = await api('/check-text', { method: 'POST', body: { body: cur.body, channel: cur.channel } })
+      setPreview(found.map((f, i) => ({ ...f, id: `p${i}`, status: 'open', image_id: null, preview: true })))
+      setStages((x) => ({ ...x, exact: 'done', exactCount: found.length, full: 'running' }))
+    } catch {
+      setStages((x) => ({ ...x, exact: 'skipped', full: 'running' }))
+    }
+    const next = await act('check', `/drafts/${cur.id}/check`)
+    setPreview(null)
+    setStages((x) => (next ? { ...x, full: 'done', ai: next.run?.ai_used } : null))
+    setTimeout(() => setStages((x) => (x?.full === 'done' ? null : x)), 4000)
+  }
+  // Arriving from "Save and run check": run it here, so the writer watches it happen.
+  useEffect(() => {
+    if (!d || autoChecked.current || !location.state?.autoCheck) return
+    autoChecked.current = true
+    navigate(location.pathname, { replace: true, state: location.state?.note ? { note: location.state.note } : null })
+    if (d.can.edit && !d.run) runCheck()
+  }, [d]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyCertain = async () => {
+    const before = latest.current.body
+    const count = certainFixes
+    const next = await act('certain', `/drafts/${latest.current.id}/accept-certain`)
+    if (next) setCompare({ before, after: next.body, count })
+  }
+
+  const pieces = useMemo(() => (d ? highlight(d.body, preview || d.findings) : []), [d, preview])
   if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
-  const lowFixes = d.findings.filter((f) => f.status === 'open' && f.severity === 'low' && f.suggestion && !f.image_id && d.body.includes(f.quote)).length
+  const certainFixes = d.findings.filter((f) => f.status === 'open' && f.certain && d.body.includes(f.quote)).length
+  // The left edge of the action bar moves from orange to green as the draft gets closer to ready.
+  const edge = d.score === null ? 'var(--color-accent)' : `color-mix(in oklab, var(--color-good) ${d.score}%, var(--color-accent))`
   const active = d.findings.filter(isActive)
   const shown = active.map((f) => ({ f }))
   for (const { f, at } of leaving) if (!active.some((a) => a.id === f.id)) shown.splice(Math.min(at, shown.length), 0, { f, leaving: true })
@@ -169,13 +212,16 @@ export default function DraftView({ user }) {
   const focus = (fid) => {
     const key = keys[fid]
     setPicked(key)
-    document.getElementById(`group-${key}`)?.scrollIntoView({ behavior: smooth(), block: 'nearest' })
+    const el = document.getElementById(`group-${key}`)
+    el?.scrollIntoView({ behavior: smooth(), block: 'nearest' })
+    pulse(el)
   }
   // Findings -> text: select the group and bring its highlight into view.
   const showInText = (key) => {
     setPicked(key)
     const el = document.querySelector(`[data-group="${key}"]`) || (key.startsWith('img') && document.getElementById(`image-${key.slice(3)}`))
     el?.scrollIntoView({ behavior: smooth(), block: 'center' })
+    pulse(el)
   }
   let markIndex = 0
 
@@ -198,13 +244,14 @@ export default function DraftView({ user }) {
       </p>
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>
-        {yourTurn && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-accent" />}
+        {yourTurn && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 transition-colors duration-700" style={{ background: edge }} />}
+        {d.score !== null && d.status !== 'approved' && <ScoreRing value={d.score} />}
         <p className="min-w-0 flex-1 basis-64 overflow-hidden text-sm font-semibold" aria-live="polite">
           <span key={nextStep(d, user)} className={acted ? 'step-in block' : 'block'}>{nextStep(d, user)}</span>
         </p>
         {d.can.edit && (
           <>
-            <Button kind={d.needs_check ? 'primary' : 'secondary'} disabled={!!busy} onClick={() => act('check', `/drafts/${d.id}/check`)}>
+            <Button kind={d.needs_check ? 'primary' : 'secondary'} disabled={!!busy} onClick={runCheck}>
               {busy === 'check' ? 'Checking…' : 'Run check'}
             </Button>
             <Button kind={d.needs_check ? 'secondary' : 'primary'} disabled={!!busy || d.needs_check} onClick={() => act('submit', `/drafts/${d.id}/submit`)}>
@@ -235,10 +282,10 @@ export default function DraftView({ user }) {
         ) : (
           <Button kind="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
         ))}
-        {d.can.edit && lowFixes > 0 && (
-          <Button disabled={!!busy} onClick={() => act('accept-low', `/drafts/${d.id}/accept-low`)}
-            title="Terminology and other low-risk findings with a ready-made fix">
-            {busy === 'accept-low' ? 'Fixing…' : `Accept all ${lowFixes} low-risk fixes`}
+        {d.can.edit && certainFixes > 0 && (
+          <Button disabled={!!busy} onClick={applyCertain}
+            title="Preferred terms and approved figures: fixes made by code, not AI. AI rewrites stay for you to accept one by one.">
+            {busy === 'certain' ? 'Fixing…' : `Apply all ${certainFixes} certain fix${certainFixes > 1 ? 'es' : ''}`}
           </Button>
         )}
         {d.can.request_changes && (
@@ -246,9 +293,11 @@ export default function DraftView({ user }) {
             onSubmit={(note) => act('changes', `/drafts/${d.id}/request-changes`, { note })} />
         )}
       </Card>
+      {stages && <CheckSteps s={stages} />}
       <div className="mt-3">
         <ErrorNote>{error}</ErrorNote>
       </div>
+      {compare && <BeforeAfter c={compare} onClose={() => setCompare(null)} />}
 
       <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
         {/* Left: the content. On a phone the findings come straight after it. */}
@@ -293,9 +342,11 @@ export default function DraftView({ user }) {
               ) : (
               <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8">
                 {pieces.map((p, i) =>
-                  p.f ? (
+                  p.f?.preview ? (
+                    <mark key={`p${p.f.id}`} className={`${SEVERITY[p.f.severity].mark} sweep`} style={{ '--i': markIndex++ }}>{p.text}</mark>
+                  ) : p.f ? (
                     <mark key={`f${p.f.id}`} tabIndex={0} role="button" data-group={keys[p.f.id]} aria-pressed={picked === keys[p.f.id]}
-                      className={`${SEVERITY[p.f.severity].mark} sweep cursor-pointer ${picked === keys[p.f.id] ? 'mark-picked' : ''}`} style={{ '--i': markIndex++ }}
+                      className={`${SEVERITY[p.f.severity].mark} sweep cursor-pointer ${picked === keys[p.f.id] ? 'mark-picked' : ''} ${hovered === keys[p.f.id] ? 'mark-hover' : ''}`} style={{ '--i': markIndex++ }}
                       aria-label={`${SEVERITY[p.f.severity].label} risk finding: ${p.text}. Show its findings`}
                       onClick={() => focus(p.f.id)} onKeyDown={(e) => e.key === 'Enter' && focus(p.f.id)}>
                       {p.text}
@@ -372,14 +423,14 @@ export default function DraftView({ user }) {
         {/* Right: findings and disclosure */}
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <h2 className="font-display text-xl font-bold">
-            <Term name="finding">Findings</Term> <span className="text-base font-normal text-muted">(<RollNumber value={active.length} /> to handle)</span>
+            <Term name="finding">Findings</Term> <span className="text-base font-normal text-muted">(<RollNumber value={preview ? preview.length : active.length} /> {preview ? 'found so far' : 'to handle'})</span>
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
           {d.run && !d.run.ai_used && /failed|could not/i.test(d.run.ai_note) && (
             <Card className="border-accent/50 bg-accent-soft p-4 text-sm">
               <p><span className="font-semibold">The AI part of the check did not run this time.</span> Only the exact checks ran, so tone, positioning and unsupported claims were not judged.</p>
               {d.can.edit && (
-                <Button className="mt-2" kind="dark" disabled={!!busy} onClick={() => act('check', `/drafts/${d.id}/check`)}>
+                <Button className="mt-2" kind="dark" disabled={!!busy} onClick={runCheck}>
                   {busy === 'check' ? 'Checking…' : 'Run the check again'}
                 </Button>
               )}
@@ -394,21 +445,27 @@ export default function DraftView({ user }) {
               <p><span className="font-semibold">No open findings.</span> {d.needs_check ? 'Run the check again to confirm.' : 'The latest version passed the check.'}</p>
             </Card>
           )}
-          {groups.map((g, gi) => {
+          {preview && <PreviewCards items={preview} stages={stages} />}
+          {!preview && groups.map((g, gi) => {
             const live = g.items.filter((x) => !x.leaving).length
             const on = picked === g.key
+            const link = {
+              onMouseEnter: () => setHovered(g.key), onMouseLeave: () => setHovered(null),
+              onFocus: () => setHovered(g.key), onBlur: () => setHovered(null),
+              onClick: (e) => { if (!e.target.closest('button, a, input, textarea, select, label, summary')) showInText(g.key) },
+            }
             if (g.items.length === 1) {
               const { f, leaving: out } = g.items[0]
               return (
-                <div key={g.key} id={`group-${g.key}`} className={`scroll-mt-24 rounded-lg transition-shadow ${on ? 'picked' : ''}`}>
+                <div key={g.key} id={`group-${g.key}`} {...link} className={`scroll-mt-24 cursor-pointer rounded-lg transition-shadow ${on ? 'picked' : ''}`}>
                   <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} leaving={out} onShow={() => showInText(g.key)} />
                 </div>
               )
             }
             const text = sentence(g.key)
             return (
-              <section key={g.key} id={`group-${g.key}`} aria-label={`${live} findings on one ${g.key.startsWith('img') ? 'image' : 'sentence'}`}
-                className={`stamp-in scroll-mt-24 rounded-xl border-2 border-dashed border-line bg-black/[0.02] p-3 transition-shadow ${on ? 'picked' : ''}`} style={{ '--i': gi }}>
+              <section key={g.key} id={`group-${g.key}`} {...link} aria-label={`${live} findings on one ${g.key.startsWith('img') ? 'image' : 'sentence'}`}
+                className={`stamp-in scroll-mt-24 cursor-pointer rounded-xl border-2 border-dashed border-line bg-black/[0.02] p-3 transition-shadow ${on ? 'picked' : ''}`} style={{ '--i': gi }}>
                 <div className="flex items-start justify-between gap-3 px-1 pb-2">
                   <p className="text-sm">
                     <span className="font-semibold">{live} findings on {g.key.startsWith('img') ? 'this image' : g.key === 'whole' ? 'the whole text' : 'this sentence'}</span>
@@ -459,6 +516,91 @@ export default function DraftView({ user }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// One short outline pulse on whatever was just selected (skipped with reduced motion).
+function pulse(el) {
+  if (!el?.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  el.animate([{ boxShadow: '0 0 0 0 color-mix(in srgb, var(--color-accent) 70%, transparent)' },
+    { boxShadow: '0 0 0 10px transparent' }], { duration: 450, easing: 'ease-out' })
+}
+
+// Which part of the check is running, in the order it really happens.
+function CheckSteps({ s }) {
+  const step = (state, label, extra) => (
+    <span className={`flex items-center gap-1.5 ${state === 'waiting' ? 'text-muted' : ''}`}>
+      {state === 'running' ? <span aria-hidden="true" className="spinner text-primary" />
+        : state === 'done' ? <span aria-hidden="true" className="font-bold text-good">✓</span>
+          : <span aria-hidden="true" className="h-2 w-2 rounded-full bg-black/15" />}
+      {label}{extra}
+    </span>
+  )
+  const running = s.exact === 'running' || s.full === 'running'
+  return (
+    <div role="status" aria-live="polite" className="toast-in relative mt-3 overflow-hidden rounded-lg border-2 border-line bg-card px-4 py-2 text-sm font-semibold">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+        {step(s.exact === 'skipped' ? 'done' : s.exact, 'Exact checks', s.exact === 'done' ? ` · ${s.exactCount} found` : '')}
+        {step(s.full, s.images ? 'AI review and images' : 'AI review', s.full === 'running' ? '…' : s.full === 'done' && s.ai === false ? ' · AI did not run' : '')}
+        {step(s.full === 'done' ? 'done' : 'waiting', 'Verified and saved')}
+      </div>
+      {running && <span aria-hidden="true" className="check-progress absolute inset-x-0 top-0 h-0.5" />}
+    </div>
+  )
+}
+
+// While the full check runs, the exact findings are already shown, read-only, with a slot for the AI.
+function PreviewCards({ items, stages }) {
+  return (
+    <>
+      {items.map((f, i) => (
+        <Card key={f.id} className="stamp-in p-4" style={{ '--i': i }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip className={SEVERITY[f.severity].chip}>{SEVERITY[f.severity].label} risk</Chip>
+            <span className="text-xs text-muted">Found by an exact check · {f.ref_code === 'TERM' ? 'terms' : f.ref_code}</span>
+          </div>
+          <p className="mt-2 text-sm"><span className={`rounded px-1 ${SEVERITY[f.severity].mark}`}>“{f.quote}”</span></p>
+          <p className="mt-1 text-sm text-muted">{f.reason}</p>
+        </Card>
+      ))}
+      {stages?.full === 'running' && (
+        <Card className="stamp-in flex items-center gap-3 p-4 text-sm" style={{ '--i': items.length }}>
+          <span aria-hidden="true" className="spinner text-primary" />
+          <span><span className="font-semibold">The AI is reading for tone, positioning and claims{stages.images ? ', and the images' : ''}.</span>
+            <span className="block text-muted">Its findings are checked against the draft before they are shown. Fixes come with the full results.</span></span>
+        </Card>
+      )}
+    </>
+  )
+}
+
+// After applying all certain fixes: the text before and after, side by side, with each change marked.
+function BeforeAfter({ c, onClose }) {
+  const parts = diffWords(c.before, c.after)
+  return (
+    <Card className="step-in mt-3 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold">Applied {c.count} certain fix{c.count > 1 ? 'es' : ''}</h2>
+          <p className="mt-1 text-sm text-muted">Preferred terms and approved figures, made by code. Saved as a new version; run the check again before sending.</p>
+        </div>
+        <Button kind="ghost" onClick={onClose}>Close</Button>
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Before</p>
+          <p className="mt-1 whitespace-pre-wrap rounded-md border-2 border-line bg-white p-3 text-sm leading-7">
+            {parts.filter((x) => x.type !== 'added').map((x, i) => (x.type === 'removed' ? <del key={i} className="diff-removed">{x.text}</del> : <span key={i}>{x.text}</span>))}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">After</p>
+          <p className="mt-1 whitespace-pre-wrap rounded-md border-2 border-line bg-white p-3 text-sm leading-7">
+            {parts.filter((x) => x.type !== 'removed').map((x, i) => (x.type === 'added' ? <ins key={i} className="diff-added">{x.text}</ins> : <span key={i}>{x.text}</span>))}
+          </p>
+        </div>
+      </div>
+    </Card>
   )
 }
 

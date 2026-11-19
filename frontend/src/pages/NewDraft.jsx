@@ -110,8 +110,8 @@ export default function NewDraft({ user }) {
         await api(`/drafts/${d.id}/images`, { method: 'POST', file: img.file, fields: { alt_text: img.alt } })
           .catch((err) => failed.push(`${img.file.name}: ${err.message}`))
       }
-      await api(`/drafts/${d.id}/check`, { method: 'POST' }).catch(() => {})
-      navigate(`/drafts/${d.id}`, { state: failed.length ? { note: `The draft was saved, but some images were not added. ${failed.join(' ')}` } : null })
+      // The check runs on the draft's page, so the writer sees it happen step by step.
+      navigate(`/drafts/${d.id}`, { state: { autoCheck: true, ...(failed.length ? { note: `The draft was saved, but some images were not added. ${failed.join(' ')}` } : {}) } })
     } catch (err) {
       setError(err.message)
       setBusy(false)
@@ -192,7 +192,7 @@ export default function NewDraft({ user }) {
           <ErrorNote>{error}</ErrorNote>
           <div className="flex gap-2">
             <Button kind="primary" type="submit" disabled={busy}>
-              {busy ? 'Checking…' : 'Save and run check'}
+              {busy ? 'Saving…' : 'Save and run check'}
             </Button>
             <Button kind="ghost" type="button" onClick={() => navigate('/')}>
               Cancel

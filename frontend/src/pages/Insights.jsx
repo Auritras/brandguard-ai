@@ -35,7 +35,7 @@ export default function Insights({ user }) {
               note={s.avg_hours_to_approval === null ? 'Nothing approved yet' : `From first draft to approved, across ${s.approved}`} />
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <Card className="p-5">
               <h2 className="font-display text-lg font-bold">Most broken rules</h2>
               <p className="mt-1 text-sm text-muted">Findings per rule, fact or term. A rule at the top may need clearer guidance for writers.</p>
@@ -87,9 +87,9 @@ function Bars({ rows, unit }) {
   if (rows.length === 0) return <p className="mt-4 text-sm text-muted">Nothing yet.</p>
   const max = Math.max(...rows.map((r) => r.value)) || 1
   return (
-    <ol className="mt-4 grid gap-3">
+    <ol className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
       {rows.map((r, i) => (
-        <li key={r.key} title={`${r.label}: ${r.value} ${unit}`}>
+        <li key={r.key} className="min-w-0" title={`${r.label}: ${r.value} ${unit}`}>
           <div className="flex items-baseline justify-between gap-3 text-sm">
             <span className="min-w-0 truncate"><span className="font-semibold">{r.label}</span> <span className="text-muted">{r.sub}</span></span>
             <span className="shrink-0 font-semibold tabular-nums">{r.value}</span>

@@ -16,6 +16,7 @@
   --color-accent-soft: #fbe5dc;
   --color-accent-deep: #8f3315;
   --color-muted: #5b5a45;
+  --color-good: #2c7a4b; /* ready: the score ring and the action bar edge as a draft nears done */
   --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
   --font-sans: "Public Sans", Arial, sans-serif;
   --font-signature: "Caveat", "Segoe Script", cursive;
@@ -403,3 +404,18 @@ mark.live-mark { padding: 0; border-radius: 2px; animation: sweep 0.45s cubic-be
    else is picked, so it is clear without relying on motion. */
 .picked { box-shadow: 0 0 0 3px var(--color-paper), 0 0 0 6px var(--color-accent); }
 mark.mark-picked { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+
+/* The ready-to-send ring fills or drains as findings are handled. */
+.score-arc { transition: stroke-dashoffset 0.8s cubic-bezier(0.3, 0.7, 0.2, 1), stroke 0.5s; }
+
+/* A thin moving line while a step of the check is running. */
+.check-progress {
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: check-progress 1.1s ease-in-out infinite;
+}
+@keyframes check-progress { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+
+/* Hovering a finding lights up its phrase in the text. */
+mark.mark-hover { outline: 2px dashed var(--color-ink); outline-offset: 2px; }
