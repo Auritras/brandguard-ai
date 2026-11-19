@@ -160,3 +160,16 @@ def test_compare_shows_each_demo_brand_flagging_differently(client):
     by = {b["key"]: {f["ref_code"] for f in b["findings"]} for b in out}
     assert "R-002" in by["lumio"] and "R-003" in by["fizzbox"]  # "the best" for Lumio, "healthy" for Fizzbox
     assert client.post("/api/demo/compare", json={"text": "x" * 1001}).status_code == 422
+
+
+def test_team_stats_show_what_waits_for_whom(client, creator, manager, reviewer):
+    from test_workflow import make
+    d = make(client, creator, "A calm post about payroll.")
+    client.post(f"/api/drafts/{d['id']}/check", headers=creator)
+    client.post(f"/api/drafts/{d['id']}/submit", headers=creator)
+    team = client.get("/api/team", headers=creator).json()
+    stats = client.get("/api/team/stats", headers=creator).json()
+    mgr = next(m for m in team if m["role"] == "manager")
+    me = next(m for m in team if m["you"])
+    assert stats[str(mgr["id"])]["waiting"] >= 1 and stats[str(me["id"])]["written"] >= 1
+    assert stats[str(me["id"])]["last_active"]

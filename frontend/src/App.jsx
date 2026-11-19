@@ -112,6 +112,13 @@ export default function App() {
     }
   }
 
+  // "Act as" buttons elsewhere (the Team page) ask for a switch with an event.
+  useEffect(() => {
+    const act = (e) => switchTo('/demo/switch', e.detail)
+    addEventListener('bg-act-as', act)
+    return () => removeEventListener('bg-act-as', act)
+  }) // re-bound every render so it always uses the current sign-in
+
   // A shared review record opens for anyone with the link, signed in or not.
   if (location.pathname.startsWith('/share/')) {
     return (

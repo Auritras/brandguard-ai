@@ -108,6 +108,36 @@ def restore(member_id: int, db: Session = Depends(get_db), user: User = Depends(
     return team(db, user)
 
 
+@router.get("/team/stats")
+def team_stats(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """For each teammate: what is waiting for them now, what they have done, and when they last acted.
+    All from the drafts and the brand's history; visible to everyone in the brand."""
+    from collections import Counter, defaultdict
+    from .drafts import WAITING
+    members = db.query(User).filter(User.brand_id == user.brand_id, User.active.isnot(False)).all()
+    drafts = db.query(Draft).filter(Draft.brand_id == user.brand_id, Draft.deleted_at.is_(None)).all()
+    done, last = defaultdict(Counter), {}
+    for a in db.query(AuditLog).filter(AuditLog.brand_id == user.brand_id).order_by(AuditLog.id):
+        done[a.user_id][a.action] += 1
+        if a.action != "demo_started":
+            last[a.user_id] = a.created_at
+    out = {}
+    for m in members:
+        if m.role == "creator":  # their own drafts sent back to them
+            waits = [d for d in drafts if d.creator_id == m.id and d.status in WAITING["creator"]]
+        else:  # drafts to review, never their own (nobody approves their own work)
+            waits = [d for d in drafts if d.status in WAITING.get(m.role, ()) and d.creator_id != m.id]
+        c = done[m.id]
+        out[m.id] = {
+            "waiting": len(waits),
+            "written": c["draft_created"], "sent": c["submitted_for_review"],
+            "approved": c["approved"] + c["sent_to_authorised_review"], "waived": c["finding_waived"],
+            "sent_back": c["changes_requested"], "comments": c["comment_added"],
+            "last_active": iso(last.get(m.id)),
+        }
+    return out
+
+
 @router.post("/team")
 def add_member(body: MemberIn, db: Session = Depends(get_db), user: User = Depends(owner)):
     not_demo(user)
