@@ -70,9 +70,25 @@ same image always gives the same result. Without an AI key, palette and descript
 - Motion: the record prints out of a slot, image measurements trace in, gauges sweep; all respect
   reduced motion.
 
+### Added on 20 November
+- **Run the test now** on the Reliability page: the exact checks on all 80 cases, live.
+- **Channel previews:** LinkedIn, Instagram and email, with where "…see more" cuts the text.
+- Reward moments: a stamp on approval, a count-up to the new score, a pop when a draft is clean.
+- **Hover a fix** to see the sentence as it would read; **undo** an accepted fix.
+- **Make this a rule:** the brand owner selects text in a draft and gets a rule drafted from it (the
+  pattern is built in code).
+- Image scan: every measured problem is labelled on the image, including where an off-brand colour sits.
+- **Precedents:** how the same rule was handled on earlier drafts.
+- Pages update by themselves when a teammate acts in another window; the draft list re-sorts smoothly.
+- Keyboard review (J / K, A, D), a share link for the sign-in comparison, and a nightly CI run of the
+  full check with AI (needs a `GROQ_API_KEY` repository secret).
+- A sliding tab marker, a spotlight in the tour, numbers that count up.
+- **Check many posts:** a content calendar or CSV, a verdict for every post.
+- **Dark mode**, opt-in.
+
 ### Testing and documentation
-- Browser tests of the main journeys in CI, with an accessibility scan (axe, WCAG 2 A and AA) of nine screens.
-- 61 backend tests, including the reliability gate.
+- Browser tests of the main journeys in CI, with an accessibility scan (axe, WCAG 2 A and AA) of nine screens, in light and dark.
+- 70 backend tests, including the reliability gate.
 - One-command local setup (`scripts/dev.sh`, `scripts/dev.ps1`), a roadmap, this changelog, and a
   testing report.
 

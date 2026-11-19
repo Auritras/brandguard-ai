@@ -5,7 +5,7 @@ and the load test runs on every push in GitHub Actions (`.github/workflows/tests
 
 | Layer | What it covers | Run it |
 |---|---|---|
-| Backend tests | 61 tests: auth and roles, brand isolation, the exact engine, the AI path with a fake model (verification, rate limits, failure), the full workflow, image review (measurements, findings, fixes, links), guideline gaps, hardening (stale pages, double clicks, limits, renamed files, channel limits), demo copies | `cd backend && python -m pytest` |
+| Backend tests | 70 tests: auth and roles, brand isolation, the exact engine, the AI path with a fake model (verification, rate limits, failure), the full workflow, image review (measurements, findings, fixes, links), guideline gaps, hardening (stale pages, double clicks, limits, renamed files, channel limits), demo copies | `cd backend && python -m pytest` |
 | Reliability gate | The 80 test drafts through the real check with exact checks only; fails if any planted problem is missed or a clean draft is flagged | part of the backend tests; also `python -m evals.run` |
 | Browser tests | The main journeys clicked through in Chromium against a real backend and website, plus an accessibility scan of each screen | `cd frontend && npm run e2e` |
 | AI evaluation | The 80 test drafts through the full check with AI | `cd backend && python -m evals.run --mode ai --save` |
@@ -47,6 +47,7 @@ The latest numbers, every miss and every false alarm are on the Reliability page
 3. **A new brand:** sign up, add a teammate, write a draft, see that you cannot approve your own, sign
    in as the teammate and approve it.
 4. **Every main page** loads and passes the accessibility scan; Ctrl+K navigation works.
+5. **Dark theme:** the same screens pass the accessibility scan with the dark theme on.
 
 Accessibility: axe-core with the WCAG 2 A and AA rules on nine screens (sign-in, drafts, new draft, a
 draft, the record, Brand health, Brand Library, Reliability, Team). The tests fail on any serious or

@@ -58,7 +58,15 @@ its library starts with sample rules you can change, and on **Team** you add tea
   reads the image; every judgement is measured in code. The draft page draws what was measured on the
   image.
 - Each finding: the quote, the cited rule or fact, the reason, the severity, a suggested fix. Accept it,
-  write your own, or dispute it. **Accept all low-risk fixes** does the terminology in one go.
+  write your own, or dispute it. **Accept all low-risk fixes** does the terminology in one go. Hover a
+  fix to see the sentence as it would read; a fix can be undone. Findings show how the same rule was
+  handled on earlier drafts (precedents). Keys: J / K move between findings, A accepts, D disputes.
+- **Channel previews:** how the draft looks as a LinkedIn post, an Instagram caption or an email, with
+  the point where "…see more" cuts it.
+- **Make this a rule** (brand owner): select text in a draft and get a rule drafted from it; the exact
+  pattern is built in code, the AI only words it.
+- **Check many posts:** paste a content calendar or upload a CSV and get a verdict for every post from
+  the exact checks; any post becomes a draft for the full check.
 - "How this was checked" on every review: what came from code and from AI, the provider and models,
   what was sent, how many AI findings were dropped.
 
@@ -68,6 +76,8 @@ its library starts with sample rules you can change, and on **Team** you add tea
   a written reason, decides the dispute, or sends it back. Approving and waiving are press-and-hold with
   a few seconds to undo.
 - Comments, every version (compare any two word by word), an append-only history, due dates.
+- Pages update by themselves when a teammate acts in another window (the draft list re-sorts smoothly,
+  the waiting badge updates, the draft page says who did what).
 - **Review record:** a printable page with the approved text, who approved it, every finding and how it
   was handled, and the full timeline. Share it read-only by link for 30 days, no account needed.
 
@@ -87,7 +97,8 @@ its library starts with sample rules you can change, and on **Team** you add tea
 **Reliability page**
 - The score of the check on 80 test drafts with planted problems (40 per brand, 10 of them clean), for
   exact checks and for the full check with AI: what it catches, how much of what it flags is real, the
-  trend over runs, per rule, and every miss and false alarm.
+  trend over runs, per rule, and every miss and false alarm. **Run the test now** runs the exact checks
+  on all 80 cases live in front of you.
 
 **Teams and access**
 - Each brand is a private workspace: every API route checks the person's brand. Owners add teammates,
@@ -108,7 +119,7 @@ From [docs/TESTING.md](docs/TESTING.md), where every number is explained:
 | Exact checks (every push): planted problems caught | 27 of 27 | 29 of 29 |
 | Full check with AI, last two runs: planted problems caught | 34 and 33 of 35 (97.1%, 94.3%) | 37 of 37 both times |
 | Full check with AI, last two runs: of what it flagged, real | 87.2%, 78.6% | 94.9%, 92.5% |
-| Browser journeys passing | 4 of 4, with an accessibility scan of 9 screens | |
+| Browser journeys passing | 5 of 5, with an accessibility scan of 9 screens, plus dark mode | |
 | Load test, live server | 15 people at once, 105 requests, 0 failed | |
 
 ## How it works
@@ -156,7 +167,7 @@ first run builds both demo brands and their drafts in it (exact checks only, abo
 `uvicorn app.main:app --port 8000`. In `frontend`, `npm ci` then `npm run dev` (it forwards `/api` to
 port 8000).
 
-**Tests:** `cd backend && python -m pytest` (61 tests, including the reliability gate) ·
+**Tests:** `cd backend && python -m pytest` (70 tests, including the reliability gate) ·
 `cd frontend && npm run e2e` (browser journeys; first time `npx playwright install chromium`) ·
 `cd backend && python -m evals.run` (the reliability score; `--mode ai` with a key).
 
@@ -183,8 +194,9 @@ brands people created are kept. `backend/.env` is ignored by git; never commit i
 
 ## Known limits
 
-- The AI evaluation is not run automatically in CI, because it needs an AI key stored there; it is run
-  by hand and its results are committed. The exact checks are scored on every push.
+- The exact checks are scored on every push. The full check with AI runs nightly in CI
+  (`reliability-ai.yml`) only once a `GROQ_API_KEY` repository secret is added; until then it is skipped
+  and run by hand, with results committed.
 - Logo checks compare shape and main colour. They do not catch a logo redrawn in a different font.
 - Contrast is measured per line of text; text on a busy photo can be measured on the wrong background.
 - Rules, terms and the AI prompts are in English. Hindi and other Indian scripts are checked for terms,
@@ -193,7 +205,7 @@ brands people created are kept. `backend/.env` is ignored by git; never commit i
 - No email notifications yet: the menu shows how many drafts wait for you.
 - The free server and AI plan limit how many checks can run at once; under heavy use the app asks you
   to wait a minute rather than failing silently.
-- Dark mode is not built.
+- Dark mode is opt-in (Account page, or the header menu); the default is the light theme.
 
 ## Repository layout
 
@@ -209,10 +221,11 @@ backend/
               drafts (review, workflow, images, sharing), insights (Brand health, guideline gaps),
               reliability
   evals/      cases/ (80 test drafts), run.py (the scorer), load.py, results/
-  tests/      61 tests
+  tests/      70 tests
 frontend/
-  src/pages/  Login, Drafts, NewDraft, DraftView, Record, Insights, Library, Reliability, Team, Account
-  src/        ImagePanel, GuidelineGaps, LiveText, Tour, CommandMenu, Resilience, ui, api
+  src/pages/  Login, Drafts, NewDraft, DraftView, Bulk, Record, Insights, Library, Reliability, Team, Account
+  src/        ImagePanel, ChannelPreview, MakeRule, LiveRun, CompareBrands, GuidelineGaps, LiveText,
+              Tour, CommandMenu, Resilience, poll, theme, ui, api
   e2e/        browser tests
 scripts/      dev.sh, dev.ps1: one-command local setup
 docs/         TESTING.md, the Round 2 deck
