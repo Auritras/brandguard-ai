@@ -71,3 +71,13 @@ def test_missing_rules_become_proposals(client, reviewer, manager, monkeypatch):
     lib = client.get("/api/library", headers=reviewer).json()
     proposed = [r for r in lib["rules"] if r["status"] == "proposed" and r["title"] == "Mention the free trial length"]
     assert proposed  # waiting for approval, not used in checks yet
+
+
+def test_make_a_rule_from_selected_text(client, reviewer, creator):
+    assert client.post("/api/rules/suggest", headers=creator, json={"phrase": "OMG"}).status_code == 403
+    s = client.post("/api/rules/suggest", headers=reviewer, json={"phrase": "OMG", "sentence": "OMG!! Payday is here."}).json()
+    assert s["patterns"] == r"\bOMG\b" and "OMG" in s["title"]
+    rule = client.post("/api/rules", headers=reviewer, json={k: s[k] for k in ("title", "text", "category", "severity", "patterns")}).json()
+    d = client.post("/api/drafts", headers=creator, json={"title": "Hype", "body": "OMG, payroll is done."}).json()
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    assert any(f["ref_code"] == rule["code"] for f in d["findings"])

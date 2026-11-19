@@ -229,3 +229,29 @@ def find_missing_rules(rules, notes: list[str]) -> list[dict]:
         if isinstance(r, dict) and str(r.get("text", "")).strip():
             out.append(r)
     return out[:5]
+
+
+FROM_TEXT_SYSTEM = """A brand owner selected a phrase in a draft and wants a brand rule against it.
+You get the BRAND's existing rules, the PHRASE, and the SENTENCE it came from.
+Write one rule that a writer can follow: what to avoid, and why, in plain words (one or two sentences).
+category is one of: tone, claims, messaging, accessibility. severity is one of: low, medium, high.
+Reply with JSON only: {"title":"short name","text":"the rule","category":"tone","severity":"medium"}"""
+
+
+def rule_from_text(phrase: str, sentence: str, rules) -> dict:
+    """A draft rule against a selected phrase. The exact pattern is always made in code from the phrase,
+    so the rule catches exactly that phrase; the AI only words the rule. Falls back to a plain wording."""
+    pattern = (r"\b" if re.match(r"\w", phrase) else "") + re.escape(phrase) + (r"\b" if re.search(r"\w$", phrase) else "")
+    base = {"title": f'Avoid "{phrase}"'[:200], "text": f'Do not use "{phrase}" in our content.', "category": "tone",
+            "severity": "medium", "patterns": pattern, "by": "code"}
+    if not config.AI_API_KEY:
+        return base
+    text = "RULES\n" + "\n".join(f"{r.code} {r.title}: {r.text}" for r in rules) + f"\n\nPHRASE: {phrase}\nSENTENCE: {sentence}"
+    try:
+        data = _chat(FROM_TEXT_SYSTEM, text)
+    except Exception:
+        return base
+    cat, sev = str(data.get("category", "")).lower(), str(data.get("severity", "")).lower()
+    return {"title": str(data.get("title") or base["title"])[:200], "text": str(data.get("text") or base["text"])[:1000],
+            "category": cat if cat in ("tone", "claims", "messaging", "accessibility") else "tone",
+            "severity": sev if sev in ("low", "medium", "high") else "medium", "patterns": pattern, "by": "ai"}

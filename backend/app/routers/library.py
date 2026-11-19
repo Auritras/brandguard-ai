@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import current_user, make_file_token, read_file_token, require
 from ..db import get_db
-from ..engine.ai import propose_rules
+from ..engine.ai import propose_rules, rule_from_text
 from ..engine.image import parse_palette, prepare
 from ..models import Brand, Fact, Rule, RuleVersion, Term, User
 from .common import iso, log, plural
@@ -218,6 +218,19 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db), user: User = Depend
 
 class BulkIn(BaseModel):
     rules: list[RuleIn] = Field(max_length=200)
+
+
+class FromTextIn(BaseModel):
+    phrase: str = Field(min_length=2, max_length=120)
+    sentence: str = Field("", max_length=1000)
+
+
+@router.post("/rules/suggest")
+def suggest_rule(body: FromTextIn, db: Session = Depends(get_db), user: User = Depends(owner)):
+    """A rule drafted from a phrase the owner selected in a draft. Nothing is saved: the owner edits it and
+    adds it with POST /rules."""
+    rules = db.query(Rule).filter(Rule.brand_id == user.brand_id, Rule.status == "approved").all()
+    return rule_from_text(body.phrase.strip(), body.sentence.strip(), rules)
 
 
 @router.post("/rules/bulk")

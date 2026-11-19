@@ -5,6 +5,7 @@ import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
 import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
 import ChannelPreview from '../ChannelPreview.jsx'
+import MakeRule from '../MakeRule.jsx'
 import { dueLabel } from '../due.js'
 import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, ScoreRing, SEVERITY, StatusChip, Term, inputCls, timeAgo, plural } from '../ui.jsx'
 
@@ -116,6 +117,8 @@ export default function DraftView({ user }) {
   const [hovered, setHovered] = useState(null) // the group under the pointer: its phrase lights up
   const [stages, setStages] = useState(null) // the check, step by step: { exact, full, exactCount, images }
   const [preview, setPreview] = useState(null) // exact findings shown while the full check is still running
+  const [selection, setSelection] = useState(null) // { phrase, sentence, x, y } text the owner selected
+  const [making, setMaking] = useState(null) // { phrase, sentence } turning into a rule
   const [trying, setTrying] = useState(null) // a fix being hovered: shown in the text, not yet applied
   const [view, setView] = useState('Text') // the text, or the draft as it would look in a channel
   const [compare, setCompare] = useState(null) // { before, after, count } after applying all certain fixes
@@ -221,6 +224,14 @@ export default function DraftView({ user }) {
   useEffect(() => {
     if (d && location.hash === '#images') setTimeout(() => document.getElementById('images')?.scrollIntoView({ block: 'start' }), 400)
   }, [!!d]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The "Make this a rule" button goes away on a click anywhere else.
+  useEffect(() => {
+    if (!selection) return
+    const away = (e) => { if (!e.target.closest?.('[data-make-rule]')) setSelection(null) }
+    addEventListener('mousedown', away)
+    return () => removeEventListener('mousedown', away)
+  }, [selection])
 
   // Arriving from "Save and run check": run it here, so the writer watches it happen.
   useEffect(() => {
@@ -368,6 +379,14 @@ export default function DraftView({ user }) {
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-1 lg:row-start-1">
           <Card className="relative overflow-hidden p-5" ref={contentRef}>
             {busy === 'check' && <div className="scan-bar" aria-hidden="true" style={{ '--scan-h': `${contentRef.current?.offsetHeight || 300}px` }} />}
+            {selection && (
+              <button data-make-rule style={{ left: selection.x, top: selection.y }}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { setMaking({ phrase: selection.phrase, sentence: selection.sentence }); setSelection(null); getSelection()?.removeAllRanges() }}
+                className="toast-in absolute z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border-2 border-ink bg-ink px-2.5 py-1 text-xs font-semibold text-paper shadow-print-sm">
+                Make this a rule
+              </button>
+            )}
             {(d.status === 'approved' || d.status === 'changes_requested') && (
               <span key={d.status} aria-hidden="true" className={`approved-stamp pointer-events-none absolute right-5 top-3 z-10 rounded-md border-[3px] bg-card px-3 py-0.5 font-display text-2xl font-extrabold uppercase tracking-wide ${
                 d.status === 'approved' ? 'border-primary text-primary' : 'border-accent text-accent-deep'}`}>
@@ -391,6 +410,7 @@ export default function DraftView({ user }) {
                 )}
               </div>
             </div>
+            {making && <MakeRule key={making.phrase} phrase={making.phrase} sentence={making.sentence} onClose={() => setMaking(null)} />}
             {editing ? (
               <div className="mt-3">
                 <label className="sr-only" htmlFor="body">Content</label>
@@ -423,7 +443,28 @@ export default function DraftView({ user }) {
               ) : view !== 'Text' ? (
                 <ChannelPreview view={view} d={d} pieces={pieces} brand={user.brand} />
               ) : (
-              <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8">
+              <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8"
+                onMouseUp={user.role === 'reviewer' ? (e) => {
+                  const sel = getSelection()
+                  let phrase = sel?.toString().trim() || ''
+                  // Snap to whole words, so the rule's pattern matches what was meant ("Running pa" -> "Running payroll").
+                  const found = d.body.indexOf(phrase)
+                  if (found !== -1) {
+                    let a = found, z = found + phrase.length
+                    while (a > 0 && /[\w'’-]/.test(d.body[a - 1])) a--
+                    while (z < d.body.length && /[\w'’-]/.test(d.body[z])) z++
+                    phrase = d.body.slice(a, z).trim()
+                  }
+                  if (phrase.length < 2 || phrase.length > 120 || !sel.rangeCount) return setSelection(null)
+                  const r = sel.getRangeAt(0).getBoundingClientRect()
+                  const box = contentRef.current.getBoundingClientRect()
+                  const at = d.body.indexOf(phrase)
+                  const start = Math.max(0, d.body.lastIndexOf('.', at) + 1)
+                  const end = d.body.indexOf('.', at + phrase.length)
+                  setSelection({ phrase, sentence: at === -1 ? '' : d.body.slice(start, end === -1 ? undefined : end + 1).trim(),
+                    x: r.left - box.left + r.width / 2, y: r.top - box.top })
+                  e.stopPropagation()
+                } : undefined}>
                 {pieces.map((p, i) =>
                   p.f?.preview ? (
                     <mark key={`p${p.f.id}`} className={`${SEVERITY[p.f.severity].mark} sweep`} style={{ '--i': markIndex++ }}>{p.text}</mark>
