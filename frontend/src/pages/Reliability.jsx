@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { Card, CountUp, ErrorNote, PageLoading, timeAgo } from '../ui.jsx'
+import LiveRun from '../LiveRun.jsx'
 
 const BRAND = { lumio: 'Lumio Payroll', fizzbox: 'Fizzbox' }
 const MODE = {
@@ -37,6 +38,8 @@ export default function Reliability({ user }) {
       </div>
 
       {runs.length === 0 && <Card className="mt-6 p-8 text-center text-muted">No results yet. Run <code>python -m evals.run --save</code> in the backend folder.</Card>}
+
+      <LiveRun key={`live-${brand}`} brand={brand} recorded={r.runs.exact?.brands.find((b) => b.brand === brand)} />
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2" key={brand}>
         {runs.map(([mode, run]) => {

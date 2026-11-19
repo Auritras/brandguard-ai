@@ -15,3 +15,11 @@ def test_exact_checks_catch_every_planted_problem():
     for line in out.stdout.splitlines():
         if "false alarms" in line and "caught" in line and "precision" in line:
             assert "false alarms 0," in line, line
+
+
+def test_live_run_scores_cases_like_the_recorded_run(client, creator):
+    cases = client.get("/api/reliability/cases?brand=lumio", headers=creator).json()
+    assert len(cases) == 40
+    ids = [c["id"] for c in cases[:10]]
+    out = client.post("/api/reliability/live", headers=creator, json={"brand": "lumio", "ids": ids}).json()
+    assert len(out) == 10 and all(r["caught"] == r["wanted"] and not r["extras"] for r in out)

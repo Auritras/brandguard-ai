@@ -440,3 +440,7 @@ mark.mark-hover { outline: 2px dashed var(--color-ink); outline-offset: 2px; }
 /* A clicked bookmarklet button hops up towards the bookmarks bar, to show it wants dragging there. */
 .nudge-up { animation: nudge-up 0.6s cubic-bezier(0.3, 0.7, 0.2, 1); }
 @keyframes nudge-up { 30% { transform: translateY(-10px) rotate(-3deg); } 60% { transform: translateY(-4px); } }
+
+/* A test draft that has just been scored pops into its colour. */
+.pop-in { animation: pop-in 0.3s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes pop-in { from { transform: scale(0.6); } }
