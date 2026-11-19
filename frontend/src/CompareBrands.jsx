@@ -56,7 +56,13 @@ function label(f) {
 }
 
 export default function CompareBrands({ onTryDemo }) {
-  const [text, setText] = useState(SAMPLE)
+  // A shared link carries its sentence: /?try=...
+  const [text, setText] = useState(() => new URLSearchParams(location.search).get('try')?.slice(0, 1000) || SAMPLE)
+  const [copied, setCopied] = useState(false)
+  const share = async () => {
+    const url = `${location.origin}/?try=${encodeURIComponent(text)}`
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { prompt('Copy this link:', url) }
+  }
   const [checked, setChecked] = useState('') // the text the verdicts below belong to
   const [quick, setQuick] = useState(true) // a preset was picked: check at once, without waiting for typing to pause
   const [result, setResult] = useState(null)
@@ -139,6 +145,9 @@ export default function CompareBrands({ onTryDemo }) {
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">Instant exact checks only here. Inside the demo, the AI also judges tone, claims and images.</p>
+          <button type="button" onClick={share} className="min-h-9 text-sm font-semibold text-primary hover:underline">
+            {copied ? 'Link copied ✓' : 'Copy a link to this comparison'}
+          </button>
           {onTryDemo && (
             <button type="button" onClick={onTryDemo}
               className="inline-flex min-h-11 items-center gap-2 rounded-md border-2 border-ink bg-primary px-3.5 text-sm font-semibold text-white shadow-print-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none md:hidden">

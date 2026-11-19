@@ -97,6 +97,8 @@ export default function Account({ user }) {
             <dl className="mt-3 grid gap-2 text-sm">
               <div className="flex items-center justify-between gap-3"><dt>Go to any page or draft</dt><dd><Kbd>Ctrl</Kbd> <Kbd>K</Kbd></dd></div>
               <div className="flex items-center justify-between gap-3"><dt>Hold to approve or waive</dt><dd><Kbd>Enter</Kbd> held</dd></div>
+              <div className="flex items-center justify-between gap-3"><dt>Next / previous finding</dt><dd><Kbd>J</Kbd> <Kbd>K</Kbd></dd></div>
+              <div className="flex items-center justify-between gap-3"><dt>Accept the selected fix / dispute it</dt><dd><Kbd>A</Kbd> <Kbd>D</Kbd></dd></div>
               <div className="flex items-center justify-between gap-3"><dt>Close a menu or the tour</dt><dd><Kbd>Esc</Kbd></dd></div>
             </dl>
           </Card>

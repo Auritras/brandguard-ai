@@ -252,6 +252,13 @@ export default function DraftView({ user }) {
     setD(next)
   })
 
+  const keyRef = useRef(null)
+  useEffect(() => {
+    const on = (e) => keyRef.current?.(e)
+    addEventListener('keydown', on)
+    return () => removeEventListener('keydown', on)
+  }, [])
+
   // The "Make this a rule" button goes away on a click anywhere else.
   useEffect(() => {
     if (!selection) return
@@ -276,7 +283,9 @@ export default function DraftView({ user }) {
   }
 
   const pieces = useMemo(() => (d ? highlight(d.body, preview || d.findings) : []), [d, preview])
-  if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
+  // One keyboard listener for the page; what it does is set further down, once the draft is loaded.
+  const keyHandler = keyRef
+    if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
   // Every finding handled, and the latest text checked: ready to send.
@@ -306,6 +315,28 @@ export default function DraftView({ user }) {
     el?.scrollIntoView({ behavior: smooth(), block: 'nearest' })
     pulse(el)
   }
+  // Keyboard review: J / K move between findings, A accepts the selected finding's fix, D opens its dispute,
+  // Esc clears the selection. Not while typing in a field.
+  keyHandler.current = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable]')) return
+      const k = e.key.toLowerCase()
+      if (!['j', 'k', 'a', 'd', 'escape'].includes(k) || !groups.length) return
+      const at = groups.findIndex((g) => g.key === picked)
+      if (k === 'escape') return setPicked(null)
+      if (k === 'j' || k === 'k') {
+        e.preventDefault()
+        const next = groups[k === 'j' ? Math.min(groups.length - 1, at + 1) : Math.max(0, at === -1 ? 0 : at - 1)]
+        const first = next.items.find((x) => !x.leaving)?.f
+        if (first) focus(first.id)
+        return
+      }
+      const box = document.getElementById(`group-${picked}`)
+      if (!box) return
+      const label = k === 'a' ? /^(Accept fix|Use this description)$/ : /^Dispute$/
+      const button = [...box.querySelectorAll('button')].find((b) => label.test(b.innerText.trim()) && !b.disabled)
+      if (button) { e.preventDefault(); button.click() }
+  }
+
   // Findings -> text: select the group and bring its highlight into view.
   const showInText = (key) => {
     setPicked(key)
@@ -582,7 +613,8 @@ export default function DraftView({ user }) {
         {/* Right: findings and disclosure */}
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <h2 className="font-display text-xl font-bold">
-            <Term name="finding">Findings</Term> <span className="text-base font-normal text-muted">(<RollNumber value={preview ? preview.length : active.length} /> {preview ? 'found so far' : 'to handle'})</span>
+            <Term name="finding">Findings</Term>
+            {groups.length > 1 && <span className="ml-2 hidden align-middle text-xs font-normal text-muted lg:inline" title="J and K move between findings, A accepts the fix, D disputes">Keys: J / K, A, D</span>} <span className="text-base font-normal text-muted">(<RollNumber value={preview ? preview.length : active.length} /> {preview ? 'found so far' : 'to handle'})</span>
           </h2>
           {d.run === null && <Card className="p-4 text-sm text-muted">This draft has not been checked yet.</Card>}
           {d.run && !d.run.ai_used && /failed|could not/i.test(d.run.ai_note) && (
