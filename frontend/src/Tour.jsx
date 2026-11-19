@@ -39,6 +39,7 @@ export function resetTours() {
 export default function Tour({ user, open, onClose }) {
   const steps = STEPS[user.role] || []
   const [i, setI] = useState(0)
+  const [spot, setSpot] = useState(null) // where the step's target is: everything else is dimmed
   const navigate = useNavigate()
   const location = useLocation()
   const step = steps[i]
@@ -49,13 +50,24 @@ export default function Tour({ user, open, onClose }) {
     if (!open || !step) return
     if (location.pathname !== step.path) navigate(step.path)
     let el = null
+    // The spotlight follows the target as the page scrolls or resizes.
+    const follow = () => {
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setSpot({ left: r.left - 8, top: r.top - 8, width: r.width + 16, height: r.height + 16 })
+    }
     const t = setTimeout(() => {
       el = document.querySelector(`[data-tour="${step.target}"]`)
-      if (!el) return
+      if (!el) return setSpot(null)
+      // A whole list is too big to spotlight: point at its first item instead.
+      if (el.getBoundingClientRect().height > innerHeight * 0.6 && el.firstElementChild) el = el.querySelector('[data-flip]') || el.firstElementChild
       el.classList.add('tour-focus')
       el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
+      follow()
     }, 450)
-    return () => { clearTimeout(t); el?.classList.remove('tour-focus') }
+    addEventListener('scroll', follow, true)
+    addEventListener('resize', follow)
+    return () => { clearTimeout(t); el?.classList.remove('tour-focus'); removeEventListener('scroll', follow, true); removeEventListener('resize', follow) }
   }, [open, i]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open || !step) return null
@@ -64,6 +76,8 @@ export default function Tour({ user, open, onClose }) {
     onClose()
   }
   return (
+    <>
+    {spot && <div aria-hidden="true" className="tour-spot pointer-events-none fixed z-40 rounded-xl" style={spot} />}
     <div role="dialog" aria-label="Guided tour" aria-live="polite"
       className="toast-in fixed bottom-4 left-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-xl border-2 border-ink bg-card p-4 shadow-print print:hidden"
       onKeyDown={(e) => e.key === 'Escape' && finish()}>
@@ -83,5 +97,6 @@ export default function Tour({ user, open, onClose }) {
         </button>
       </div>
     </div>
+    </>
   )
 }

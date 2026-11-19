@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { api, getAuth, getDemoToken, setAuth, setDemoToken } from './api.js'
 import { ErrorBoundary } from './Resilience.jsx'
@@ -209,12 +209,25 @@ function MainNav({ waiting }) {
     addEventListener('resize', measure)
     return () => { el.removeEventListener('scroll', measure); removeEventListener('resize', measure) }
   }, [])
+  // The highlight behind the current page slides to the next one instead of jumping.
+  const location = useLocation()
+  const [pill, setPill] = useState(null)
+  useLayoutEffect(() => {
+    const place = () => {
+      const a = ref.current?.querySelector('[aria-current="page"]')
+      setPill(a ? { left: a.offsetLeft, top: a.offsetTop, width: a.offsetWidth, height: a.offsetHeight } : null)
+    }
+    place()
+    addEventListener('resize', place)
+    return () => removeEventListener('resize', place)
+  }, [location.pathname])
   const tab = ({ isActive }) =>
-    `flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-md px-3 text-sm font-semibold sm:min-h-9 ${isActive ? 'bg-paper text-ink' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
+    `relative z-10 flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-md px-3 text-sm font-semibold transition-colors duration-300 sm:min-h-9 ${isActive ? 'text-ink' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
   return (
     <div className="relative order-last -mx-3 w-[calc(100%+1.5rem)] sm:order-none sm:mx-0 sm:w-auto sm:min-w-0 sm:flex-1">
-      <nav ref={ref} aria-label="Main" className="flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:px-0 sm:pb-0">
-        <NavLink to="/" end viewTransition className={tab} data-tour="nav-drafts" aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
+      <nav ref={ref} aria-label="Main" className="relative flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:px-0 sm:pb-0">
+        {pill && <span aria-hidden="true" className="nav-pill absolute rounded-md bg-paper" style={{ transform: `translate(${pill.left}px, ${pill.top}px)`, width: pill.width, height: pill.height }} />}
+        <NavLink to="/" end className={tab} data-tour="nav-drafts" aria-label={waiting ? `Drafts, ${waiting} waiting for you` : 'Drafts'}>
           Drafts
           {waiting > 0 && (
             <span key={waiting} aria-hidden="true" className="roll-in ml-1.5 inline-grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-xs font-bold text-white">
@@ -222,10 +235,10 @@ function MainNav({ waiting }) {
             </span>
           )}
         </NavLink>
-        <NavLink to="/insights" viewTransition className={tab} data-tour="nav-insights">Brand health</NavLink>
-        <NavLink to="/library" viewTransition className={tab} data-tour="nav-library">Brand Library</NavLink>
-        <NavLink to="/reliability" viewTransition className={tab} data-tour="nav-reliability">Reliability</NavLink>
-        <NavLink to="/team" viewTransition className={tab}>Team</NavLink>
+        <NavLink to="/insights" className={tab} data-tour="nav-insights">Brand health</NavLink>
+        <NavLink to="/library" className={tab} data-tour="nav-library">Brand Library</NavLink>
+        <NavLink to="/reliability" className={tab} data-tour="nav-reliability">Reliability</NavLink>
+        <NavLink to="/team" className={tab}>Team</NavLink>
       </nav>
       {more.left && <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-ink to-transparent" />}
       {more.right && <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink to-transparent" />}

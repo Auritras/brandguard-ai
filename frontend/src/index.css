@@ -465,3 +465,12 @@ mark.mark-hover { outline: 2px dashed var(--color-ink); outline-offset: 2px; }
   animation: img-scan 1.1s ease-in-out 0.1s;
 }
 @keyframes img-scan { 0% { opacity: 1; top: 0%; } 95% { opacity: 1; } 100% { opacity: 0; top: 100%; } }
+
+/* The header's current-page highlight slides between pages. */
+.nav-pill { left: 0; top: 0; transition: transform 0.35s cubic-bezier(0.3, 1.2, 0.5, 1), width 0.35s cubic-bezier(0.3, 1.2, 0.5, 1); }
+
+/* The tour dims the page around what it is describing. */
+.tour-spot {
+  box-shadow: 0 0 0 200vmax rgb(20 22 31 / 0.45);
+  transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
+}

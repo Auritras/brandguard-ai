@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, getDemoToken, setDemoToken } from '../api.js'
-import { Button, Card, ErrorNote, Field, inputCls } from '../ui.jsx'
+import { Button, Card, CountUp, ErrorNote, Field, inputCls } from '../ui.jsx'
 import CompareBrands from '../CompareBrands.jsx'
 
 const ROLE_HELP = {
@@ -25,9 +25,9 @@ function Facts() {
   const item = 'flex items-baseline gap-2'
   return (
     <ul className="order-4 grid content-start gap-x-6 gap-y-3 border-t-2 border-ink/20 pt-4 text-sm sm:grid-cols-2 md:order-none md:col-start-1 md:row-start-2">
-      {f?.exact && <li className={item}><span className="font-display text-2xl font-bold">{f.exact.caught}/{f.exact.planted}</span> planted problems caught by the exact checks</li>}
-      {f?.ai && <li className={item}><span className="font-display text-2xl font-bold">{f.ai.caught}/{f.ai.planted}</span> caught by the full check with AI</li>}
-      {f && <li className={item}><span className="font-display text-2xl font-bold">{f.cases}</span> public test drafts, run on every change</li>}
+      {f?.exact && <li className={item}><span className="font-display text-2xl font-bold tabular-nums"><CountUp value={`${f.exact.caught}/${f.exact.planted}`} /></span> planted problems caught by the exact checks</li>}
+      {f?.ai && <li className={item}><span className="font-display text-2xl font-bold tabular-nums"><CountUp value={`${f.ai.caught}/${f.ai.planted}`} /></span> caught by the full check with AI</li>}
+      {f && <li className={item}><span className="font-display text-2xl font-bold tabular-nums"><CountUp value={f.cases} /></span> public test drafts, run on every change</li>}
     </ul>
   )
 }
