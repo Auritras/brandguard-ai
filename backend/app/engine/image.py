@@ -173,6 +173,24 @@ def contrast_ratio(a, b) -> float:
     return (la + 0.05) / (lb + 0.05)
 
 
+def colour_box(img: Image.Image, rgb, tolerance: int = 100):
+    """Where in the image a colour is: the box around the pixels close to it (on a small copy, scaled back)."""
+    small = img.copy()
+    small.thumbnail((160, 160))
+    k = img.width / small.width
+    px = small.load()
+    xs, ys = [], []
+    for y in range(small.height):
+        for x in range(small.width):
+            p = px[x, y]
+            if abs(p[0] - rgb[0]) + abs(p[1] - rgb[1]) + abs(p[2] - rgb[2]) <= tolerance:
+                xs.append(x)
+                ys.append(y)
+    if not xs:
+        return None
+    return [round(min(xs) * k), round(min(ys) * k), round((max(xs) + 1) * k), round((max(ys) + 1) * k)]
+
+
 def _clamp_box(box, w, h):
     try:
         x0, y0, x1, y1 = (float(v) for v in box)
@@ -310,6 +328,9 @@ def analyse(data: bytes, mime: str, width: int, height: int, palette: list[str],
     """Everything the review needs about one image. Measurements in code; reading by the vision model."""
     img = open_rgb(data)
     colours = palette_check(main_colours(img), palette)
+    for c in colours:
+        if c["off"]:
+            c["box"] = colour_box(img, rgb_of(c["hex"]))
     seen = read_image(data, mime, width, height, logo, logo_mime)
     lg = seen.get("logo") if logo else None
     logo_box = _clamp_box(lg.get("box"), img.width, img.height) if lg and lg.get("present") and lg.get("box") else None

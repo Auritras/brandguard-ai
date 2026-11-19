@@ -134,6 +134,7 @@ def _analysis_key(img: DraftImage, brand: Brand | None, ai: bool) -> str:
     h.update((brand.palette if brand else "").encode())
     h.update(hashlib.sha256(brand.logo).digest() if brand and brand.logo else b"")
     h.update(b"ai" if ai else b"code")
+    h.update(b"v2")  # bump when the analysis gains new measurements (v2: where off-brand colours are)
     return h.hexdigest()
 
 

@@ -9,7 +9,7 @@ export const imageSrc = (url) => BASE + url
 export default function ImagePanel({ d, busy, act, onError }) {
   if (!d.images.length && !d.can.edit) return null
   return (
-    <Card id="images" className="scroll-mt-24 p-5">
+    <Card id="images" className="@container scroll-mt-24 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-xl font-bold">Images <span className="text-base font-normal text-muted">({d.images.length})</span></h2>
         {d.can.edit && d.images.length < 4 && <AddImage d={d} busy={busy} act={act} onError={onError} />}
@@ -49,7 +49,7 @@ function OneImage({ n, img, d, busy, act }) {
   const failing = (a?.lines || []).filter((l) => l.contrast && !l.contrast.passes).length
   const off = (a?.colours || []).filter((c) => c.off).length
   return (
-    <figure id={`image-${img.id}`} className="scroll-mt-24 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,17rem)]">
+    <figure id={`image-${img.id}`} className="scroll-mt-24 grid gap-4 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,17rem)]">
       <div>
         <div className="relative overflow-hidden rounded-lg border-2 border-line bg-white">
           <img src={imageSrc(img.url)} alt={img.alt_text || `Image ${n}, not described yet`} className="block h-auto w-full" />
@@ -63,8 +63,30 @@ function OneImage({ n, img, d, busy, act }) {
                 <rect className="box-fade" style={{ '--i': a.lines.length }} x={a.logo.box[0]} y={a.logo.box[1]} width={a.logo.box[2] - a.logo.box[0]} height={a.logo.box[3] - a.logo.box[1]}
                   fill="none" stroke={a.logo.issues.length ? '#c0261b' : '#2f3bd9'} strokeDasharray="10 6" strokeWidth={Math.max(2, img.width / 300)} rx="4" />
               )}
+              {a.colours.filter((c) => c.off && c.box).map((c, i) => (
+                <rect key={c.hex} className="box-fade" style={{ '--i': a.lines.length + 1 + i }} x={c.box[0] + 3} y={c.box[1] + 3} width={c.box[2] - c.box[0] - 6} height={c.box[3] - c.box[1] - 6}
+                  fill="none" stroke="#d9a21b" strokeDasharray="14 8" strokeWidth={Math.max(3, img.width / 220)} />
+              ))}
             </svg>
           )}
+          {/* Labels on what was measured: the contrast of each failing line, and each off-brand colour area. */}
+          {a && show && (
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+              {a.lines.filter((l) => l.box && l.contrast && !l.contrast.passes).map((l, i) => (
+                <span key={i} className="box-fade absolute -translate-y-full whitespace-nowrap rounded-sm bg-[#c0261b] px-1 text-[10px] font-bold leading-4 text-white"
+                  style={{ left: `${(l.box[0] / img.width) * 100}%`, top: `${(l.box[1] / img.height) * 100}%`, '--i': i + 1 }}>
+                  {l.contrast.ratio}:1
+                </span>
+              ))}
+              {a.colours.filter((c) => c.off && c.box).map((c, i) => (
+                <span key={c.hex} className="box-fade absolute flex items-center gap-1 whitespace-nowrap rounded-sm bg-ink px-1 text-[10px] font-bold leading-4 text-paper"
+                  style={{ left: `calc(${(c.box[0] / img.width) * 100}% + 6px)`, top: `calc(${(c.box[1] / img.height) * 100}% + 6px)`, '--i': a.lines.length + 1 + i }}>
+                  <span className="h-2 w-2 rounded-sm border border-white/60" style={{ background: c.hex }} />off-brand
+                </span>
+              ))}
+            </div>
+          )}
+          {a && <span key={img.id} aria-hidden="true" className="img-scan pointer-events-none absolute inset-x-0 top-0 h-1" />}
         </div>
         <figcaption className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
           <span className="font-semibold text-ink">Image {n}</span>
