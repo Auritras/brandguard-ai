@@ -240,6 +240,8 @@ export default function DraftView({ user }) {
   if (!d) return error ? <ErrorNote>{error}</ErrorNote> : <PageLoading />
 
   const yourTurn = d.status !== 'approved' && (d.can.edit || d.can.approve || d.can.waive)
+  // Every finding handled, and the latest text checked: ready to send.
+  const ready = d.score === 100 && !d.needs_check && d.can.edit
   const certainFixes = d.findings.filter((f) => f.status === 'open' && f.certain && d.body.includes(f.quote)).length
   // The left edge of the action bar moves from orange to green as the draft gets closer to ready.
   const edge = d.score === null ? 'var(--color-accent)' : `color-mix(in oklab, var(--color-good) ${d.score}%, var(--color-accent))`
@@ -304,7 +306,13 @@ export default function DraftView({ user }) {
 
       <Card className={`relative mt-5 flex flex-wrap items-center gap-3 overflow-hidden p-4 ${yourTurn ? 'pl-6' : ''}`}>
         {yourTurn && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 transition-colors duration-700" style={{ background: edge }} />}
-        {d.score !== null && d.status !== 'approved' && <ScoreRing value={d.score} />}
+        {d.score !== null && d.status !== 'approved' && (
+          // At 100 the ring pulses once and a "Brand-safe" label appears: the payoff for working through the list.
+          <span key={ready ? 'ready' : 'not'} className={`flex items-center gap-2 ${ready && acted ? 'ready-burst' : ''}`}>
+            <ScoreRing value={d.score} />
+            {ready && <span className="step-in rounded-full border-2 border-good bg-good px-2.5 py-0.5 text-xs font-bold text-white">Brand-safe ✓</span>}
+          </span>
+        )}
         <p className="min-w-0 flex-1 basis-64 overflow-hidden text-sm font-semibold" aria-live="polite">
           <span key={nextStep(d, user)} className={acted ? 'step-in block' : 'block'}>{nextStep(d, user)}</span>
         </p>
@@ -313,7 +321,8 @@ export default function DraftView({ user }) {
             <Button kind={d.needs_check ? 'primary' : 'secondary'} disabled={!!busy} onClick={runCheck}>
               {busy === 'check' ? 'Checking…' : 'Run check'}
             </Button>
-            <Button kind={d.needs_check ? 'secondary' : 'primary'} disabled={!!busy || d.needs_check} onClick={() => act('submit', `/drafts/${d.id}/submit`)}>
+            <Button kind={d.needs_check ? 'secondary' : 'primary'} disabled={!!busy || d.needs_check} onClick={() => act('submit', `/drafts/${d.id}/submit`)}
+              className={ready ? 'ready-lift' : ''}>
               Send for review
             </Button>
           </>
@@ -358,9 +367,10 @@ export default function DraftView({ user }) {
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-start-1 lg:row-start-1">
           <Card className="relative overflow-hidden p-5" ref={contentRef}>
             {busy === 'check' && <div className="scan-bar" aria-hidden="true" style={{ '--scan-h': `${contentRef.current?.offsetHeight || 300}px` }} />}
-            {d.status === 'approved' && (
-              <span aria-hidden="true" className="approved-stamp pointer-events-none absolute right-5 top-3 rounded-md border-[3px] border-primary bg-card px-3 py-0.5 font-display text-2xl font-extrabold tracking-wide text-primary">
-                Approved
+            {(d.status === 'approved' || d.status === 'changes_requested') && (
+              <span key={d.status} aria-hidden="true" className={`approved-stamp pointer-events-none absolute right-5 top-3 z-10 rounded-md border-[3px] bg-card px-3 py-0.5 font-display text-2xl font-extrabold uppercase tracking-wide ${
+                d.status === 'approved' ? 'border-primary text-primary' : 'border-accent text-accent-deep'}`}>
+                {d.status === 'approved' ? 'Approved' : 'Changes requested'}
               </span>
             )}
             <div className="flex flex-wrap items-center justify-between gap-3">
