@@ -12,13 +12,20 @@ function marked(text, findings) {
   const marks = []
   for (const f of findings) for (const [start, end] of f.spans) marks.push({ start, end, f })
   marks.sort((a, b) => a.start - b.start || b.end - a.end)
+  // Touching marks of the same finding ("!" and "!" in "!!") become one mark.
+  for (let i = marks.length - 1; i > 0; i--) {
+    if (marks[i].start === marks[i - 1].end && marks[i].f === marks[i - 1].f) {
+      marks[i - 1].end = marks[i].end
+      marks.splice(i, 1)
+    }
+  }
   const out = []
   let pos = 0
   for (const m of marks) {
     if (m.start < pos) continue
     if (m.start > pos) out.push(<span key={`t${pos}`}>{text.slice(pos, m.start)}</span>)
-    // Short marks (a "!") get an outline too, so they cannot be missed.
-    out.push(<mark key={`m${m.start}`} className={`${SEVERITY[m.f.severity].mark} sweep rounded-sm ${m.end - m.start <= 3 ? 'px-0.5 outline outline-2 outline-ink/40' : ''}`} title={m.f.reason}>{text.slice(m.start, m.end)}</mark>)
+    // Short marks (a "!") are padded and underlined, so they cannot be missed.
+    out.push(<mark key={`m${m.start}`} className={`${SEVERITY[m.f.severity].mark} sweep rounded-sm ${m.end - m.start <= 3 ? 'border-b-[3px] border-current px-1' : ''}`} title={m.f.reason}>{text.slice(m.start, m.end)}</mark>)
     pos = m.end
   }
   if (pos < text.length) out.push(<span key={`t${pos}`}>{text.slice(pos)}</span>)
