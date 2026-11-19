@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { diffWords } from '../diff.js'
 import LiveText from '../LiveText.jsx'
 import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
+import ChannelPreview from '../ChannelPreview.jsx'
 import { dueLabel } from '../due.js'
 import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, ScoreRing, SEVERITY, StatusChip, Term, inputCls, timeAgo, plural } from '../ui.jsx'
 
@@ -115,6 +116,7 @@ export default function DraftView({ user }) {
   const [hovered, setHovered] = useState(null) // the group under the pointer: its phrase lights up
   const [stages, setStages] = useState(null) // the check, step by step: { exact, full, exactCount, images }
   const [preview, setPreview] = useState(null) // exact findings shown while the full check is still running
+  const [view, setView] = useState('Text') // the text, or the draft as it would look in a channel
   const [compare, setCompare] = useState(null) // { before, after, count } after applying all certain fixes
   const location = useLocation()
   const autoChecked = useRef(false)
@@ -363,6 +365,14 @@ export default function DraftView({ user }) {
             )}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-xl font-bold">Content</h2>
+              {!editing && (
+                <div role="tablist" aria-label="Show as" className="flex rounded-md border-2 border-line bg-white p-0.5 text-xs font-semibold">
+                  {['Text', 'LinkedIn', 'Instagram', 'Email'].map((v) => (
+                    <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+                      className={`min-h-9 rounded px-2.5 sm:min-h-7 ${view === v ? 'bg-select text-paper' : 'text-muted hover:text-ink'}`}>{v}</button>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 {!editing && <CopyText body={d.body} title={d.title} />}
                 {d.can.edit && !editing && (
@@ -391,6 +401,8 @@ export default function DraftView({ user }) {
                       : <span key={i} className="rewrite-in">{p.text}</span>,
                 )}
               </p>
+              ) : view !== 'Text' ? (
+                <ChannelPreview view={view} d={d} pieces={pieces} brand={user.brand} />
               ) : (
               <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8">
                 {pieces.map((p, i) =>
