@@ -161,3 +161,20 @@ test('Pages explain themselves and pass an accessibility scan', async ({ page })
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Brand Library', exact: true })).toBeVisible()
 })
+
+test('The dark theme passes the accessibility scan too', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('bg_theme', 'dark'))
+  await startDemo(page, 'Lumio Payroll', 'Asha')
+  await noSeriousA11yProblems(page, 'dark drafts')
+  await page.getByRole('link', { name: 'New draft' }).click()
+  await page.getByRole('button', { name: 'Load a sample post' }).click()
+  await page.getByRole('textbox', { name: 'Title' }).fill('Dark check')
+  await page.getByRole('button', { name: 'Save and run check' }).click()
+  await expect(page.getByText('Verified and saved')).toBeVisible()
+  await noSeriousA11yProblems(page, 'dark draft')
+  for (const link of ['Brand health', 'Brand Library', 'Reliability', 'Team']) {
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: link }).click()
+    await expect(page.getByRole('heading', { name: link, exact: true })).toBeVisible()
+    await noSeriousA11yProblems(page, `dark ${link}`)
+  }
+})

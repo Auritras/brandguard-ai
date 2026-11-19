@@ -474,3 +474,46 @@ mark.mark-hover { outline: 2px dashed var(--color-ink); outline-offset: 2px; }
   box-shadow: 0 0 0 200vmax rgb(20 22 31 / 0.45);
   transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
 }
+
+/* ---------- Dark theme (opt in on the account page) ----------
+   The palette's variables flip to a dark desk with light ink; the few fixed colours used directly
+   (white cards inside cards, red text, pale tints) get dark equivalents. Contrast checked for text. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-olive: #2c2b1f;
+  --color-olive-deep: #4d4a33;
+  --color-ink: #ece9dc;
+  --color-paper: #1c1d23;
+  --color-card: #24252d;
+  --color-line: #3d3e48;
+  --color-primary: #8f97ff;
+  --color-primary-deep: #c3c7ff;
+  --color-primary-soft: #2c3060;
+  --color-accent: #ff7d55;
+  --color-accent-soft: #42251b;
+  --color-accent-deep: #ffb59c;
+  --color-muted: #aeac9b;
+  --color-select: #8d8853;
+  --color-good: #56b783;
+  --shadow-print: 5px 5px 0 0 #000;
+  --shadow-print-sm: 3px 3px 0 0 #000;
+}
+:root[data-theme="dark"] header.bg-ink { background-color: #0e0f13; }
+:root[data-theme="dark"] .bg-white { background-color: #2c2d36; }
+:root[data-theme="dark"] .bg-white\/60, :root[data-theme="dark"] .bg-white\/70 { background-color: rgb(44 45 54 / 0.7); }
+:root[data-theme="dark"] .bg-black\/5 { background-color: rgb(255 255 255 / 0.06); }
+:root[data-theme="dark"] .bg-black\/10 { background-color: rgb(255 255 255 / 0.1); }
+:root[data-theme="dark"] .text-red-800 { color: #ff9d92; }
+:root[data-theme="dark"] .bg-red-50 { background-color: #3b2020; }
+:root[data-theme="dark"] .border-red-200 { border-color: #6e2c2c; }
+:root[data-theme="dark"] .border-black\/15, :root[data-theme="dark"] .border-black\/10 { border-color: rgb(255 255 255 / 0.15); }
+:root[data-theme="dark"] .mark-high { --m: #4b2327; --u: #ff6b6b; }
+:root[data-theme="dark"] .mark-medium { --m: #46391a; --u: #f0b73a; }
+:root[data-theme="dark"] .mark-low { --m: #2f343d; --u: #9aa6b8; }
+:root[data-theme="dark"] .bg-ink.text-paper:not(header), :root[data-theme="dark"] .bg-ink.text-white:not(header) { background-color: #ece9dc; color: #1c1d23; }
+:root[data-theme="dark"] img { filter: none; }
+:root[data-theme="dark"] .nav-pill { background-color: #3a3b47; }
+:root[data-theme="dark"] .bg-primary.text-white,
+:root[data-theme="dark"] .bg-good.text-white,
+:root[data-theme="dark"] .bg-accent.text-white { color: #11131d; }
+:root[data-theme="dark"] .bg-primary .text-white, :root[data-theme="dark"] button.bg-primary { color: #11131d; }

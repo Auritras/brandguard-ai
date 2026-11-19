@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { resetTours } from '../Tour.jsx'
+import { getTheme, setTheme } from '../theme.js'
 import { api } from '../api.js'
 import { ACTION_LABEL, Button, Card, CountUp, ErrorNote, Field, inputCls, timeAgo } from '../ui.jsx'
 
@@ -115,6 +116,7 @@ function Kbd({ children }) {
 // Settings that live in this browser: whether the tour opens by itself.
 function Preferences() {
   const [autoTour, setAutoTour] = useState(read('bg_tours_off') !== '1')
+  const [theme, setThemeState] = useState(getTheme())
   return (
     <Card className="p-5">
       <h2 className="font-display text-xl font-bold">Preferences</h2>
@@ -125,6 +127,17 @@ function Preferences() {
           <span className="block text-muted">Saved in this browser.</span></span>
       </label>
       <Button className="mt-4" onClick={() => { resetTours(); dispatchEvent(new Event('bg-tour')) }}>Take the tour now</Button>
+      <fieldset className="mt-5 border-t border-line pt-4">
+        <legend className="text-sm font-semibold">Theme</legend>
+        <div className="mt-2 flex flex-wrap gap-2" role="radiogroup">
+          {[['light', 'Light'], ['dark', 'Dark'], ['system', 'Match my device']].map(([k, label]) => (
+            <button key={k} role="radio" aria-checked={theme === k} onClick={() => { setTheme(k); setThemeState(k) }}
+              className={`min-h-11 rounded-md border-2 px-3 text-sm font-semibold sm:min-h-9 ${theme === k ? 'border-ink bg-select text-paper shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-line bg-white hover:border-ink'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
     </Card>
   )
 }
