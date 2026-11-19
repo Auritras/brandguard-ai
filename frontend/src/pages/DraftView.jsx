@@ -453,14 +453,16 @@ export default function DraftView({ user }) {
                 Make this a rule
               </button>
             )}
-            {(d.status === 'approved' || d.status === 'changes_requested') && (
-              <span key={d.status} aria-hidden="true" className={`approved-stamp pointer-events-none absolute right-5 top-3 z-10 rounded-md border-[3px] bg-card px-3 py-0.5 font-display text-2xl font-extrabold uppercase tracking-wide ${
-                d.status === 'approved' ? 'border-primary text-primary' : 'border-accent text-accent-deep'}`}>
-                {d.status === 'approved' ? 'Approved' : 'Changes requested'}
-              </span>
-            )}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-xl font-bold">Content</h2>
+              <h2 className="flex items-center gap-4 font-display text-xl font-bold">
+                Content
+                {(d.status === 'approved' || d.status === 'changes_requested') && (
+                  <span key={d.status} aria-hidden="true" className={`approved-stamp pointer-events-none inline-block rounded-md border-[3px] bg-card px-2.5 py-0.5 text-lg font-extrabold uppercase tracking-wide ${
+                    d.status === 'approved' ? 'border-primary text-primary' : 'border-accent text-accent-deep'}`}>
+                    {d.status === 'approved' ? 'Approved' : 'Changes requested'}
+                  </span>
+                )}
+              </h2>
               {!editing && (
                 <div role="tablist" aria-label="Show as" className="flex rounded-md border-2 border-line bg-white p-0.5 text-xs font-semibold">
                   {['Text', 'LinkedIn', 'Instagram', 'Email'].map((v) => (
@@ -498,9 +500,10 @@ export default function DraftView({ user }) {
                       : <span key={i} className="rewrite-in">{p.text}</span>,
                 )}
               </p>
-              ) : trying && view === 'Text' ? (
+              ) : trying ? (
                 <p className="mt-3 whitespace-pre-wrap text-[17px] leading-8" aria-live="polite">
                   <span className="sr-only">Preview of the fix: </span>
+                  {view !== 'Text' && <span aria-hidden="true" className="mb-1 block text-xs font-semibold text-muted">Showing the text with this fix · back to {view} when you move away</span>}
                   {diffWords(d.body, trying).map((p, i) =>
                     p.type === 'same' ? <span key={i}>{p.text}</span>
                       : p.type === 'added' ? <ins key={i} className="diff-added">{p.text}</ins>
