@@ -6,6 +6,7 @@ import LiveText from '../LiveText.jsx'
 import ImagePanel, { imageSrc } from '../ImagePanel.jsx'
 import ChannelPreview from '../ChannelPreview.jsx'
 import MakeRule from '../MakeRule.jsx'
+import { usePoll } from '../poll.js'
 import { dueLabel } from '../due.js'
 import { ACTION_LABEL, Button, Card, Chip, ErrorNote, FINDING_STATUS, HoldButton, PageLoading, ReasonButton, RollNumber, ScoreRing, SEVERITY, StatusChip, Term, inputCls, timeAgo, plural } from '../ui.jsx'
 
@@ -234,6 +235,23 @@ export default function DraftView({ user }) {
     if (d && location.hash === '#images') setTimeout(() => document.getElementById('images')?.scrollIntoView({ block: 'start' }), 400)
   }, [!!d]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A teammate acting on this draft in another window: the page catches up by itself and says who did what.
+  const [news, setNews] = useState('')
+  usePoll(async () => {
+    const cur = latest.current
+    if (!cur || busy || editing || trying) return
+    const next = await api(`/drafts/${cur.id}`).catch(() => null)
+    if (!next || next.rev === cur.rev || latest.current?.rev !== cur.rev) return
+    const h = next.history[0]
+    if (h && h.user !== user.name) {
+      setNews(`${h.user.split(' (')[0]} ${ACTION_LABEL[h.action] || 'changed this draft'} just now.`)
+      setTimeout(() => setNews(''), 6000)
+    }
+    animate(cur, next)
+    setActed(true)
+    setD(next)
+  })
+
   // The "Make this a rule" button goes away on a click anywhere else.
   useEffect(() => {
     if (!selection) return
@@ -378,6 +396,7 @@ export default function DraftView({ user }) {
         )}
       </Card>
       {stages && <CheckSteps s={stages} />}
+      {news && <p role="status" className="toast-in mt-3 rounded-lg border-2 border-ink bg-card px-4 py-2 text-sm font-semibold">{news}</p>}
       {undo && (
         <div role="status" className="toast-in fixed inset-x-3 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 rounded-lg border-2 border-ink bg-ink px-4 py-2.5 text-sm text-paper shadow-print print:hidden">
           <span className="flex-1">Fix for {undo.ref} applied.</span>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, BASE } from '../api.js'
 import { Button, Card, ErrorNote, PageLoading, ScoreRing, StatusChip, timeAgo, Term } from '../ui.jsx'
 import { dueLabel } from '../due.js'
+import { useFlip, usePoll } from '../poll.js'
 
 // Same order as the channel picker on the new draft form.
 const CHANNELS = ['LinkedIn', 'Instagram', 'Email', 'Advertisement', 'Blog', 'Website', 'Document']
@@ -42,6 +43,9 @@ export default function Drafts({ user }) {
   useEffect(() => {
     api('/drafts').then(setDrafts).catch((e) => setError(e.message))
   }, [])
+  // New and changed drafts appear by themselves (a teammate in another window sends one for review).
+  usePoll(() => api('/drafts').then(setDrafts).catch(() => {}))
+  const grid = useRef(null)
 
   const [params, setParams] = useSearchParams()
   const channel = params.get('channel') || 'All'
@@ -66,6 +70,7 @@ export default function Drafts({ user }) {
   const rank = (d) => URGENCY[user.role]?.[d.status] ?? 9
   const byWaiting = (a, b) => rank(a) - rank(b) || time(b) - time(a)
   const sorted = [...shown].sort(SORTS[sort][1] || byWaiting)
+  useFlip(grid, [sorted.map((d) => `${d.id}:${d.status}`).join()])
   // Keep the address in step with the filters so Back returns to the same view.
   const setView = (next) => {
     const v = { channel: active, sort, status, q: query, ...next }
@@ -144,7 +149,7 @@ export default function Drafts({ user }) {
         </>
       )}
 
-      <div data-tour="drafts" className="mt-4 grid gap-4 rounded-lg sm:grid-cols-2 lg:grid-cols-3" key={`${active}-${sort}-${status}`}>
+      <div ref={grid} data-tour="drafts" className="mt-4 grid gap-4 rounded-lg sm:grid-cols-2 lg:grid-cols-3">
         {drafts?.length > 0 && sorted.length === 0 && (
           <Card className="col-span-full p-6 text-center text-muted">
             No drafts match. <button className="font-semibold text-primary hover:underline" onClick={() => { setQuery(''); setParams({}, { replace: true }) }}>Clear the filters</button>
@@ -161,7 +166,7 @@ export default function Drafts({ user }) {
           </Card>
         )}
         {sorted.map((d, i) => (
-          <Link key={d.id} to={`/drafts/${d.id}`} className="deal-in block" style={{ '--i': i }}>
+          <Link key={d.id} data-flip={d.id} to={`/drafts/${d.id}`} className="deal-in block" style={{ '--i': i }}>
             <Card className="relative flex h-full flex-col overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-print-sm">
               {waiting(d) && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-accent" />}
               <div className="flex items-center justify-between gap-2">

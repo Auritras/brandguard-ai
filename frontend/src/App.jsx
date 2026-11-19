@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { api, getAuth, getDemoToken, setAuth, setDemoToken } from './api.js'
 import { ErrorBoundary } from './Resilience.jsx'
+import { usePoll } from './poll.js'
 import Tour, { tourDone } from './Tour.jsx'
 import CommandMenu from './CommandMenu.jsx'
 import { DEMO_BRANDS, DemoMenu, PersonMenu } from './HeaderMenus.jsx'
@@ -54,6 +55,8 @@ export default function App() {
     if (!auth) return
     api('/waiting').then((w) => setWaiting(w.count)).catch(() => {})
   }, [auth?.token, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The waiting badge also updates by itself when a teammate sends something your way.
+  usePoll(() => { if (auth) api('/waiting').then((w) => setWaiting(w.count)).catch(() => {}) }, 10000, [auth?.token])
 
   // The tour opens by itself the first time someone uses a demo copy or a new brand, once per role.
   const [touring, setTouring] = useState(false)
