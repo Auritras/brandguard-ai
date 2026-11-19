@@ -103,7 +103,7 @@ export default function CompareBrands({ onTryDemo }) {
           <span className="text-sm text-muted">Try:</span>
           {PRESETS.map(([name, t]) => (
             <button key={name} type="button" onClick={() => pick(t)} aria-pressed={text === t}
-              className={`min-h-9 rounded-full border-2 px-3 text-sm font-semibold transition ${text === t ? 'border-olive-deep bg-olive-deep text-paper' : 'border-line bg-white text-muted hover:border-ink hover:text-ink'}`}>
+              className={`min-h-9 rounded-full border-2 px-3 text-sm font-semibold transition ${text === t ? 'border-ink bg-select text-paper shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-line bg-white text-muted hover:border-ink hover:text-ink'}`}>
               {name}
             </button>
           ))}

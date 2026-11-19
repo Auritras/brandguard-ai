@@ -16,6 +16,7 @@
   --color-accent-soft: #fbe5dc;
   --color-accent-deep: #8f3315;
   --color-muted: #5b5a45;
+  --color-select: #4f4c27; /* "this one is selected": dark olive, cream text at 7.7:1 */
   --color-good: #2c7a4b; /* ready: the score ring and the action bar edge as a draft nears done */
   --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
   --font-sans: "Public Sans", Arial, sans-serif;

@@ -114,7 +114,7 @@ export default function Login({ onSignIn, signedOut }) {
         <div role="tablist" aria-label="How to sign in" className="grid grid-cols-3 gap-1 rounded-lg border-2 border-line bg-white p-1">
           {TABS.map(([k, label]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => pick(k)}
-              className={`rounded-md px-2 py-1.5 text-sm font-semibold transition-colors ${tab === k ? 'bg-olive-deep text-paper' : 'text-muted hover:bg-black/5 hover:text-ink'}`}>
+              className={`rounded-md px-2 py-1.5 text-sm font-semibold transition-colors ${tab === k ? 'border-2 border-ink bg-select text-paper shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-2 border-transparent text-muted hover:bg-black/5 hover:text-ink'}`}>
               {label}
             </button>
           ))}
@@ -126,11 +126,11 @@ export default function Login({ onSignIn, signedOut }) {
               <div role="radiogroup" aria-label="Demo brand" className="grid grid-cols-2 gap-2">
                 {brands.map((b) => (
                   <button key={b.key} role="radio" aria-checked={demoBrand === b.key} onClick={() => setDemoBrand(b.key)}
-                    className={`relative rounded-md border-2 p-2.5 pr-8 text-left transition ${demoBrand === b.key ? 'border-olive-deep bg-olive-deep text-paper' : 'border-line bg-white hover:border-ink'}`}>
+                    className={`relative rounded-md border-2 p-2.5 pr-8 text-left transition ${demoBrand === b.key ? 'border-ink bg-select text-paper shadow-[2px_2px_0_0_var(--color-ink)]' : 'border-line bg-white hover:border-ink'}`}>
                     <span className="block font-display font-bold">{b.name}</span>
                     <span className={`block text-xs ${demoBrand === b.key ? 'text-paper' : 'text-muted'}`}>{ABOUT[b.key]}</span>
                     {demoBrand === b.key && (
-                      <span aria-hidden="true" className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-paper text-xs font-bold text-olive-deep">✓</span>
+                      <span aria-hidden="true" className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-paper text-xs font-bold text-select">✓</span>
                     )}
                   </button>
                 ))}
