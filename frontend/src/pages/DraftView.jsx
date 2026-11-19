@@ -119,6 +119,8 @@ export default function DraftView({ user }) {
   const [preview, setPreview] = useState(null) // exact findings shown while the full check is still running
   const [selection, setSelection] = useState(null) // { phrase, sentence, x, y } text the owner selected
   const [making, setMaking] = useState(null) // { phrase, sentence } turning into a rule
+  const [undo, setUndo] = useState(null) // { id, ref } a fix just applied, which can be taken back for a few seconds
+  const undoTimer = useRef()
   const [trying, setTrying] = useState(null) // a fix being hovered: shown in the text, not yet applied
   const [view, setView] = useState('Text') // the text, or the draft as it would look in a channel
   const [compare, setCompare] = useState(null) // { before, after, count } after applying all certain fixes
@@ -161,6 +163,13 @@ export default function DraftView({ user }) {
     const body = cur.body.slice(0, at) + replacement + cur.body.slice(at + f.quote.length)
     return { ...cur, body, needs_check: true, version: cur.version + 1,
       findings: cur.findings.map((x) => (x.id === f.id ? { ...x, status } : x)) }
+  }
+
+  // After a fix in the text, offer to take it back for six seconds.
+  const fixed = (f) => {
+    clearTimeout(undoTimer.current)
+    setUndo({ id: f.id, ref: f.ref_code === 'TERM' ? `"${f.quote}"` : f.ref_code })
+    undoTimer.current = setTimeout(() => setUndo(null), 6000)
   }
 
   // Run one action against the API and show the refreshed draft.
@@ -369,6 +378,13 @@ export default function DraftView({ user }) {
         )}
       </Card>
       {stages && <CheckSteps s={stages} />}
+      {undo && (
+        <div role="status" className="toast-in fixed inset-x-3 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 rounded-lg border-2 border-ink bg-ink px-4 py-2.5 text-sm text-paper shadow-print print:hidden">
+          <span className="flex-1">Fix for {undo.ref} applied.</span>
+          <button className="rounded-md bg-paper px-3 py-1 font-semibold text-ink hover:bg-primary-soft"
+            onClick={() => { const id = undo.id; setUndo(null); act('undo', `/findings/${id}/undo`) }}>Undo</button>
+        </div>
+      )}
       <div className="mt-3">
         <ErrorNote>{error}</ErrorNote>
       </div>
@@ -582,7 +598,7 @@ export default function DraftView({ user }) {
               const { f, leaving: out } = g.items[0]
               return (
                 <div key={g.key} id={`group-${g.key}`} {...link} className={`scroll-mt-24 cursor-pointer rounded-lg transition-shadow ${on ? 'picked' : ''}`}>
-                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} setTrying={setTrying} leaving={out} onShow={() => showInText(g.key)} />
+                  <FindingCard i={gi} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} setTrying={setTrying} onFixed={fixed} leaving={out} onShow={() => showInText(g.key)} />
                 </div>
               )
             }
@@ -599,7 +615,7 @@ export default function DraftView({ user }) {
                 </div>
                 <div className="grid gap-3">
                   {g.items.map(({ f, leaving: out }, i) => (
-                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} setTrying={setTrying} leaving={out} nested hideQuote={f.quote === text} />
+                    <FindingCard key={f.id} i={i} f={f} d={d} user={user} busy={!!busy} act={act} guessFix={guessFix} setTrying={setTrying} onFixed={fixed} leaving={out} nested hideQuote={f.quote === text} />
                   ))}
                 </div>
               </section>
@@ -851,7 +867,7 @@ function CompareVersions({ versions }) {
   )
 }
 
-function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, leaving, nested = false, hideQuote = false, onShow }) {
+function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, onFixed, leaving, nested = false, hideQuote = false, onShow }) {
   const ref = useRef(null)
   // Fold from the card's real height so the collapse is smooth at any size.
   useLayoutEffect(() => {
@@ -891,6 +907,20 @@ function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, leaving, n
         <span className="font-semibold">{f.ref_code === 'TERM' ? 'Terminology list' : f.ref_code.startsWith('VIS-') ? 'Image standard' : f.ref_code.startsWith('CH-') ? `${d.channel} limit` : `${f.ref_code.startsWith('F-') ? 'Approved fact' : 'Rule'} ${f.ref_code}`}:</span>{' '}
         {f.ref_text}
       </p>
+      {!leaving && d.precedents?.[f.ref_code]?.length > 0 && (
+        <details className="mt-2 rounded-lg border border-line bg-white p-2 text-sm">
+          <summary className="cursor-pointer font-semibold">How the team decided this before ({d.precedents[f.ref_code].length})</summary>
+          <ul className="mt-1.5 grid gap-1.5">
+            {d.precedents[f.ref_code].map((x, k) => (
+              <li key={k} className="text-muted">
+                <span className="font-semibold text-ink">{x.outcome[0].toUpperCase() + x.outcome.slice(1)}</span>
+                {x.by && <> by {x.by}</>} in <Link to={`/drafts/${x.draft_id}`} className="font-semibold text-primary hover:underline">{x.draft}</Link>
+                {x.note && <span className="block">“{x.note}”</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {f.suggestion && !disputed && (
         <p className="mt-2 rounded-lg border border-primary/25 bg-primary-soft p-2 text-sm">
           <span className="font-semibold">{f.image_id ? 'Suggested description' : 'Suggested fix'}:</span> {f.suggestion}
@@ -910,7 +940,7 @@ function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, leaving, n
             {inPixels && <p className="w-full text-sm text-muted">This is in the image itself: change the image, then remove this one and add the new one. Or dispute it.</p>}
             {f.suggestion && !inPixels && !wholeText && (
               <Button kind="primary" disabled={busy}
-                onClick={() => { setTrying?.(null); act('accept', `/findings/${f.id}/accept`, undefined, guessFix(f, f.suggestion, 'accepted')) }}
+                onClick={async () => { setTrying?.(null); if (await act('accept', `/findings/${f.id}/accept`, undefined, guessFix(f, f.suggestion, 'accepted')) && !f.image_id) onFixed?.(f) }}
                 {...(!f.image_id && setTrying ? {
                   // Hovering (or focusing) shows the fix in the text: old words struck through, new ones marked.
                   onMouseEnter: () => setTrying(guessFix(f, f.suggestion, 'accepted')(d).body),
@@ -924,7 +954,7 @@ function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, leaving, n
               <ReasonButton label={f.image_id ? 'Write my own description' : 'Write my own fix'}
                 placeholder={f.image_id ? 'What does the image show?' : 'Replacement for the highlighted text'}
                 confirmLabel={f.image_id ? 'Save description' : 'Apply my fix'} initial={f.image_id ? f.suggestion : f.suggestion || f.quote}
-                onSubmit={(replacement) => act('edit', `/findings/${f.id}/edit`, { replacement }, guessFix(f, replacement, 'edited'))} />
+                onSubmit={async (replacement) => { if (await act('edit', `/findings/${f.id}/edit`, { replacement }, guessFix(f, replacement, 'edited')) && !f.image_id) onFixed?.(f) }} />
             )}
             <ReasonButton label="Dispute" placeholder="Why is this finding wrong?" confirmLabel="Send dispute"
               onSubmit={(reason) => act('dispute', `/findings/${f.id}/dispute`, { reason })} />

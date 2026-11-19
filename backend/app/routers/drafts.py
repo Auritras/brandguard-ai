@@ -260,6 +260,33 @@ def is_certain(f: Finding) -> bool:
     return bool(f.suggestion) and f.image_id is None and (f.ref_code == "TERM" or f.ref_code.startswith("F-"))
 
 
+PRECEDENT = {"waived": "waived", "dismissed": "dismissed after a dispute", "accepted": "fixed with the suggested fix",
+             "edited": "fixed by the writer"}
+
+
+def precedents(db: Session, d: Draft, findings: list) -> dict:
+    """How the team decided the same rule on other drafts: for each rule on this draft, the latest two
+    decisions (waived, dismissed, fixed) with the reason given. From the brand's own history, no AI."""
+    codes = {f.ref_code for f in findings if f.status in BLOCKING}
+    if not codes:
+        return {}
+    others = {x.id: x.title for x in db.query(Draft).filter(Draft.brand_id == d.brand_id, Draft.id != d.id, Draft.deleted_at.is_(None))}
+    if not others:
+        return {}
+    names = {u.id: u.name.split(" (")[0] for u in db.query(User).filter(User.brand_id == d.brand_id)}
+    out = {}
+    for f in db.query(Finding).filter(Finding.draft_id.in_(list(others)), Finding.ref_code.in_(codes),
+                                      Finding.status.in_(list(PRECEDENT))).order_by(Finding.id.desc()):
+        rows = out.setdefault(f.ref_code, [])
+        if len(rows) < 2:
+            note = (f.note or "").split(" (Creator said:")[0]
+            for lead in ("Waived: ", "Finding dismissed: ", "Replaced with: "):
+                note = note.removeprefix(lead)
+            rows.append({"draft_id": f.draft_id, "draft": others[f.draft_id], "outcome": PRECEDENT[f.status],
+                         "by": names.get(f.decided_by, ""), "note": note[:200], "quote": f.quote[:80]})
+    return out
+
+
 def detail(db: Session, d: Draft, user: User) -> dict:
     findings = db.query(Finding).filter(Finding.draft_id == d.id).order_by(Finding.id).all()
     run = db.query(ReviewRun).filter(ReviewRun.draft_id == d.id).order_by(ReviewRun.id.desc()).first()
@@ -274,6 +301,7 @@ def detail(db: Session, d: Draft, user: User) -> dict:
         # The newest history line: sent back with each action, so changes by others are noticed (see fresh()).
         "rev": db.query(AuditLog.id).filter(AuditLog.draft_id == d.id).order_by(AuditLog.id.desc()).limit(1).scalar() or 0,
         "findings": [finding_out(f) for f in findings],
+        "precedents": precedents(db, d, findings) if not isinstance(user, SimpleNamespace) else {},
         "images": [image_out(i) for i in db.query(DraftImage).filter(DraftImage.draft_id == d.id).order_by(DraftImage.id)],
         "run": None if run is None else {
             "version": run.version, "ai_used": run.ai_used, "ai_provider": run.ai_provider, "ai_model": run.ai_model,
@@ -548,6 +576,25 @@ def edit(finding_id: int, body: EditIn, db: Session = Depends(get_db), user: Use
     finding, draft = get_finding(db, finding_id, user)
     own_editable(draft, user)
     apply_fix(db, finding, draft, user, body.replacement, "edited")
+    return detail(db, draft, user)
+
+
+@router.post("/findings/{finding_id}/undo")
+def undo_fix(finding_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Take back a fix just applied: the text goes back to the version before it and the finding opens
+    again. Only the person who applied it, only while nothing else has changed the text since."""
+    finding, draft = get_finding(db, finding_id, user)
+    own_editable(draft, user)
+    if finding.status not in ("accepted", "edited") or finding.decided_by != user.id:
+        raise HTTPException(409, "There is no fix of yours on this finding to undo.")
+    latest = db.query(DraftVersion).filter(DraftVersion.draft_id == draft.id, DraftVersion.number == draft.version).first()
+    before = db.query(DraftVersion).filter(DraftVersion.draft_id == draft.id, DraftVersion.number == draft.version - 1).first()
+    if not latest or not before or finding.ref_code not in (latest.note or ""):
+        raise HTTPException(409, "The text has changed since this fix, so it cannot be undone. Edit the text instead.")
+    new_version(db, draft, user, before.body, f"Undid the fix for {finding.ref_code}")
+    finding.status, finding.decided_by, finding.note = "open", None, ""
+    log(db, user, "fix_undone", finding.ref_code, draft.id)
+    db.commit()
     return detail(db, draft, user)
 
 

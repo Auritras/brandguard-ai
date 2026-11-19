@@ -161,3 +161,21 @@ def test_a_rewrite_that_keeps_a_problem_keeps_its_finding_at_the_new_place(clien
     assert still["TERM"]["quote"] == "Lumio Pay" and still["R-002"]["quote"] == "#1"
     for f in still.values():
         assert "10,000" not in (f["suggestion"] or "")  # no stale fix that would undo the accepted one
+
+
+def test_undo_a_fix_and_see_precedents(client, creator, manager):
+    d = make(client, creator, "Our clients love it.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    term = next(f for f in d["findings"] if f["ref_code"] == "TERM")
+    d = client.post(f"/api/findings/{term['id']}/accept", headers=creator).json()
+    assert "customers" in d["body"]
+    d = client.post(f"/api/findings/{term['id']}/undo", headers=creator).json()
+    assert d["body"] == "Our clients love it." and next(f for f in d["findings"] if f["id"] == term["id"])["status"] == "open"
+    assert client.post(f"/api/findings/{term['id']}/undo", headers=creator).status_code == 409
+    # another draft with the same rule shows how it was decided here
+    d2 = make(client, creator, "Our clients are happy.")
+    d2 = client.post(f"/api/drafts/{d2['id']}/check", headers=creator).json()
+    t2 = next(f for f in d2["findings"] if f["ref_code"] == "TERM")
+    client.post(f"/api/findings/{t2['id']}/accept", headers=creator)
+    d = client.get(f"/api/drafts/{d['id']}", headers=creator).json()
+    assert d["precedents"]["TERM"][0]["outcome"] == "fixed with the suggested fix"
