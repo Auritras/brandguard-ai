@@ -12,7 +12,7 @@ from ..db import get_db
 from ..models import AuditLog, Brand, Draft, User
 from ..sandbox import clear_old_sandboxes, create_sandbox
 from ..seed import TEMPLATES, seed_library, template_key
-from .common import log
+from .common import iso, log
 
 router = APIRouter(prefix="/api", tags=["accounts"])
 owner = require("reviewer")
@@ -159,6 +159,30 @@ def remove_member(member_id: int, db: Session = Depends(get_db), user: User = De
     log(db, user, "member_removed", member.name)
     db.commit()
     return team(db, user)
+
+
+@router.get("/me/activity")
+def activity(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """What this person has done in their brand, from the audit log: totals and the latest actions."""
+    rows = db.query(AuditLog).filter(AuditLog.user_id == user.id).order_by(AuditLog.id.desc()).all()
+    count = lambda *actions: sum(1 for r in rows if r.action in actions)  # noqa: E731
+    titles = {d.id: d.title for d in db.query(Draft).filter(Draft.id.in_({r.draft_id for r in rows if r.draft_id}))} if rows else {}
+    return {
+        "since": iso(user.brand.created_at) if user.brand else None,
+        "totals": {
+            "written": count("draft_created"),
+            "checks": count("check_run"),
+            "fixed": count("finding_accepted", "finding_edited"),
+            "sent": count("submitted_for_review"),
+            "approved": count("approved", "sent_to_authorised_review"),
+            "waived": count("finding_waived"),
+            "sent_back": count("changes_requested"),
+            "comments": count("comment_added"),
+        },
+        "recent": [{"action": r.action, "detail": r.detail[:140], "draft_id": r.draft_id,
+                    "draft": titles.get(r.draft_id, ""), "at": iso(r.created_at)}
+                   for r in rows if r.action not in ("demo_started",)][:8],
+    }
 
 
 @router.put("/me/password")

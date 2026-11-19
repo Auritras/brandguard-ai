@@ -97,19 +97,24 @@ export default function Drafts({ user }) {
       <Recheck />
 
       {drafts?.length > 0 && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <>
+        <div className="mt-6">
           <ChannelMenu tabs={tabs} active={active} onPick={(c) => setView({ channel: c })}
             waitingIn={new Set((drafts || []).filter(waiting).map(channelOf))} />
-          <div className="flex flex-wrap items-center gap-2">
-          <label className="relative">
+        </div>
+        {/* One toolbar row: search grows to fill the space, status and sort sit at the right edge. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="relative min-w-[12rem] flex-1 sm:max-w-md">
             <span className="sr-only">Search drafts</span>
             <input type="search" value={query} placeholder="Search title or writer" data-search
               onChange={(e) => { setQuery(e.target.value); setView({ q: e.target.value }) }}
-              className="w-52 rounded-md border-2 border-line bg-card py-1.5 pl-8 pr-2 text-sm transition hover:border-ink focus:border-primary focus:outline-none" />
+              className="w-full rounded-md border-2 border-line bg-card py-1.5 pl-8 pr-2 text-sm transition hover:border-ink focus:border-primary focus:outline-none" />
             <svg aria-hidden="true" viewBox="0 0 16 16" className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted">
               <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="2" />
             </svg>
           </label>
+          <span className="hidden flex-1 sm:block" aria-hidden="true" />
+          <span className="text-sm text-muted tabular-nums" aria-live="polite">{sorted.length} of {drafts.length}</span>
           <label className="text-sm font-semibold">
             <span className="sr-only">Status</span>
             <select value={status} onChange={(e) => setView({ status: e.target.value })}
@@ -134,8 +139,8 @@ export default function Drafts({ user }) {
               </svg>
             </span>
           </label>
-          </div>
         </div>
+        </>
       )}
 
       <div data-tour="drafts" className="mt-4 grid gap-4 rounded-lg sm:grid-cols-2 lg:grid-cols-3" key={`${active}-${sort}-${status}`}>

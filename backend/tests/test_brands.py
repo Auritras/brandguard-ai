@@ -146,3 +146,10 @@ def test_owner_can_write_but_never_approve_their_own_draft(client):
     client.post("/api/team", headers=owner, json={"name": "Mo", "email": email, "role": "manager", "password": "manager-pass"})
     mgr = {"Authorization": "Bearer " + client.post("/api/auth/login", json={"email": email, "password": "manager-pass"}).json()["token"]}
     assert client.post(f"/api/drafts/{did}/approve", headers=mgr).json()["status"] == "approved"
+
+
+def test_my_activity_counts_only_my_own_actions(client, creator, manager):
+    mine = client.get("/api/me/activity", headers=creator).json()
+    theirs = client.get("/api/me/activity", headers=manager).json()
+    assert mine["totals"]["written"] >= 1 and theirs["totals"]["written"] == 0
+    assert all(set(r) >= {"action", "draft", "at"} for r in mine["recent"])
