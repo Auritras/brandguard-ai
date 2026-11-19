@@ -43,3 +43,15 @@ def reliability(user: User = Depends(current_user)):
         "cases": len(cases),
         "clean": sum(1 for c in cases.values() if not c.get("expect")),
     }
+
+
+@router.get("/reliability/summary")
+def summary():
+    """The headline numbers for the sign-in page (public: they describe the checker, not anyone's data)."""
+    out = {}
+    for mode in ("exact", "ai"):
+        report = _read(EVALS / "results" / f"{mode}.json", None)
+        if report:
+            out[mode] = {"caught": sum(b["caught"] for b in report["brands"]), "planted": sum(b["planted"] for b in report["brands"])}
+    cases = sum(len(_read(p, {}).get("cases", [])) for p in (EVALS / "cases").glob("*.json"))
+    return {**out, "cases": cases}

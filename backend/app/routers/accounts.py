@@ -281,7 +281,7 @@ def compare(body: CompareIn, request: Request, db: Session = Depends(get_db)):
         found = run_exact(body.text, db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all(),
                           db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all())
         out.append({"key": key, "name": name, "findings": [
-            {"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
+            {"quote": f["quote"], "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"], "suggestion": f["suggestion"],
              "spans": spans(body.text, f["quote"])} for f in found]})
     return out
 

@@ -18,6 +18,25 @@ const TABS = [
 // Kept between visits to this page, so signing out does not wait for the server again.
 let cachedDemo = null
 
+// Numbers anyone can check, from the reliability runs on the public test drafts.
+function Facts() {
+  const [f, setF] = useState(null)
+  useEffect(() => { api('/reliability/summary', { token: 'none' }).then(setF).catch(() => {}) }, [])
+  const item = 'flex items-baseline gap-2'
+  return (
+    <ul className="grid gap-x-8 gap-y-2 border-t-2 border-ink/20 pt-5 text-sm sm:grid-cols-2 md:col-span-2 lg:grid-cols-4">
+      {f?.exact && <li className={item}><span className="font-display text-2xl font-bold">{f.exact.caught}/{f.exact.planted}</span> planted problems caught by the exact checks</li>}
+      {f?.ai && <li className={item}><span className="font-display text-2xl font-bold">{f.ai.caught}/{f.ai.planted}</span> caught by the full check with AI</li>}
+      {f && <li className={item}><span className="font-display text-2xl font-bold">{f.cases}</span> public test drafts, run on every change</li>}
+      <li className={item}>
+        <a href="https://github.com/Auritras/brandguard-ai" target="_blank" rel="noreferrer" className="font-semibold underline decoration-2 underline-offset-2 hover:text-primary-deep">
+          Open source on GitHub →
+        </a>
+      </li>
+    </ul>
+  )
+}
+
 export default function Login({ onSignIn, signedOut }) {
   const [tab, setTab] = useState('demo')
   const [error, setError] = useState('')
@@ -73,27 +92,24 @@ export default function Login({ onSignIn, signedOut }) {
   }
 
   return (
-    <main className="page-in mx-auto grid min-h-screen max-w-5xl items-center gap-x-10 gap-y-8 px-5 py-10 md:grid-cols-2">
-      <div>
-        <svg viewBox="0 0 32 32" aria-hidden="true" className="logo-draw h-14 w-14 rounded-md border-2 border-ink shadow-print-sm">
-          <rect width="32" height="32" fill="#2f3bd9" />
-          <path className="logo-shield" pathLength="1" d="M16 5l9 4v7c0 6-4 9-9 11-5-2-9-5-9-11V9z" fill="#d9552f" stroke="#f3f0e2" strokeWidth="1.2" strokeLinejoin="round" />
-        </svg>
-        <h1 className="mt-5 font-display text-6xl font-extrabold leading-none">BrandGuard AI</h1>
-        <p className="mt-5 max-w-md text-lg">
-          Check a post, email or document against your approved brand rules and facts before it is published. Every
-          issue names the rule it breaks and suggests a fix. People make the final approval.
-        </p>
-        <p className="mt-6 max-w-md text-lg font-bold">
-          Same text, two brands, different results: see it below, then try either brand.
-        </p>
-        <p className="mt-2 max-w-md text-ink">
-          Lumio Payroll and Fizzbox are fictional brands with opposite styles. Or create your own brand: it is private to
-          you and the teammates you add.
+    // Above the fold on a laptop: the headline, one sentence and the live comparison on the left, the way in on
+    // the right. On a phone: the headline, the way in, then the comparison.
+    <main className="page-in mx-auto grid max-w-6xl gap-x-10 gap-y-6 px-5 py-8 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-start md:py-12">
+      <div className="md:col-start-1 md:row-start-1">
+        <div className="flex items-center gap-4">
+          <svg viewBox="0 0 32 32" aria-hidden="true" className="logo-draw h-12 w-12 shrink-0 rounded-md border-2 border-ink shadow-print-sm">
+            <rect width="32" height="32" fill="#2f3bd9" />
+            <path className="logo-shield" pathLength="1" d="M16 5l9 4v7c0 6-4 9-9 11-5-2-9-5-9-11V9z" fill="#d9552f" stroke="#f3f0e2" strokeWidth="1.2" strokeLinejoin="round" />
+          </svg>
+          <h1 className="font-display text-5xl font-extrabold leading-none sm:text-6xl">BrandGuard AI</h1>
+        </div>
+        <p className="mt-4 max-w-xl text-lg">
+          Checks every post, email and document against your brand's rules and approved facts before it goes out.
+          <span className="font-bold"> People make the final call.</span>
         </p>
       </div>
 
-      <Card heavy className="p-6">
+      <Card heavy className="p-6 md:col-start-2 md:row-span-2 md:row-start-1">
         {signedOut && <p role="status" className="mb-4 rounded-md bg-primary-soft px-3 py-2 text-sm font-semibold text-primary-deep">You've signed out. Pick how to carry on.</p>}
         <div role="tablist" aria-label="How to sign in" className="grid grid-cols-3 gap-1 rounded-lg border-2 border-line bg-white p-1">
           {TABS.map(([k, label]) => (
@@ -124,9 +140,12 @@ export default function Login({ onSignIn, signedOut }) {
               <div className="mt-3 grid gap-2">
                 {(chosen?.accounts || []).map((a) => (
                   <button key={a.role} disabled={busy} onClick={() => demo(a.role)}
-                    className="rounded-md border-2 border-line bg-white p-3 text-left transition hover:border-primary hover:bg-primary-soft disabled:opacity-50">
-                    <span className="block font-semibold">{a.name}</span>
-                    <span className="block text-sm text-muted">{ROLE_HELP[a.role]}</span>
+                    className="group flex items-center gap-3 rounded-md border-2 border-ink bg-white p-3 text-left shadow-[2px_2px_0_0_var(--color-ink)] transition duration-100 hover:-translate-y-px hover:bg-primary-soft active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50">
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">{a.name}</span>
+                      <span className="block text-sm text-muted">{ROLE_HELP[a.role]}</span>
+                    </span>
+                    <span aria-hidden="true" className="text-lg font-bold text-primary transition-transform group-hover:translate-x-1">→</span>
                   </button>
                 ))}
                 {!demoInfo && !error && <p className="text-sm text-muted">Loading demo accounts… the free server can take up to a minute to wake.</p>}
@@ -177,7 +196,10 @@ export default function Login({ onSignIn, signedOut }) {
           <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>
         </div>
       </Card>
-      <CompareBrands />
+      <div className="md:col-start-1 md:row-start-2">
+        <CompareBrands />
+      </div>
+      <Facts />
     </main>
   )
 }
