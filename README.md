@@ -196,9 +196,9 @@ brands people created are kept. `backend/.env` is ignored by git; never commit i
 
 ## Known limits
 
-- The exact checks are scored on every push. The full check with AI runs nightly in CI
-  (`reliability-ai.yml`) only once a `GROQ_API_KEY` repository secret is added; until then it is skipped
-  and run by hand, with results committed.
+- The exact checks are scored on every push. The full check with AI is not run on every push (80 AI
+  calls each time); it runs every night in CI (`reliability-ai.yml`, 03:00 IST) and commits its results,
+  so a change to the AI part is scored by the next morning, not before it is merged.
 - Logo checks compare shape and main colour. They do not catch a logo redrawn in a different font.
 - Contrast is measured per line of text; text on a busy photo can be measured on the wrong background.
 - Rules, terms and the AI prompts are in English. Hindi and other Indian scripts are checked for terms,

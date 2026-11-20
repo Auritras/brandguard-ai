@@ -36,7 +36,7 @@ same image always gives the same result. Without an AI key, palette and descript
 | Part | Delivered | How |
 |---|---|---|
 | About 40 seeded drafts per brand | Yes | 40 per demo brand: 30 with problems planted on purpose, 10 clean. They include Hindi, emoji, and Fizzbox hype that must not be flagged. `backend/evals/cases/` |
-| Run on every change | Yes, in two parts | The exact checks run on every push in CI, and a change that misses a planted problem fails the build. The full check with AI runs on demand (`python -m evals.run --mode ai --save`); it needs an AI key, which is not stored in CI. |
+| Run on every change | Yes, in two parts | The exact checks run on every push in CI, and a change that misses a planted problem fails the build. The full check with AI runs every night in CI and commits its results (`reliability-ai.yml`), and on demand (`python -m evals.run --mode ai --save`); it is not run on every push, to stay inside the free AI limit. |
 | Shown in the product | Yes | A Reliability page: catch rate, how much of what it flags is real, clean drafts left alone, trend over runs, per-rule bars, and every miss and false alarm with its draft. |
 
 ### Reliability under normal use
@@ -81,7 +81,7 @@ same image always gives the same result. Without an AI key, palette and descript
 - **Precedents:** how the same rule was handled on earlier drafts.
 - Pages update by themselves when a teammate acts in another window; the draft list re-sorts smoothly.
 - Keyboard review (J / K, A, D), a share link for the sign-in comparison, and a nightly CI run of the
-  full check with AI (needs a `GROQ_API_KEY` repository secret).
+  full check with AI, which commits its scores.
 - A sliding tab marker, a spotlight in the tour, numbers that count up.
 - **Check many posts:** a content calendar or CSV, a verdict for every post.
 - **Dark mode**, opt-in.

@@ -46,7 +46,7 @@ than argued with stay above 60%; no pilot reports a missed high-risk problem tha
 - A paid always-on server instead of the free one that sleeps, and background jobs for checks, so a
   long check never holds a page open.
 - A fallback AI provider when the main one is rate limited, with the same verification step.
-- The reliability run with AI on a schedule in CI (it needs a stored AI key), with an alert when the
+- The reliability run with AI, already nightly in CI, raising an alert when the
   catch rate drops.
 - Audit log export for compliance teams, and single sign-on (Google Workspace).
 
