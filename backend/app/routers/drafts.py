@@ -206,6 +206,28 @@ def new_version(db: Session, draft: Draft, user: User, body: str, note: str) -> 
     db.add(DraftVersion(draft_id=draft.id, number=draft.version, body=body, note=note, user_id=user.id))
 
 
+def check_own_fix(db: Session, draft: Draft, lo: int, hi: int, done: Finding) -> None:
+    """Someone wrote their own fix: run the exact checks on the new text at once. Anything in the new words
+    that is not already an open finding becomes one, so the count and score never improve on a fix that
+    breaks the rules. (AI rules are judged when the check runs again; the page asks for that.)"""
+    b = draft.brand_id
+    found = run_exact(draft.body, db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all(),
+                      db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all(),
+                      channel=draft.channel or "")
+    open_now = db.query(Finding).filter(Finding.draft_id == draft.id, Finding.status.in_(("open", "disputed")),
+                                        Finding.image_id.is_(None)).all()
+    db.flush()
+    for x in found:
+        where = spans(draft.body, x["quote"])
+        if not any(a < hi and lo < z for a, z in where):
+            continue  # not in the new words
+        if any(f.ref_code == x["ref_code"] and f.quote == x["quote"] for f in open_now):
+            continue
+        db.add(Finding(draft_id=draft.id, version=draft.version, source="exact", category=x["category"], severity=x["severity"],
+                       quote=x["quote"], focus=x.get("focus", ""), ref_code=x["ref_code"], ref_text=x["ref_text"],
+                       reason=f"In your own fix: {x['reason']}", suggestion=x["suggestion"], status="open"))
+
+
 def blocking_findings(db: Session, draft: Draft) -> list[Finding]:
     return db.query(Finding).filter(
         Finding.draft_id == draft.id, Finding.severity == "high", Finding.status.in_(BLOCKING)).all()
@@ -477,6 +499,8 @@ def apply_fix(db: Session, finding: Finding, draft: Draft, user: User, replaceme
     refresh_siblings(db, draft, before, draft.body, start, finding.quote, replacement, finding)
     finding.status, finding.decided_by = status, user.id
     finding.note = f"Replaced with: {replacement}"
+    if status == "edited":
+        check_own_fix(db, draft, start, start + len(replacement), finding)
     log(db, user, f"finding_{status}", f"{finding.ref_code}: \"{finding.quote}\" -> \"{replacement}\"", draft.id)
     db.commit()
 

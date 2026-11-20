@@ -170,11 +170,18 @@ export function RollNumber({ value }) {
 }
 
 // A button that first asks for a written reason, then calls onSubmit(reason).
-export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLabel = 'Confirm', onSubmit, initial = '', hold = false, pendingLabel = 'Sending' }) {
+export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLabel = 'Confirm', onSubmit, initial = '', hold = false, pendingLabel = 'Sending', check }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(initial)
   const [busy, setBusy] = useState(false)
   const [locked, setLocked] = useState(false) // the reason cannot change once the hold has started
+  const [warn, setWarn] = useState(null) // what the instant checks find in the text being typed (when `check` is given)
+  useEffect(() => {
+    if (!open || !check || text.trim().length < 2) return setWarn(null)
+    let stale = false
+    const t = setTimeout(() => check(text.trim()).then((w) => { if (!stale) setWarn(w) }).catch(() => {}), 450)
+    return () => { stale = true; clearTimeout(t) }
+  }, [open, text]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!open) {
     return (
       <Button kind={kind} onClick={() => setOpen(true)}>
@@ -196,6 +203,16 @@ export function ReasonButton({ label, placeholder, kind = 'secondary', confirmLa
           className={`${inputCls} mt-1 font-normal`}
         />
       </label>
+      {warn && (
+        <div aria-live="polite" className="mt-1.5 text-sm">
+          {warn.length === 0 ? <p className="text-muted">No problems from the instant checks in this text.</p> : (
+            <ul className="grid gap-1 rounded-md border-2 border-accent bg-accent/10 p-2">
+              <li className="font-semibold">This fix breaks {warn.length === 1 ? 'a rule' : `${warn.length} rules`} too:</li>
+              {warn.map((w, i) => <li key={i}>“{w.focus || w.quote}”: {w.reason}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {hold ? (
           <HoldButton kind="dark" disabled={busy || text.trim().length < 3} pendingLabel={pendingLabel}
@@ -331,12 +348,12 @@ export function Term({ name, children }) {
 }
 
 // 0 to 100: how ready the draft is to send. The ring fills as findings are handled.
-export function ScoreRing({ value, size = 44 }) {
+export function ScoreRing({ value, size = 44, stale = false }) {
   const r = 17, len = 2 * Math.PI * r
   const colour = value >= 85 ? 'var(--color-good)' : value >= 70 ? 'var(--color-primary)' : value >= 40 ? 'var(--color-accent)' : '#b42318'
   return (
-    <span className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}
-      title={`Ready to send: ${value} of 100. It is 100 when nothing is open; each open finding lowers it, a high-risk one most, and every fix raises it.`}>
+    <span className={`relative inline-grid shrink-0 place-items-center ${stale ? 'opacity-50' : ''}`} style={{ width: size, height: size }}
+      title={`${stale ? 'Until the check runs again. ' : ''}Ready to send: ${value} of 100. It is 100 when nothing is open; each open finding lowers it, a high-risk one most, and every fix raises it.`}>
       <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx="20" cy="20" r={r} fill="none" stroke="var(--color-line)" strokeWidth="4" />
         <circle cx="20" cy="20" r={r} fill="none" stroke={colour} strokeWidth="4" strokeLinecap="round"

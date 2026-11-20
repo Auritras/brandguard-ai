@@ -189,3 +189,16 @@ def test_check_many_posts_in_one_request(client, creator):
     assert first and second == []
     too_many = client.post("/api/check-many", headers=creator, json={"posts": posts * 26})
     assert too_many.status_code == 422  # 52 posts: the limit is 50
+
+
+def test_own_fix_is_checked_at_once(client, creator):
+    from test_workflow import make
+    d = make(client, creator, "Our payroll app is simple. Read more.")
+    d = client.post(f"/api/drafts/{d['id']}/check", headers=creator).json()
+    f = next(x for x in d["findings"] if x["ref_code"] == "R-005")
+    before = sum(1 for x in d["findings"] if x["status"] == "open")
+    d = client.post(f"/api/findings/{f['id']}/edit", headers=creator,
+                    json={"replacement": "Lumio Pay is the best. BUY NOW!!"}).json()
+    new = [x for x in d["findings"] if x["status"] == "open" and x["reason"].startswith("In your own fix")]
+    assert {x["ref_code"] for x in new} >= {"TERM", "R-006", "R-007"}
+    assert sum(1 for x in d["findings"] if x["status"] == "open") > before - 1 and d["needs_check"]

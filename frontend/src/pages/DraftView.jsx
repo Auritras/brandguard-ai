@@ -384,7 +384,8 @@ export default function DraftView({ user }) {
         {d.score !== null && d.status !== 'approved' && (
           // At 100 the ring pulses once and a "Brand-safe" label appears: the payoff for working through the list.
           <span key={ready ? 'ready' : 'not'} className={`flex items-center gap-2 ${ready && acted ? 'ready-burst' : ''}`}>
-            <ScoreRing value={d.score} />
+            <ScoreRing value={d.score} stale={d.needs_check} />
+            {d.needs_check && d.can.edit && <span className="text-xs text-muted">until re-checked</span>}
             {ready && <span className="step-in rounded-full border-2 border-good bg-good px-2.5 py-0.5 text-xs font-bold text-white">Brand-safe ✓</span>}
           </span>
         )}
@@ -1021,6 +1022,7 @@ function FindingCard({ i, f, d, user, busy, act, guessFix, setTrying, onFixed, l
               <ReasonButton label={f.image_id ? 'Write my own description' : 'Write my own fix'}
                 placeholder={f.image_id ? 'What does the image show?' : 'Replacement for the highlighted text'}
                 confirmLabel={f.image_id ? 'Save description' : 'Apply my fix'} initial={f.image_id ? f.suggestion : f.suggestion || f.quote}
+                check={f.image_id ? undefined : (text) => api('/check-text', { method: 'POST', body: { body: text, channel: '' } })}
                 onSubmit={async (replacement) => { if (await act('edit', `/findings/${f.id}/edit`, { replacement }, guessFix(f, replacement, 'edited')) && !f.image_id) onFixed?.(f) }} />
             )}
             <ReasonButton label="Dispute" placeholder="Why is this finding wrong?" confirmLabel="Send dispute"
