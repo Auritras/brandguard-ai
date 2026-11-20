@@ -77,9 +77,11 @@ export const inputCls =
 export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendingLabel = 'Sending', disabled, onConfirm, onPhase, children }) {
   const [phase, setPhase] = useState('idle') // idle | holding | pending
   const [left, setLeft] = useState(0)
+  const [hint, setHint] = useState(false) // let go too soon: say to keep holding
   const hold = useRef()
+  const hintT = useRef()
   const tick = useRef()
-  useEffect(() => () => { clearTimeout(hold.current); clearInterval(tick.current) }, [])
+  useEffect(() => () => { clearTimeout(hold.current); clearInterval(tick.current); clearTimeout(hintT.current) }, [])
   useEffect(() => { onPhase?.(phase) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = () => {
@@ -102,7 +104,13 @@ export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendi
   }
   const stop = () => {
     clearTimeout(hold.current)
-    setPhase((p) => (p === 'holding' ? 'idle' : p))
+    setPhase((p) => {
+      if (p !== 'holding') return p
+      setHint(true)
+      clearTimeout(hintT.current)
+      hintT.current = setTimeout(() => setHint(false), 2200)
+      return 'idle'
+    })
   }
   const undo = () => {
     clearInterval(tick.current)
@@ -126,7 +134,7 @@ export function HoldButton({ kind = 'primary', ms = 1100, undoSeconds = 4, pendi
       onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); start() } }}
       onKeyUp={(e) => { if (e.key === 'Enter' || e.key === ' ') stop() }}>
       <span aria-hidden="true" className={`hold-fill ${phase === 'holding' ? 'is-holding' : ''}`} style={{ '--hold': `${ms}ms` }} />
-      <span className="relative">{phase === 'holding' ? 'Keep holding…' : children}</span>
+      <span className="relative">{phase === 'holding' ? 'Keep holding…' : hint ? 'Press and hold to confirm' : children}</span>
     </Button>
   )
 }

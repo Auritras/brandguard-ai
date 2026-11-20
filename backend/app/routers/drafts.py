@@ -622,7 +622,7 @@ def decide(finding_id: int, body: DecideIn, db: Session = Depends(get_db),
     if finding.status != "disputed":
         raise HTTPException(409, "This finding is not disputed.")
     if finding.severity == "high" and user.role != "reviewer":
-        raise HTTPException(403, "A high-severity dispute needs an authorised reviewer.")
+        raise HTTPException(403, "A high-risk dispute needs an authorised reviewer.")
     if body.decision == "uphold":
         finding.status = "open"
         finding.note = f"Dispute rejected: {body.reason} (Creator said: {finding.note})"
@@ -692,7 +692,7 @@ def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(r
         if blocking:
             draft.status = "authorised_review"
             log(db, user, "sent_to_authorised_review",
-                f"Manager approved; {plural(len(blocking), 'high-severity finding')} still {'needs' if len(blocking) == 1 else 'need'} an authorised reviewer", draft.id)
+                f"Manager approved; {plural(len(blocking), 'high-risk finding')} still {'needs' if len(blocking) == 1 else 'need'} an authorised reviewer", draft.id)
         else:
             draft.status = "approved"
             log(db, user, "approved", f"Version {draft.version} approved and locked", draft.id)
@@ -700,7 +700,7 @@ def approve(draft_id: int, db: Session = Depends(get_db), user: User = Depends(r
         if draft.status not in ("in_review", "authorised_review"):
             raise HTTPException(409, "This draft is not waiting for review.")
         if blocking:
-            raise HTTPException(409, f"{plural(len(blocking), 'high-severity finding')} {'is' if len(blocking) == 1 else 'are'} still open. Waive each with a reason, "
+            raise HTTPException(409, f"{plural(len(blocking), 'high-risk finding')} {'is' if len(blocking) == 1 else 'are'} still open. Waive each with a reason, "
                                      "decide the dispute, or request changes.")
         draft.status = "approved"
         log(db, user, "approved", f"Version {draft.version} approved and locked", draft.id)

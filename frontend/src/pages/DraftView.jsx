@@ -402,7 +402,15 @@ export default function DraftView({ user }) {
             </Button>
           </>
         )}
-        {d.can.approve && (
+        {d.can.approve && user.role !== 'manager' && d.blocking > 0 && (
+          <span className="flex flex-wrap items-center gap-2">
+            <Button kind="primary" disabled aria-describedby="approve-why">Hold to approve</Button>
+            <span id="approve-why" className="text-sm text-muted">
+              {plural(d.blocking, 'high-risk finding')} still {d.blocking === 1 ? 'needs' : 'need'} you: waive {d.blocking === 1 ? 'it' : 'each'} with a reason, decide the dispute, or request changes.
+            </span>
+          </span>
+        )}
+        {d.can.approve && !(user.role !== 'manager' && d.blocking > 0) && (
           <HoldButton kind="primary" disabled={!!busy} pendingLabel={user.role === 'manager' && d.blocking > 0 ? 'Escalating' : 'Approving'}
             onConfirm={() => act('approve', `/drafts/${d.id}/approve`)}>
             {busy === 'approve' ? 'Approving…' : user.role === 'manager' && d.blocking > 0 ? 'Hold to approve and escalate' : 'Hold to approve'}
