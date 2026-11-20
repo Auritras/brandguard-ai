@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api } from './api.js'
+import { jsSpans } from './offsets.js'
 import { Chip, RollNumber, SEVERITY } from './ui.jsx'
 
 // The same box metrics for the textarea and the highlight layer behind it, so the marks line up.
@@ -37,7 +38,7 @@ export default function LiveText({ id, value, onChange, required, placeholder, m
   }, [value])
 
   const marks = []
-  for (const f of found) for (const [start, end] of f.spans) {
+  for (const f of jsSpans(value, found)) for (const [start, end] of f.spans) {
     // A wrong or expired figure: only the number is highlighted, not the whole sentence.
     const inner = f.focus ? value.slice(start, end).indexOf(f.focus) : -1
     marks.push(inner === -1 ? { start, end, f } : { start: start + inner, end: start + inner + f.focus.length, f })

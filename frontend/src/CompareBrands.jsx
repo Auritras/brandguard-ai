@@ -2,6 +2,7 @@
 // Exact checks only (instant, no AI, nothing stored), re-run a moment after you stop typing.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api } from './api.js'
+import { jsSpans } from './offsets.js'
 import { SEVERITY } from './ui.jsx'
 
 // Ready-made sentences, so nobody has to type to see the difference.
@@ -17,7 +18,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
 function marked(text, findings, lit) {
   const marks = []
-  for (const f of findings) for (const [start, end] of f.spans) {
+  for (const f of jsSpans(text, findings)) for (const [start, end] of f.spans) {
     // A wrong or expired figure: only the number is highlighted, not the whole sentence.
     const inner = f.focus ? text.slice(start, end).indexOf(f.focus) : -1
     marks.push(inner === -1 ? { start, end, f } : { start: start + inner, end: start + inner + f.focus.length, f })
