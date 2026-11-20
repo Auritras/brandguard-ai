@@ -10,7 +10,7 @@ import io
 import json
 import math
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageChops, ImageFilter, ImageMath, ImageOps
 
 from .. import config
 from .ai import _post, _why
@@ -351,6 +351,90 @@ def analyse(data: bytes, mime: str, width: int, height: int, palette: list[str],
                     "issues": sorted(set(measured + said)), "measured": measured}
     return {"colours": colours, "palette": palette, "lines": lines, "logo": logo_out,
             "description": seen.get("description", ""), "ai_used": seen.get("used", False), "note": seen.get("note", "")}
+
+
+# ---------- sharpness ----------
+
+_LAPLACE = ImageFilter.Kernel((3, 3), [0, -1, 0, -1, 4, -1, 0, -1, 0], scale=1, offset=128)
+BLURRY_BELOW = 0.45  # calibrated: crisp graphics and photos score 0.55 to 1.2; blurred or upscaled ones 0.1 to 0.41
+
+
+def sharpness(img: Image.Image) -> float | None:
+    """How crisp the image's edges are, whatever their contrast: at each real edge (a step of 60 or more
+    grey levels within 7 px), the strongest second derivative divided by the step. A crisp edge changes in
+    one pixel (about 0.6 or more); a blurred or upscaled edge is spread over several (under 0.45).
+    None if the image has too few edges to judge (a flat colour, a soft gradient)."""
+    g = img.convert("L")
+    if g.width > 1000:
+        g = g.resize((1000, max(1, round(g.height * 1000 / g.width))), Image.LANCZOS)
+    w, h = g.size
+    if w < 20 or h < 20:
+        return None
+    edge = (4, 4, w - 4, h - 4)  # the filters see a false edge at the border
+    lap = g.filter(_LAPLACE).point(lambda v: abs(v - 128)).filter(ImageFilter.MaxFilter(7)).crop(edge)
+    step = ImageChops.subtract(g.filter(ImageFilter.MaxFilter(7)), g.filter(ImageFilter.MinFilter(7))).crop(edge)
+    mask = step.point(lambda v: 255 if v >= 60 else 0)
+    # peak / step as a percentage, 0 to 255, counted only where there is a real edge
+    ratio = ImageMath.lambda_eval(lambda a: a["convert"](a["min"](a["p"] * 100 / a["s"], 255), "L"),
+                                  p=lap.convert("I"), s=step.point(lambda v: max(v, 1)).convert("I"))
+    hist = ratio.histogram(mask=mask)
+    n = sum(hist)
+    if n < 200:
+        return None
+    acc = 0
+    for v, c in enumerate(hist):
+        acc += c
+        if acc * 2 >= n:
+            return round(v / 100, 2)
+    return None
+
+
+# ---------- size and shape for the channel ----------
+
+# (name, width / height, the size to export at). The first is what we suggest when an image fits none.
+CHANNEL_IMAGES = {
+    "Instagram": {"min_width": 1080, "range": (0.8, 1.91),
+                  "shapes": [("4:5 portrait", 4 / 5, "1080 × 1350"), ("1:1 square", 1.0, "1080 × 1080"), ("1.91:1 landscape", 1.91, "1080 × 566")]},
+    "LinkedIn": {"min_width": 1200, "range": (0.8, 1.91),
+                 "shapes": [("1.91:1 landscape", 1.91, "1200 × 627"), ("1:1 square", 1.0, "1200 × 1200"), ("4:5 portrait", 4 / 5, "1080 × 1350")]},
+    "Email": {"min_width": 600, "range": None, "shapes": []},
+}
+
+
+def _overlap(a, b) -> float:
+    """Share of box a that lies inside box b."""
+    w = max(0, min(a[2], b[2]) - max(a[0], b[0]))
+    h = max(0, min(a[3], b[3]) - max(a[1], b[1]))
+    area = max(1, (a[2] - a[0]) * (a[3] - a[1]))
+    return w * h / area
+
+
+def channel_fit(width: int, height: int, channel: str | None, analysis: dict) -> dict | None:
+    """Does the image's shape and size suit the draft's channel? If the shape is outside what the channel
+    shows uncropped, the nearest standard shape, the centred crop to it, and what that crop would cut off
+    (the logo, lines of text). Pure arithmetic."""
+    spec = CHANNEL_IMAGES.get(channel or "")
+    if not spec or not width or not height:
+        return None
+    ratio = width / height
+    out = {"channel": channel, "ratio": round(ratio, 2), "width": width, "min_width": spec["min_width"],
+           "too_small": width < spec["min_width"], "shape_ok": True}
+    lo_hi = spec["range"]
+    if lo_hi and not (lo_hi[0] * 0.97 <= ratio <= lo_hi[1] * 1.03):
+        name, target, size = min(spec["shapes"], key=lambda s: abs(s[1] - ratio))
+        if ratio > target:  # too wide: keep the full height, trim the sides
+            cw = round(height * target)
+            crop = [(width - cw) // 2, 0, (width - cw) // 2 + cw, height]
+        else:  # too tall: keep the full width, trim top and bottom
+            ch = round(width / target)
+            crop = [0, (height - ch) // 2, width, (height - ch) // 2 + ch]
+        cut = []
+        lg = analysis.get("logo") or {}
+        if lg.get("present") and lg.get("box") and _overlap(lg["box"], crop) < 0.9:
+            cut.append("the logo")
+        cut += [f"\"{ln['text']}\"" for ln in analysis.get("lines", []) if ln.get("box") and _overlap(ln["box"], crop) < 0.9][:3]
+        out.update(shape_ok=False, shape=name, size=size, crop=crop, cut=cut)
+    return out
 
 
 def image_text(analysis: dict) -> str:

@@ -141,3 +141,47 @@ def test_text_in_an_image_goes_through_the_same_rules(client, creator, monkeypat
     assert "VIS-LOGO" in from_image and "stretched" in from_image["VIS-LOGO"]["quote"]
     assert from_image["VIS-ALT"]["suggestion"].startswith("A white banner")
     assert "qwen" in d["run"]["ai_model"]
+
+
+def test_sharpness_tells_crisp_from_blurry():
+    from PIL import ImageFilter
+
+    from app.engine.image import BLURRY_BELOW, sharpness
+    for key in ("lumio", "fizzbox"):
+        img = Image.open(io.BytesIO(sample_png(key))).convert("RGB")
+        assert sharpness(img) >= 0.55  # the crisp originals
+        assert sharpness(img.filter(ImageFilter.GaussianBlur(1.5))) < BLURRY_BELOW
+        small = img.resize((img.width // 3, img.height // 3), Image.BILINEAR).resize(img.size, Image.BICUBIC)
+        assert sharpness(small) < BLURRY_BELOW  # a small image enlarged
+    assert sharpness(Image.new("RGB", (800, 800), "red")) is None  # nothing to judge
+
+
+def test_channel_fit_shape_size_and_what_a_crop_cuts():
+    from app.engine.image import channel_fit
+    assert channel_fit(1200, 675, "LinkedIn", {})["shape_ok"]  # 1.78:1 is fine
+    assert channel_fit(1080, 1350, "Instagram", {}) == {**channel_fit(1080, 1350, "Instagram", {}), "shape_ok": True, "too_small": False}
+    assert channel_fit(1000, 500, "Blog", {}) is None  # no rule for this channel
+    tall = {"logo": {"present": True, "box": [400, 20, 680, 110]}, "lines": [{"text": "Hello", "box": [100, 600, 900, 700]}]}
+    f = channel_fit(1080, 2400, "Instagram", tall)  # 0.45:1, a phone screenshot
+    assert not f["shape_ok"] and f["shape"].startswith("4:5") and f["size"] == "1080 × 1350"
+    assert f["crop"] == [0, 525, 1080, 1875] and f["cut"] == ["the logo"]  # the text in the middle survives
+    assert channel_fit(500, 500, "Instagram", {})["too_small"]
+
+
+def test_size_and_blur_findings_on_a_draft(client, creator):
+    from PIL import ImageFilter
+    r = client.post("/api/drafts", headers=creator, json={"title": "Story", "channel": "Instagram", "body": "A calm post about payroll."})
+    did = r.json()["id"]
+    img = Image.open(io.BytesIO(sample_png("lumio"))).convert("RGB").resize((400, 900)).filter(ImageFilter.GaussianBlur(2))
+    client.post(f"/api/drafts/{did}/images", headers=creator, files={"file": ("story.png", png(img), "image/png")})
+    d = client.post(f"/api/drafts/{did}/check", headers=creator).json()
+    size = [f for f in d["findings"] if f["ref_code"] == "VIS-SIZE"]
+    assert len(size) == 2 and any("Crop to 4:5" in f["suggestion"] for f in size) and any("1080 px" in f["reason"] for f in size)
+    assert any(f["ref_code"] == "VIS-SHARP" for f in d["findings"])
+    a = d["images"][0]["analysis"]
+    assert a["fit"]["crop"] and a["sharpness"] < 0.45
+    # the shape follows the channel: in an email, the same image only needs to be 600 px wide
+    did = client.post("/api/drafts", headers=creator, json={"title": "Mail", "channel": "Email", "body": "A calm note about payroll."}).json()["id"]
+    client.post(f"/api/drafts/{did}/images", headers=creator, files={"file": ("story.png", png(img), "image/png")})
+    d = client.post(f"/api/drafts/{did}/check", headers=creator).json()
+    assert [f["reason"][:20] for f in d["findings"] if f["ref_code"] == "VIS-SIZE" and f["status"] == "open"] == ["The image is 400 px "]

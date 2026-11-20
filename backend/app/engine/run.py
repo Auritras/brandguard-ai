@@ -12,7 +12,7 @@ from .. import config
 from ..models import Brand, Draft, DraftImage, Fact, Finding, ReviewRun, Rule, Term
 from .ai import ai_review
 from .exact import check_rule_patterns, check_terms, run_exact
-from .image import analyse, image_text, parse_palette
+from .image import BLURRY_BELOW, analyse, channel_fit, image_text, open_rgb, parse_palette, sharpness
 from .verify import verify_ai_findings
 
 # A finding a person has already ruled on is not raised again for the same passage.
@@ -25,6 +25,10 @@ VISUAL_RULES = {
     "VIS-LOGO": ("visual", "medium", "Use the logo as supplied: the same proportions and colours, not cropped, rotated or "
                                      "crowded, and large enough to read."),
     "VIS-ALT": ("accessibility", "medium", "Every image needs a short description (alt text) for people who use screen readers."),
+    "VIS-SIZE": ("visual", "medium", "Images should match the channel's shape and size, so they are not cropped or stretched: "
+                                     "Instagram 4:5, 1:1 or 1.91:1 at 1080 px wide; LinkedIn 1.91:1, 1:1 or 4:5 at 1200 px wide; "
+                                     "email at least 600 px wide."),
+    "VIS-SHARP": ("visual", "medium", "Images should be crisp: not blurred, and not a small image or screenshot enlarged."),
 }
 
 
@@ -99,6 +103,27 @@ def _visual(code: str, quote: str, reason: str, suggestion: str = "", ref_text: 
 def image_findings(a: dict, alt_text: str, palette: list[str]) -> list[dict]:
     """Turn one image's measurements into findings. Pure code: the same measurements give the same findings."""
     out = []
+    fit = a.get("fit")
+    if fit and not fit["shape_ok"]:
+        cut = f" A centred crop would cut off {', '.join(fit['cut'])}, so choose the crop yourself." if fit["cut"] else ""
+        out.append(_visual(
+            "VIS-SIZE", f"Image shape ({fit['ratio']}:1) for {fit['channel']}",
+            f"The image is {fit['ratio']}:1 (width to height). {fit['channel']} shows images between 4:5 and 1.91:1, "
+            f"so this one will be cropped in the feed.{cut}",
+            suggestion=f"Crop to {fit['shape']} and export at {fit['size']} px."))
+    if fit and fit["too_small"]:
+        out.append(_visual(
+            "VIS-SIZE", f"Image width ({fit['width']} px) for {fit['channel']}",
+            f"The image is {fit['width']} px wide; {fit['channel']} shows images at {fit['min_width']} px or more, "
+            "so it will be enlarged and look soft.",
+            suggestion=f"Export the image at least {fit['min_width']} px wide from the original design file.", severity="low"))
+    sharp = a.get("sharpness")
+    if sharp is not None and sharp < BLURRY_BELOW:
+        out.append(_visual(
+            "VIS-SHARP", f"The image looks blurry (sharpness {sharp})",
+            f"Edges in the image are spread over several pixels (sharpness {sharp}; crisp images measure 0.55 or more). "
+            "This usually means a small image or a screenshot was enlarged, or the image was saved from a chat app.",
+            suggestion="Export the image again from the original design file, at full size."))
     for c in a["colours"]:
         if c["off"]:
             out.append(_visual(
@@ -154,6 +179,12 @@ def review_images(db: Session, draft: Draft, rules, facts, terms) -> tuple[list[
         if not cached:
             img.analysis, img.analysed_key = json.dumps(a), (key if a["ai_used"] or not config.AI_API_KEY else "")
         used = used or a["ai_used"]
+        # Measured outside the cached analysis (no need to ask the vision model again): sharpness once per
+        # image, and the fit to the draft's channel every time, since the channel can change.
+        if "sharpness" not in a:
+            a["sharpness"] = sharpness(open_rgb(img.data))
+        a["fit"] = channel_fit(img.width, img.height, draft.channel, a)
+        img.analysis = json.dumps(a)
         found = image_findings(a, img.alt_text, palette)
         text = image_text(a)
         if text:
