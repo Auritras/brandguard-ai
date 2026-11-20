@@ -85,10 +85,12 @@ same image always gives the same result. Without an AI key, palette and descript
 - A sliding tab marker, a spotlight in the tour, numbers that count up.
 - **Check many posts:** a content calendar or CSV, a verdict for every post.
 - **Dark mode**, opt-in.
+- Two more image checks, measured in code: shape and size for the channel (Instagram, LinkedIn,
+  email), with the crop drawn on the image and what it would cut off; and blurry or enlarged images.
 
 ### Testing and documentation
 - Browser tests of the main journeys in CI, with an accessibility scan (axe, WCAG 2 A and AA) of nine screens, in light and dark.
-- 70 backend tests, including the reliability gate.
+- 73 backend tests, including the reliability gate.
 - One-command local setup (`scripts/dev.sh`, `scripts/dev.ps1`), a roadmap, this changelog, and a
   testing report.
 

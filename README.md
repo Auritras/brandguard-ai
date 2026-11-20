@@ -54,7 +54,8 @@ its library starts with sample rules you can change, and on **Team** you add tea
   counted.
 - **Image review:** the image's colours against the brand palette, the contrast of each line of text in
   it (WCAG 2.2 AA), the logo's proportions and colour against the official file, the text inside it
-  (checked like the draft's own text), and its description for screen readers. The vision model only
+  (checked like the draft's own text), its description for screen readers, its shape and size for the
+  channel (with what a crop would cut off), and whether it is blurry. The vision model only
   reads the image; every judgement is measured in code. The draft page draws what was measured on the
   image.
 - Each finding: the quote, the cited rule or fact, the reason, the severity, a suggested fix. Accept it,
@@ -167,7 +168,7 @@ first run builds both demo brands and their drafts in it (exact checks only, abo
 `uvicorn app.main:app --port 8000`. In `frontend`, `npm ci` then `npm run dev` (it forwards `/api` to
 port 8000).
 
-**Tests:** `cd backend && python -m pytest` (70 tests, including the reliability gate) ·
+**Tests:** `cd backend && python -m pytest` (73 tests, including the reliability gate) ·
 `cd frontend && npm run e2e` (browser journeys; first time `npx playwright install chromium`) ·
 `cd backend && python -m evals.run` (the reliability score; `--mode ai` with a key).
 
@@ -221,7 +222,7 @@ backend/
               drafts (review, workflow, images, sharing), insights (Brand health, guideline gaps),
               reliability
   evals/      cases/ (80 test drafts), run.py (the scorer), load.py, results/
-  tests/      70 tests
+  tests/      73 tests
 frontend/
   src/pages/  Login, Drafts, NewDraft, DraftView, Bulk, Record, Insights, Library, Reliability, Team, Account
   src/        ImagePanel, ChannelPreview, MakeRule, LiveRun, CompareBrands, GuidelineGaps, LiveText,
