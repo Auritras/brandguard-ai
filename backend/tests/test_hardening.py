@@ -179,3 +179,13 @@ def test_undo_a_fix_and_see_precedents(client, creator, manager):
     client.post(f"/api/findings/{t2['id']}/accept", headers=creator)
     d = client.get(f"/api/drafts/{d['id']}", headers=creator).json()
     assert d["precedents"]["TERM"][0]["outcome"] == "fixed with the suggested fix"
+
+
+def test_check_many_posts_in_one_request(client, creator):
+    posts = [{"body": "Lumio Pay is great. Click here!", "channel": "LinkedIn"}, {"body": "Payday, sorted.", "channel": "Email"}]
+    r = client.post("/api/check-many", headers=creator, json={"posts": posts})
+    assert r.status_code == 200
+    first, second = r.json()
+    assert first and second == []
+    too_many = client.post("/api/check-many", headers=creator, json={"posts": posts * 26})
+    assert too_many.status_code == 422  # 52 posts: the limit is 50

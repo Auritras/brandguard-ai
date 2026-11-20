@@ -56,6 +56,10 @@ class BodyIn(BaseModel):
     channel: str = Field("", max_length=60)  # only used by the live check, for channel limits
 
 
+class ManyIn(BaseModel):
+    posts: list[BodyIn] = Field(min_length=1, max_length=50)  # a content calendar, checked in one request
+
+
 class DueIn(BaseModel):
     due_date: date | None = None
 
@@ -396,16 +400,29 @@ def spans(body: str, quote: str) -> list[list[int]]:
     return [[m.start(), m.end()] for m in re.finditer(left + re.escape(quote) + right, body)][:20]
 
 
+def _library(db: Session, brand_id: int):
+    return (db.query(Rule).filter(Rule.brand_id == brand_id, Rule.status == "approved").all(),
+            db.query(Fact).filter(Fact.brand_id == brand_id).all(), db.query(Term).filter(Term.brand_id == brand_id).all())
+
+
+def _instant(text: str, channel: str, lib) -> list[dict]:
+    rules, facts, terms = lib
+    found = run_exact(text, rules, facts, terms, channel=channel)
+    return [{"quote": f["quote"], "focus": f.get("focus", ""), "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
+             "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
+
+
 @router.post("/check-text")
 def check_text(body: BodyIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     """Exact checks only, on unsaved text, for checking while typing. Nothing is stored or sent to AI."""
-    text = body.body[:MAX_BODY]
-    b = user.brand_id
-    rules = db.query(Rule).filter(Rule.brand_id == b, Rule.status == "approved").all()
-    found = run_exact(text, rules, db.query(Fact).filter(Fact.brand_id == b).all(), db.query(Term).filter(Term.brand_id == b).all(),
-                      channel=body.channel)
-    return [{"quote": f["quote"], "focus": f.get("focus", ""), "severity": f["severity"], "ref_code": f["ref_code"], "reason": f["reason"],
-             "suggestion": f["suggestion"], "spans": spans(text, f["quote"])} for f in found]
+    return _instant(body.body[:MAX_BODY], body.channel, _library(db, user.brand_id))
+
+
+@router.post("/check-many")
+def check_many(body: ManyIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """The same exact checks on up to 50 posts at once (a content calendar). Nothing is stored or sent to AI."""
+    lib = _library(db, user.brand_id)
+    return [_instant(p.body[:MAX_BODY], p.channel, lib) for p in body.posts]
 
 
 @router.delete("/drafts/{draft_id}")

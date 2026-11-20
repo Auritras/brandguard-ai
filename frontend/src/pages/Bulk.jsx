@@ -36,20 +36,22 @@ export default function Bulk() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
+  const [skipped, setSkipped] = useState(0) // posts past the first 50, not checked
   const check = async () => {
-    const posts = postsFrom(text, channel).slice(0, 50)
+    const all = postsFrom(text, channel)
+    const posts = all.slice(0, 50)
     if (!posts.length) return setError('Paste some posts first: one post per paragraph, with a blank line between posts.')
     setError('')
     setBusy(true)
+    setSkipped(all.length - posts.length)
     setRows(posts.map((p) => ({ ...p, found: null })))
-    for (let i = 0; i < posts.length; i++) {
-      try {
-        const found = await api('/check-text', { method: 'POST', body: { body: posts[i].text.slice(0, 20000), channel: posts[i].channel } })
-        setRows((r) => r.map((x, j) => (j === i ? { ...x, found } : x)))
-      } catch (e) {
-        setError(e.message)
-        break
-      }
+    try {
+      // One request for the whole calendar.
+      const found = await api('/check-many', { method: 'POST', body: { posts: posts.map((p) => ({ body: p.text.slice(0, 20000), channel: p.channel })) } })
+      setRows(posts.map((p, i) => ({ ...p, found: found[i] })))
+    } catch (e) {
+      setError(e.message)
+      setRows(null)
     }
     setBusy(false)
   }
@@ -98,7 +100,9 @@ export default function Bulk() {
         </label>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button kind="primary" onClick={check} disabled={busy}>{busy ? 'Checking…' : 'Check every post'}</Button>
-          <span className="text-sm text-muted">{postsFrom(text, channel).length > 0 && plural(Math.min(50, postsFrom(text, channel).length), 'post')} (up to 50)</span>
+          <span className={`text-sm ${postsFrom(text, channel).length > 50 ? 'font-semibold text-red-800' : 'text-muted'}`}>
+            {postsFrom(text, channel).length > 50 ? `${postsFrom(text, channel).length} posts: only the first 50 will be checked` : <>{postsFrom(text, channel).length > 0 && plural(postsFrom(text, channel).length, 'post')} (up to 50)</>}
+          </span>
         </div>
         <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>
       </Card>
@@ -108,6 +112,7 @@ export default function Bulk() {
           <p className="border-b-2 border-line px-5 py-3 text-sm" aria-live="polite">
             <span className="font-semibold">{done.length} of {rows.length} checked</span>
             {done.length > 0 && <> · <span className="text-good font-semibold">{clean} fine as written</span> · {done.length - clean} to fix</>}
+            {skipped > 0 && <span className="mt-1 block font-semibold text-red-800">Only the first 50 posts were checked; {skipped} more were left out. Check them in a second batch.</span>}
           </p>
           <ol className="divide-y divide-line">
             {rows.map((r, i) => {
