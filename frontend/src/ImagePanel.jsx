@@ -48,11 +48,20 @@ function OneImage({ n, img, d, busy, act }) {
   const [show, setShow] = useState(true)
   const failing = (a?.lines || []).filter((l) => l.contrast && !l.contrast.passes).length
   const off = (a?.colours || []).filter((c) => c.off).length
+  const crop = a?.fit && !a.fit.shape_ok ? a.fit.crop : null // what the channel would show: the rest is dimmed
   return (
     <figure id={`image-${img.id}`} className="scroll-mt-24 grid gap-4 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,17rem)]">
       <div>
         <div className="relative overflow-hidden rounded-lg border-2 border-line bg-white">
           <img src={imageSrc(img.url)} alt={img.alt_text || `Image ${n}, not described yet`} className="block h-auto w-full" />
+          {crop && show && (
+            <svg viewBox={`0 0 ${img.width} ${img.height}`} className="box-fade pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+              <path fillRule="evenodd" fill="rgba(20,20,20,0.55)"
+                d={`M0 0H${img.width}V${img.height}H0Z M${crop[0]} ${crop[1]}H${crop[2]}V${crop[3]}H${crop[0]}Z`} />
+              <rect x={crop[0]} y={crop[1]} width={crop[2] - crop[0]} height={crop[3] - crop[1]} fill="none" stroke="#fff"
+                strokeDasharray="12 8" strokeWidth={Math.max(2, img.width / 300)} />
+            </svg>
+          )}
           {a && show && (
             <svg viewBox={`0 0 ${img.width} ${img.height}`} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
               {a.lines.filter((l) => l.box).map((l, i) => (
@@ -78,6 +87,12 @@ function OneImage({ n, img, d, busy, act }) {
                   {l.contrast.ratio}:1
                 </span>
               ))}
+              {crop && (
+                <span className="box-fade absolute whitespace-nowrap rounded-sm bg-white px-1 text-[10px] font-bold leading-4 text-ink"
+                  style={{ left: `calc(${(crop[0] / img.width) * 100}% + 6px)`, top: `calc(${(crop[1] / img.height) * 100}% + 6px)` }}>
+                  {a.fit.channel} shows this part · {a.fit.shape}
+                </span>
+              )}
               {a.colours.filter((c) => c.off && c.box).map((c, i) => (
                 <span key={c.hex} className="box-fade absolute flex items-center gap-1 whitespace-nowrap rounded-sm bg-ink px-1 text-[10px] font-bold leading-4 text-paper"
                   style={{ left: `calc(${(c.box[0] / img.width) * 100}% + 6px)`, top: `calc(${(c.box[1] / img.height) * 100}% + 6px)`, '--i': a.lines.length + 1 + i }}>
@@ -161,6 +176,29 @@ function OneImage({ n, img, d, busy, act }) {
               <p className={`mt-1 ${a.logo.issues.length ? 'font-semibold text-red-800' : 'text-muted'}`}>
                 {!a.logo.present ? 'Not found in the image.' : a.logo.issues.length ? `Used wrongly: ${a.logo.issues.join(', ')}.` : 'Used as supplied.'}
               </p>
+            </section>
+          )}
+          {(a.fit || a.sharpness != null) && (
+            <section>
+              <h3 className="font-semibold">Size and sharpness</h3>
+              <ul className="mt-1 grid gap-1">
+                {a.fit && (
+                  <li className={a.fit.shape_ok ? 'text-muted' : 'font-semibold text-red-800'}>
+                    {a.fit.shape_ok ? `Shape suits ${a.fit.channel} (${a.fit.ratio}:1).` : `${a.fit.ratio}:1 will be cropped on ${a.fit.channel}: use ${a.fit.shape}, ${a.fit.size} px.`}
+                    {!a.fit.shape_ok && a.fit.cut.length > 0 && <span className="block font-normal">A centred crop cuts off {a.fit.cut.join(', ')}.</span>}
+                  </li>
+                )}
+                {a.fit && (
+                  <li className={a.fit.too_small ? 'font-semibold text-red-800' : 'text-muted'}>
+                    {img.width} × {img.height} px{a.fit.too_small ? `: under the ${a.fit.min_width} px ${a.fit.channel} uses.` : `, enough for ${a.fit.channel}.`}
+                  </li>
+                )}
+                {a.sharpness != null && (
+                  <li className={a.sharpness < 0.45 ? 'font-semibold text-red-800' : 'text-muted'}>
+                    Sharpness {a.sharpness}{a.sharpness < 0.45 ? ': looks blurry (crisp is 0.55 or more).' : ': crisp.'}
+                  </li>
+                )}
+              </ul>
             </section>
           )}
           {a.note && <p className="text-xs text-muted">{a.note}</p>}
