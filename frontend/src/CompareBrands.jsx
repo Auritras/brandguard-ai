@@ -6,12 +6,11 @@ import { jsSpans } from './offsets.js'
 import { SEVERITY } from './ui.jsx'
 
 // Ready-made sentences, so nobody has to type to see the difference.
-const PRESETS = [
-  ['Hype post', "OMG!! Our new mango fizz is the most fun you'll have all week. Grab yours today!"],
-  ['Drink ad', 'BUY NOW!! Our healthy new mango fizz is the best drink in town. Click here to grab yours.'],
-  ['Payroll ad', "Lumio Pay is India's #1 payroll app, trusted by 10,000 companies. Guaranteed accuracy. Click here!"],
-  ['Neutral', 'Something new is coming this summer. Sign up on our website to hear about it first.'],
-]
+// The presets and their verdicts are built into the page (backend/app/make_presets.py), so they show at
+// once even while the server is asleep. Only text someone types goes to the server.
+import BAKED from './presets.json'
+const PRESETS = BAKED.map((p) => [p.label, p.text])
+const bakedFor = (text) => BAKED.find((p) => p.text === text)?.result
 const SAMPLE = PRESETS[0][1]
 const STYLE = { lumio: 'Calm and careful', fizzbox: 'Loud and playful' }
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
@@ -73,6 +72,8 @@ export default function CompareBrands({ onTryDemo }) {
   const [lit, setLit] = useState(null) // the finding whose chip is hovered: its passage lights up
   useEffect(() => {
     if (!text.trim()) return setResult(null)
+    const baked = bakedFor(text)
+    if (baked) { setResult(baked); setChecked(text); setError(''); setRetry(0); return }
     let stale = false
     const t = setTimeout(() => {
       api('/demo/compare', { method: 'POST', body: { text }, token: 'none' })

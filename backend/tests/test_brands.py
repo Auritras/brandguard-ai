@@ -181,3 +181,13 @@ def test_lumio_flags_buy_now_but_not_payroll_acronyms(client, creator):
         return [f["ref_code"] for f in r.json()]
     assert "R-006" in codes("Payroll in minutes. BUY NOW.")
     assert "R-006" not in codes("Pay salaries by UPI ID and file GST TDS returns on time.")
+
+
+def test_baked_presets_match_the_api(client):
+    """The sign-in page shows built-in verdicts for its presets; they must equal what the API says now.
+    If this fails, run: cd backend && python -m app.make_presets"""
+    import json
+    from pathlib import Path
+    baked = json.loads((Path(__file__).resolve().parents[2] / "frontend" / "src" / "presets.json").read_text(encoding="utf-8"))
+    for p in baked:
+        assert client.post("/api/demo/compare", json={"text": p["text"]}).json() == p["result"], p["label"]

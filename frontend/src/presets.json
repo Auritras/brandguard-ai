@@ -1,0 +1,265 @@
+[
+ {
+  "label": "Hype post",
+  "text": "OMG!! Our new mango fizz is the most fun you'll have all week. Grab yours today!",
+  "result": [
+   {
+    "key": "lumio",
+    "name": "Lumio Payroll",
+    "findings": [
+     {
+      "quote": "!",
+      "severity": "low",
+      "ref_code": "R-007",
+      "reason": "\"!\" breaks the rule \"One exclamation mark at most\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        3,
+        4
+       ],
+       [
+        4,
+        5
+       ],
+       [
+        79,
+        80
+       ]
+      ]
+     }
+    ]
+   },
+   {
+    "key": "fizzbox",
+    "name": "Fizzbox",
+    "findings": []
+   }
+  ]
+ },
+ {
+  "label": "Drink ad",
+  "text": "BUY NOW!! Our healthy new mango fizz is the best drink in town. Click here to grab yours.",
+  "result": [
+   {
+    "key": "lumio",
+    "name": "Lumio Payroll",
+    "findings": [
+     {
+      "quote": "the best",
+      "severity": "high",
+      "ref_code": "R-002",
+      "reason": "\"the best\" breaks the rule \"No unsupported superlatives\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        40,
+        48
+       ]
+      ]
+     },
+     {
+      "quote": "Click here",
+      "severity": "medium",
+      "ref_code": "R-005",
+      "reason": "\"Click here\" breaks the rule \"Descriptive links\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        64,
+        74
+       ]
+      ]
+     },
+     {
+      "quote": "BUY NOW",
+      "severity": "low",
+      "ref_code": "R-006",
+      "reason": "\"BUY NOW\" breaks the rule \"No shouting\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        0,
+        7
+       ]
+      ]
+     },
+     {
+      "quote": "!",
+      "severity": "low",
+      "ref_code": "R-007",
+      "reason": "\"!\" breaks the rule \"One exclamation mark at most\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        7,
+        8
+       ],
+       [
+        8,
+        9
+       ]
+      ]
+     }
+    ]
+   },
+   {
+    "key": "fizzbox",
+    "name": "Fizzbox",
+    "findings": [
+     {
+      "quote": "healthy",
+      "severity": "high",
+      "ref_code": "R-003",
+      "reason": "\"healthy\" breaks the rule \"No health claims\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        14,
+        21
+       ]
+      ]
+     },
+     {
+      "quote": "Click here",
+      "severity": "medium",
+      "ref_code": "R-007",
+      "reason": "\"Click here\" breaks the rule \"Descriptive links\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        64,
+        74
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "Payroll ad",
+  "text": "Lumio Pay is India's #1 payroll app, trusted by 10,000 companies. Guaranteed accuracy. Click here!",
+  "result": [
+   {
+    "key": "lumio",
+    "name": "Lumio Payroll",
+    "findings": [
+     {
+      "quote": "Lumio Pay",
+      "severity": "low",
+      "ref_code": "TERM",
+      "reason": "\"Lumio Pay\" is on the list of terms we do not use.",
+      "suggestion": "Lumio Payroll",
+      "focus": "",
+      "spans": [
+       [
+        0,
+        9
+       ]
+      ]
+     },
+     {
+      "quote": "#1",
+      "severity": "high",
+      "ref_code": "R-002",
+      "reason": "\"#1\" breaks the rule \"No unsupported superlatives\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        21,
+        23
+       ]
+      ]
+     },
+     {
+      "quote": "Guaranteed",
+      "severity": "high",
+      "ref_code": "R-003",
+      "reason": "\"Guaranteed\" breaks the rule \"No promised outcomes\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        66,
+        76
+       ]
+      ]
+     },
+     {
+      "quote": "Click here",
+      "severity": "medium",
+      "ref_code": "R-005",
+      "reason": "\"Click here\" breaks the rule \"Descriptive links\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        87,
+        97
+       ]
+      ]
+     },
+     {
+      "quote": "Lumio Pay is India's #1 payroll app, trusted by 10,000 companies.",
+      "severity": "high",
+      "ref_code": "F-001",
+      "reason": "The draft says 10,000, but the approved figure is 8,200.",
+      "suggestion": "Lumio Pay is India's #1 payroll app, trusted by 8,200 companies.",
+      "focus": "10,000",
+      "spans": [
+       [
+        0,
+        65
+       ]
+      ]
+     }
+    ]
+   },
+   {
+    "key": "fizzbox",
+    "name": "Fizzbox",
+    "findings": [
+     {
+      "quote": "Click here",
+      "severity": "medium",
+      "ref_code": "R-007",
+      "reason": "\"Click here\" breaks the rule \"Descriptive links\".",
+      "suggestion": "",
+      "focus": "",
+      "spans": [
+       [
+        87,
+        97
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "Neutral",
+  "text": "Something new is coming this summer. Sign up on our website to hear about it first.",
+  "result": [
+   {
+    "key": "lumio",
+    "name": "Lumio Payroll",
+    "findings": []
+   },
+   {
+    "key": "fizzbox",
+    "name": "Fizzbox",
+    "findings": []
+   }
+  ]
+ }
+]
