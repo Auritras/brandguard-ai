@@ -1,11 +1,14 @@
 # How BrandGuard AI is tested
 
 Four layers, from the engine up to the whole product in a browser. Everything except the AI evaluation
-and the load test runs on every push in GitHub Actions (`.github/workflows/tests.yml`).
+and the load test runs on every push in GitHub Actions (`.github/workflows/tests.yml`); the AI evaluation
+runs every night (`.github/workflows/reliability-ai.yml`). Run the Python commands with the backend's
+virtual environment active (`backend/.venv`, made by the setup scripts: `source .venv/bin/activate`,
+or `.venv\Scripts\activate` on Windows).
 
 | Layer | What it covers | Run it |
 |---|---|---|
-| Backend tests | 77 tests: auth and roles, brand isolation, the exact engine, the AI path with a fake model (verification, rate limits, failure), the full workflow, image review (measurements, findings, fixes, links), guideline gaps, hardening (stale pages, double clicks, limits, renamed files, channel limits), demo copies | `cd backend && python -m pytest` |
+| Backend tests | 78 tests: auth and roles, brand isolation, the exact engine, the AI path with a fake model (verification, rate limits, failure), the full workflow, image review (measurements, findings, fixes, links), guideline gaps, hardening (stale pages, double clicks, limits, renamed files, channel limits), demo copies | `cd backend && python -m pytest` |
 | Reliability gate | The 80 test drafts through the real check with exact checks only; fails if any planted problem is missed or a clean draft is flagged | part of the backend tests; also `python -m evals.run` |
 | Browser tests | The main journeys clicked through in Chromium against a real backend and website, plus an accessibility scan of each screen | `cd frontend && npm run e2e` |
 | AI evaluation | The 80 test drafts through the full check with AI | `cd backend && python -m evals.run --mode ai --save` |

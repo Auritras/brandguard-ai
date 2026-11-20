@@ -169,9 +169,11 @@ first run builds both demo brands and their drafts in it (exact checks only, abo
 `uvicorn app.main:app --port 8000`. In `frontend`, `npm ci` then `npm run dev` (it forwards `/api` to
 port 8000).
 
-**Tests:** `cd backend && python -m pytest` (77 tests, including the reliability gate) ·
-`cd frontend && npm run e2e` (browser journeys; first time `npx playwright install chromium`) ·
-`cd backend && python -m evals.run` (the reliability score; `--mode ai` with a key).
+**Tests** use the backend's virtual environment (the scripts above make it in `backend/.venv`). In
+`backend`, run `.venv/bin/python -m pytest` (on Windows `.venv\Scripts\python -m pytest`): 78 tests,
+including the reliability gate. The reliability score: the same Python with `-m evals.run` (add
+`--mode ai` with a key). Browser journeys: `cd frontend && npm run e2e` (the first time,
+`npx playwright install chromium`); it starts its own backend and website on other ports.
 
 ## Deploy
 
@@ -223,7 +225,7 @@ backend/
               drafts (review, workflow, images, sharing), insights (Brand health, guideline gaps),
               reliability
   evals/      cases/ (80 test drafts), run.py (the scorer), load.py, results/
-  tests/      77 tests
+  tests/      78 tests
 frontend/
   src/pages/  Login, Drafts, NewDraft, DraftView, Bulk, Record, Insights, Library, Reliability, Team, Account
   src/        ImagePanel, ChannelPreview, MakeRule, LiveRun, CompareBrands, GuidelineGaps, LiveText,

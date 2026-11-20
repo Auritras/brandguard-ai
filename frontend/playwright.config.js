@@ -1,6 +1,7 @@
 // Browser tests of the main journeys, against a real backend (fresh SQLite database, no AI key) and the
 // real frontend. Run: npx playwright test   (CI installs Chromium and runs the same).
 import { defineConfig } from '@playwright/test'
+import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -8,8 +9,11 @@ import { join } from 'node:path'
 // an environment variable the worker inherits.
 process.env.E2E_DB ??= join(tmpdir(), `brandguard-e2e-${Date.now()}.db`)
 const db = process.env.E2E_DB
-const python = process.env.E2E_PYTHON
-  || (process.platform === 'win32' ? `"${join(process.cwd(), '..', 'backend', '.venv', 'Scripts', 'python.exe')}"` : 'python')
+// The backend's own virtual environment (made by scripts/dev.sh or dev.ps1) when there is one, else `python`.
+const venv = process.platform === 'win32'
+  ? join(process.cwd(), '..', 'backend', '.venv', 'Scripts', 'python.exe')
+  : join(process.cwd(), '..', 'backend', '.venv', 'bin', 'python')
+const python = process.env.E2E_PYTHON || (existsSync(venv) ? `"${venv}"` : 'python')
 
 export default defineConfig({
   testDir: 'e2e',

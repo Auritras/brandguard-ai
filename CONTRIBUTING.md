@@ -2,7 +2,8 @@
 
 1. Run it: `sh scripts/dev.sh` (macOS, Linux) or `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1`
    (Windows). It uses a local SQLite database; it never reads `DATABASE_URL` from `backend/.env`.
-2. Before you push, run what CI runs:
+2. Before you push, run what CI runs (Python commands with the backend's virtual environment active:
+   `source backend/.venv/bin/activate`, or `backend\.venv\Scripts\activate` on Windows):
    - `cd backend && python -m pytest` (includes the reliability gate)
    - `cd frontend && npm run lint && npm run build`
    - `cd frontend && npm run e2e` (browser tests; first time: `npx playwright install chromium`)

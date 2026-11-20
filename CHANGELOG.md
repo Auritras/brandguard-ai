@@ -100,7 +100,7 @@ same image always gives the same result. Without an AI key, palette and descript
 
 ### Testing and documentation
 - Browser tests of the main journeys in CI, with an accessibility scan (axe, WCAG 2 A and AA) of nine screens, in light and dark.
-- 77 backend tests, including the reliability gate.
+- 78 backend tests, including the reliability gate.
 - One-command local setup (`scripts/dev.sh`, `scripts/dev.ps1`), a roadmap, this changelog, and a
   testing report.
 
