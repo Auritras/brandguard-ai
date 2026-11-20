@@ -1,7 +1,7 @@
 {
  "mode": "ai",
- "date": "2026-11-18T22:36:08+00:00",
- "commit": "963058f",
+ "date": "2026-11-20T19:15:16+00:00",
+ "commit": "0fde3cb",
  "model": "openai/gpt-oss-120b",
  "brands": [
   {
@@ -10,8 +10,8 @@
    "planted": 37,
    "caught": 37,
    "catch_rate": 100.0,
-   "false_alarms": 3,
-   "precision": 92.5,
+   "false_alarms": 2,
+   "precision": 94.9,
    "clean_drafts": 10,
    "clean_passed": 9,
    "per_rule": [
@@ -79,25 +79,18 @@
    "misses": [],
    "false_alarm_list": [
     {
-     "case": "F11",
+     "case": "F10",
      "ref": "R-001",
-     "quote": "Thank you to all our consumers for an amazing year!",
+     "quote": "beverage",
      "source": "ai",
-     "body": "Thank you to all our consumers for an amazing year!"
+     "body": "The coolest beverage of the summer is here!"
     },
     {
-     "case": "F13",
-     "ref": "R-004",
-     "quote": "sugar-free",
-     "source": "ai",
-     "body": "Fizzbox Zero is sugar-free and full of fizz!"
-    },
-    {
-     "case": "F33",
+     "case": "F40",
      "ref": "R-001",
-     "quote": "Each 330 ml can of Fizzbox Classic has 45 calories.",
+     "quote": "Zero sugar. Full fizz. Fizzbox Zero, in stores now.",
      "source": "ai",
-     "body": "Each 330 ml can of Fizzbox Classic has 45 calories."
+     "body": "Zero sugar. Full fizz. Fizzbox Zero, in stores now."
     }
    ],
    "ai_skipped": 0
@@ -106,12 +99,12 @@
    "brand": "lumio",
    "drafts": 40,
    "planted": 35,
-   "caught": 33,
-   "catch_rate": 94.3,
-   "false_alarms": 9,
-   "precision": 78.6,
+   "caught": 34,
+   "catch_rate": 97.1,
+   "false_alarms": 5,
+   "precision": 87.2,
    "clean_drafts": 10,
-   "clean_passed": 10,
+   "clean_passed": 9,
    "per_rule": [
     {
      "ref": "F-001",
@@ -136,7 +129,7 @@
     {
      "ref": "R-001",
      "planted": 2,
-     "caught": 1
+     "caught": 2
     },
     {
      "ref": "R-002",
@@ -186,12 +179,6 @@
    ],
    "misses": [
     {
-     "case": "L22",
-     "ref": "R-001",
-     "quote": "you will regret waiting",
-     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
-    },
-    {
      "case": "L27",
      "ref": "R-008",
      "quote": "Zoho Payroll",
@@ -200,39 +187,11 @@
    ],
    "false_alarm_list": [
     {
-     "case": "L01",
-     "ref": "R-001",
-     "quote": "Lumio Payroll is the best way to pay your team on time.",
-     "source": "ai",
-     "body": "Lumio Payroll is the best way to pay your team on time."
-    },
-    {
      "case": "L09",
      "ref": "R-004",
      "quote": "Lumio Pay",
      "source": "ai",
      "body": "Lumio Pay helps small businesses pay their employees on time."
-    },
-    {
-     "case": "L10",
-     "ref": "R-009",
-     "quote": "payroll now takes a coffee break, not a whole day",
-     "source": "ai",
-     "body": "Our clients tell us payroll now takes a coffee break, not a whole day."
-    },
-    {
-     "case": "L11",
-     "ref": "R-001",
-     "quote": "Lumio Payroll is cheap and simple to set up.",
-     "source": "ai",
-     "body": "Lumio Payroll is cheap and simple to set up."
-    },
-    {
-     "case": "L11",
-     "ref": "R-009",
-     "quote": "simple to set up",
-     "source": "ai",
-     "body": "Lumio Payroll is cheap and simple to set up."
     },
     {
      "case": "L13",
@@ -242,11 +201,11 @@
      "body": "Paying your staff should not take a whole afternoon."
     },
     {
-     "case": "L22",
-     "ref": "R-009",
-     "quote": "Prices go up tomorrow",
+     "case": "L27",
+     "ref": "R-001",
+     "quote": "Switch from Zoho Payroll today.",
      "source": "ai",
-     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
     },
     {
      "case": "L27",
@@ -256,11 +215,11 @@
      "body": "Switch from Zoho Payroll today. Their support is terrible."
     },
     {
-     "case": "L27",
-     "ref": "R-001",
-     "quote": "Switch from Zoho Payroll today.",
+     "case": "L38",
+     "ref": "R-009",
+     "quote": "हर महीने समय पर वेतन दें।",
      "source": "ai",
-     "body": "Switch from Zoho Payroll today. Their support is terrible."
+     "body": "छोटे व्यवसायों के लिए आसान पेरोल। Lumio Payroll के साथ हर महीने समय पर वेतन दें।"
     }
    ],
    "ai_skipped": 0
