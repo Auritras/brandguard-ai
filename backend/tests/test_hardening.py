@@ -202,3 +202,12 @@ def test_own_fix_is_checked_at_once(client, creator):
     new = [x for x in d["findings"] if x["status"] == "open" and x["reason"].startswith("In your own fix")]
     assert {x["ref_code"] for x in new} >= {"TERM", "R-006", "R-007"}
     assert sum(1 for x in d["findings"] if x["status"] == "open") > before - 1 and d["needs_check"]
+
+
+def test_blank_settings_fall_back_to_defaults(monkeypatch):
+    """.env.example has lines like `DATABASE_URL=`: a blank value must mean the default, not crash."""
+    from app.config import env
+    monkeypatch.setenv("BG_TEST_SETTING", "   ")
+    assert env("BG_TEST_SETTING", "fallback") == "fallback"
+    monkeypatch.setenv("BG_TEST_SETTING", "set")
+    assert env("BG_TEST_SETTING", "fallback") == "set"
