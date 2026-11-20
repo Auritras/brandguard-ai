@@ -17,6 +17,12 @@ USERS = [
     ("Meera (Brand owner)", "reviewer@brandguard.test", "reviewer"),
 ]
 
+# Lumio's "No shouting": two or more words in capitals ("BUY NOW"), each of three letters or more, so
+# payroll acronyms ("GST", "UPI ID", "GST TDS") are not shouting.
+ACRONYMS = "GST|TDS|EPF|ESI|ESIC|UPI|PAN|TAN|IFSC|NEFT|RTGS|IMPS|KYC|API|CEO|CFO|CTO|COO|HRMS|SME|MSME|FAQ|PDF|CSV|USA|UAE|EMI|CTC|LOP"
+SHOUT = rf"\b(?!(?:{ACRONYMS})\b)[A-Z]{{3,}}(?:\s+[A-Z]{{2,}})*\s+(?!(?:{ACRONYMS})\b)[A-Z]{{3,}}\b"
+OLD_SHOUT = r"\b[A-Z]{3,}(?:\s+[A-Z]{2,}){2,}\b"
+
 # code, category, title, text, severity, patterns (one regex per line; empty = judged by AI)
 RULES = [
     ("R-001", "tone", "Plain, confident, friendly",
@@ -36,7 +42,7 @@ RULES = [
      "medium", "\n".join([r"\bclick here\b", r"\bread more\b"])),
     ("R-006", "accessibility", "No shouting",
      "Do not write whole phrases in capital letters; screen readers may spell them out.",
-     "low", r"\b[A-Z]{3,}(?:\s+[A-Z]{2,}){2,}\b"),
+     "low", SHOUT),
     ("R-007", "tone", "One exclamation mark at most",
      "Use at most one exclamation mark in a piece of content.",
      "low", r"!(?=[^!]*!)"),
@@ -170,6 +176,10 @@ def seed(db: Session) -> None:
                 db.add(User(brand_id=brand.id, name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD)))
         if db.query(Rule).filter_by(brand_id=brand.id).count() == 0:
             seed_library(db, brand.id, key)
+        # Upgrade: Lumio's "No shouting" used to need three words in capitals and missed "BUY NOW".
+        old = db.query(Rule).filter_by(brand_id=brand.id, code="R-006", patterns=OLD_SHOUT).first()
+        if old:
+            old.patterns = SHOUT
         if not brand.palette:  # brand colours and logo for image review
             from .samples import PALETTES, logo_png
             brand.palette, brand.logo, brand.logo_type = PALETTES[key], logo_png(key), "image/png"

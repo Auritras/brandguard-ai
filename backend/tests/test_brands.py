@@ -173,3 +173,11 @@ def test_team_stats_show_what_waits_for_whom(client, creator, manager, reviewer)
     me = next(m for m in team if m["you"])
     assert stats[str(mgr["id"])]["waiting"] >= 1 and stats[str(me["id"])]["written"] >= 1
     assert stats[str(me["id"])]["last_active"]
+
+
+def test_lumio_flags_buy_now_but_not_payroll_acronyms(client, creator):
+    def codes(text):
+        r = client.post("/api/check-text", headers=creator, json={"body": text, "channel": "LinkedIn"})
+        return [f["ref_code"] for f in r.json()]
+    assert "R-006" in codes("Payroll in minutes. BUY NOW.")
+    assert "R-006" not in codes("Pay salaries by UPI ID and file GST TDS returns on time.")
