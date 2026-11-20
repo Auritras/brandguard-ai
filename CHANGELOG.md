@@ -88,9 +88,19 @@ same image always gives the same result. Without an AI key, palette and descript
 - Two more image checks, measured in code: shape and size for the channel (Instagram, LinkedIn,
   email), with the crop drawn on the image and what it would cut off; and blurry or enlarged images.
 
+### Fixed after an outside review (21 November)
+- The sign-in comparison's presets show at once, without waiting for a sleeping server.
+- Live highlights no longer drift after an emoji.
+- Your own fix is checked: warnings while typing, new findings for what it breaks, and the score is
+  marked "until re-checked".
+- The next-step banner and the Findings heading count disputed findings the same way.
+- Hold to approve is disabled, with the reason, when high-risk findings block it; a quick click says to hold.
+- Check many posts: one request for the whole calendar, and a note when posts past 50 are left out.
+- Lumio's "No shouting" catches "BUY NOW" (two words in capitals), not payroll acronyms like "UPI ID".
+
 ### Testing and documentation
 - Browser tests of the main journeys in CI, with an accessibility scan (axe, WCAG 2 A and AA) of nine screens, in light and dark.
-- 73 backend tests, including the reliability gate.
+- 77 backend tests, including the reliability gate.
 - One-command local setup (`scripts/dev.sh`, `scripts/dev.ps1`), a roadmap, this changelog, and a
   testing report.
 

@@ -59,7 +59,8 @@ its library starts with sample rules you can change, and on **Team** you add tea
   reads the image; every judgement is measured in code. The draft page draws what was measured on the
   image.
 - Each finding: the quote, the cited rule or fact, the reason, the severity, a suggested fix. Accept it,
-  write your own, or dispute it. **Accept all low-risk fixes** does the terminology in one go. Hover a
+  write your own, or dispute it. **Accept all low-risk fixes** does the terminology in one go. Your own
+  fix is checked as you type it, and anything it breaks becomes a new finding when you apply it. Hover a
   fix to see the sentence as it would read; a fix can be undone. Findings show how the same rule was
   handled on earlier drafts (precedents). Keys: J / K move between findings, A accepts, D disputes.
 - **Channel previews:** how the draft looks as a LinkedIn post, an Instagram caption or an email, with
@@ -67,7 +68,7 @@ its library starts with sample rules you can change, and on **Team** you add tea
 - **Make this a rule** (brand owner): select text in a draft and get a rule drafted from it; the exact
   pattern is built in code, the AI only words it.
 - **Check many posts:** paste a content calendar or upload a CSV and get a verdict for every post from
-  the exact checks; any post becomes a draft for the full check.
+  the exact checks (up to 50 in one request); any post becomes a draft for the full check.
 - "How this was checked" on every review: what came from code and from AI, the provider and models,
   what was sent, how many AI findings were dropped.
 
@@ -168,7 +169,7 @@ first run builds both demo brands and their drafts in it (exact checks only, abo
 `uvicorn app.main:app --port 8000`. In `frontend`, `npm ci` then `npm run dev` (it forwards `/api` to
 port 8000).
 
-**Tests:** `cd backend && python -m pytest` (73 tests, including the reliability gate) ·
+**Tests:** `cd backend && python -m pytest` (77 tests, including the reliability gate) ·
 `cd frontend && npm run e2e` (browser journeys; first time `npx playwright install chromium`) ·
 `cd backend && python -m evals.run` (the reliability score; `--mode ai` with a key).
 
@@ -222,7 +223,7 @@ backend/
               drafts (review, workflow, images, sharing), insights (Brand health, guideline gaps),
               reliability
   evals/      cases/ (80 test drafts), run.py (the scorer), load.py, results/
-  tests/      73 tests
+  tests/      77 tests
 frontend/
   src/pages/  Login, Drafts, NewDraft, DraftView, Bulk, Record, Insights, Library, Reliability, Team, Account
   src/        ImagePanel, ChannelPreview, MakeRule, LiveRun, CompareBrands, GuidelineGaps, LiveText,
