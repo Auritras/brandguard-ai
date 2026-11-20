@@ -82,7 +82,12 @@ function nextStep(d, user) {
   const isOwner = d.can.edit
   if (d.status === 'approved') return 'Approved. This version is locked and ready to publish.'
   if (isOwner && d.needs_check) return 'The text has changed since the last check. Run the check again before sending it for review.'
-  if (isOwner && d.open > 0) return `${plural(d.open, 'finding')} to handle. Accept the fix, write your own, or dispute. You can also send it for review as it is.`
+  // Counted like the Findings heading: open and disputed (a dispute is still to be settled, by a reviewer).
+  const todo = d.findings.filter(isActive).length
+  const disputed = d.findings.filter((f) => f.status === 'disputed').length
+  const note = disputed ? ` (${disputed} disputed, waiting for a reviewer)` : ''
+  if (isOwner && todo > disputed) return `${plural(todo, 'finding')} to handle${note}. Accept the fix, write your own, or dispute. You can also send it for review as it is.`
+  if (isOwner && disputed) return `${plural(todo, 'finding')} to handle${note}. Send it for review: the reviewer settles the disputes.`
   if (isOwner) return 'Nothing left to handle. Send it for review.'
   // You wrote it: someone else on the team decides it, whatever your role.
   if (d.mine && d.status === 'authorised_review') return 'With the brand owner. You wrote this draft, so someone else decides it.'
