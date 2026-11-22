@@ -1,7 +1,7 @@
 {
  "mode": "ai",
- "date": "2026-11-21T02:37:26+00:00",
- "commit": "5a0f10b",
+ "date": "2026-11-22T01:27:27+00:00",
+ "commit": "3a0932b",
  "model": "openai/gpt-oss-120b",
  "brands": [
   {
@@ -10,10 +10,10 @@
    "planted": 37,
    "caught": 37,
    "catch_rate": 100.0,
-   "false_alarms": 0,
-   "precision": 100.0,
+   "false_alarms": 1,
+   "precision": 97.4,
    "clean_drafts": 10,
-   "clean_passed": 10,
+   "clean_passed": 9,
    "per_rule": [
     {
      "ref": "F-001",
@@ -77,17 +77,25 @@
     }
    ],
    "misses": [],
-   "false_alarm_list": [],
+   "false_alarm_list": [
+    {
+     "case": "F33",
+     "ref": "R-001",
+     "quote": "Each 330 ml can of Fizzbox Classic has 45 calories.",
+     "source": "ai",
+     "body": "Each 330 ml can of Fizzbox Classic has 45 calories."
+    }
+   ],
    "ai_skipped": 0
   },
   {
    "brand": "lumio",
    "drafts": 40,
    "planted": 35,
-   "caught": 33,
-   "catch_rate": 94.3,
-   "false_alarms": 6,
-   "precision": 84.6,
+   "caught": 34,
+   "catch_rate": 97.1,
+   "false_alarms": 7,
+   "precision": 82.9,
    "clean_drafts": 10,
    "clean_passed": 10,
    "per_rule": [
@@ -149,7 +157,7 @@
     {
      "ref": "R-008",
      "planted": 2,
-     "caught": 1
+     "caught": 2
     },
     {
      "ref": "R-009",
@@ -168,19 +176,13 @@
      "ref": "R-001",
      "quote": "you will regret waiting",
      "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
-    },
-    {
-     "case": "L27",
-     "ref": "R-008",
-     "quote": "Zoho Payroll",
-     "body": "Switch from Zoho Payroll today. Their support is terrible."
     }
    ],
    "false_alarm_list": [
     {
      "case": "L09",
      "ref": "R-004",
-     "quote": "Lumio Pay helps small businesses pay their employees on time.",
+     "quote": "Lumio Pay",
      "source": "ai",
      "body": "Lumio Pay helps small businesses pay their employees on time."
     },
@@ -192,25 +194,25 @@
      "body": "Our clients tell us payroll now takes a coffee break, not a whole day."
     },
     {
-     "case": "L13",
-     "ref": "R-009",
-     "quote": "Paying your staff should not take a whole afternoon.",
-     "source": "ai",
-     "body": "Paying your staff should not take a whole afternoon."
-    },
-    {
-     "case": "L23",
-     "ref": "R-008",
-     "quote": "your rivals",
-     "source": "ai",
-     "body": "Do not wait until your rivals leave you behind. Sign up today, before it is too late."
-    },
-    {
-     "case": "L27",
+     "case": "L11",
      "ref": "R-001",
-     "quote": "Switch from Zoho Payroll today.",
+     "quote": "cheap",
      "source": "ai",
-     "body": "Switch from Zoho Payroll today. Their support is terrible."
+     "body": "Lumio Payroll is cheap and simple to set up."
+    },
+    {
+     "case": "L22",
+     "ref": "R-009",
+     "quote": "Prices go up tomorrow",
+     "source": "ai",
+     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
+    },
+    {
+     "case": "L25",
+     "ref": "R-001",
+     "quote": "every enterprise needs",
+     "source": "ai",
+     "body": "Lumio Payroll is the accounting tool every enterprise needs."
     },
     {
      "case": "L27",
@@ -218,6 +220,13 @@
      "quote": "Their support is terrible.",
      "source": "ai",
      "body": "Switch from Zoho Payroll today. Their support is terrible."
+    },
+    {
+     "case": "L30",
+     "ref": "R-004",
+     "quote": "Lumio Pay",
+     "source": "ai",
+     "body": "🎉 नई सुविधा: Lumio Pay से वेतन अब आसान! Click here देखें।"
     }
    ],
    "ai_skipped": 0
