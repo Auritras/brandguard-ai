@@ -1,7 +1,7 @@
 {
  "mode": "ai",
- "date": "2026-11-23T01:52:40+00:00",
- "commit": "3169274",
+ "date": "2026-11-24T05:24:04+00:00",
+ "commit": "0e722da",
  "model": "openai/gpt-oss-120b",
  "brands": [
   {
@@ -10,10 +10,10 @@
    "planted": 37,
    "caught": 37,
    "catch_rate": 100.0,
-   "false_alarms": 4,
-   "precision": 90.2,
+   "false_alarms": 3,
+   "precision": 92.5,
    "clean_drafts": 10,
-   "clean_passed": 8,
+   "clean_passed": 9,
    "per_rule": [
     {
      "ref": "F-001",
@@ -79,11 +79,11 @@
    "misses": [],
    "false_alarm_list": [
     {
-     "case": "F09",
+     "case": "F12",
      "ref": "R-001",
-     "quote": "Find your nearest store.",
+     "quote": "Our customers voted mango the flavour of the year!",
      "source": "ai",
-     "body": "Find your nearest store. Click here."
+     "body": "Our customers voted mango the flavour of the year!"
     },
     {
      "case": "F13",
@@ -93,18 +93,11 @@
      "body": "Fizzbox Zero is sugar-free and full of fizz!"
     },
     {
-     "case": "F33",
+     "case": "F37",
      "ref": "R-001",
-     "quote": "Each 330 ml can of Fizzbox Classic has 45 calories.",
+     "quote": "Behind the fizz: how our team picked this year's flavours with fans across India.",
      "source": "ai",
-     "body": "Each 330 ml can of Fizzbox Classic has 45 calories."
-    },
-    {
-     "case": "F40",
-     "ref": "R-001",
-     "quote": "Zero sugar. Full fizz. Fizzbox Zero, in stores now.",
-     "source": "ai",
-     "body": "Zero sugar. Full fizz. Fizzbox Zero, in stores now."
+     "body": "Behind the fizz: how our team picked this year's flavours with fans across India."
     }
    ],
    "ai_skipped": 0
@@ -113,10 +106,10 @@
    "brand": "lumio",
    "drafts": 40,
    "planted": 35,
-   "caught": 33,
-   "catch_rate": 94.3,
-   "false_alarms": 8,
-   "precision": 80.5,
+   "caught": 34,
+   "catch_rate": 97.1,
+   "false_alarms": 7,
+   "precision": 82.9,
    "clean_drafts": 10,
    "clean_passed": 10,
    "per_rule": [
@@ -143,7 +136,7 @@
     {
      "ref": "R-001",
      "planted": 2,
-     "caught": 1
+     "caught": 2
     },
     {
      "ref": "R-002",
@@ -193,12 +186,6 @@
    ],
    "misses": [
     {
-     "case": "L22",
-     "ref": "R-001",
-     "quote": "you will regret waiting",
-     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
-    },
-    {
      "case": "L27",
      "ref": "R-008",
      "quote": "Zoho Payroll",
@@ -214,6 +201,13 @@
      "body": "Lumio Pay helps small businesses pay their employees on time."
     },
     {
+     "case": "L09",
+     "ref": "R-009",
+     "quote": "pay their employees on time",
+     "source": "ai",
+     "body": "Lumio Pay helps small businesses pay their employees on time."
+    },
+    {
      "case": "L10",
      "ref": "R-009",
      "quote": "payroll now takes a coffee break, not a whole day",
@@ -221,32 +215,18 @@
      "body": "Our clients tell us payroll now takes a coffee break, not a whole day."
     },
     {
-     "case": "L12",
-     "ref": "R-001",
-     "quote": "e-mail",
-     "source": "ai",
-     "body": "Reply to this e-mail to book a walkthrough with our team."
-    },
-    {
      "case": "L13",
      "ref": "R-009",
-     "quote": "Paying your staff should not take a whole afternoon",
+     "quote": "Paying your staff should not take a whole afternoon.",
      "source": "ai",
      "body": "Paying your staff should not take a whole afternoon."
     },
     {
      "case": "L22",
      "ref": "R-009",
-     "quote": "Prices go up tomorrow",
+     "quote": "Prices go up tomorrow and you will regret waiting!",
      "source": "ai",
      "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
-    },
-    {
-     "case": "L27",
-     "ref": "R-001",
-     "quote": "Switch from Zoho Payroll today.",
-     "source": "ai",
-     "body": "Switch from Zoho Payroll today. Their support is terrible."
     },
     {
      "case": "L27",
@@ -256,11 +236,11 @@
      "body": "Switch from Zoho Payroll today. Their support is terrible."
     },
     {
-     "case": "L30",
-     "ref": "R-004",
-     "quote": "Lumio Pay",
+     "case": "L27",
+     "ref": "R-001",
+     "quote": "Switch from Zoho Payroll today.",
      "source": "ai",
-     "body": "🎉 नई सुविधा: Lumio Pay से वेतन अब आसान! Click here देखें।"
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
     }
    ],
    "ai_skipped": 0
