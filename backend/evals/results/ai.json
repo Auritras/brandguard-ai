@@ -1,7 +1,7 @@
 {
  "mode": "ai",
- "date": "2026-11-25T04:23:17+00:00",
- "commit": "e5e37d6",
+ "date": "2026-11-26T03:41:13+00:00",
+ "commit": "332c7de",
  "model": "openai/gpt-oss-120b",
  "brands": [
   {
@@ -10,8 +10,8 @@
    "planted": 37,
    "caught": 37,
    "catch_rate": 100.0,
-   "false_alarms": 2,
-   "precision": 94.9,
+   "false_alarms": 1,
+   "precision": 97.4,
    "clean_drafts": 10,
    "clean_passed": 9,
    "per_rule": [
@@ -79,13 +79,6 @@
    "misses": [],
    "false_alarm_list": [
     {
-     "case": "F13",
-     "ref": "R-004",
-     "quote": "sugar-free",
-     "source": "ai",
-     "body": "Fizzbox Zero is sugar-free and full of fizz!"
-    },
-    {
      "case": "F33",
      "ref": "R-001",
      "quote": "Each 330 ml can of Fizzbox Classic has 45 calories.",
@@ -99,10 +92,10 @@
    "brand": "lumio",
    "drafts": 40,
    "planted": 35,
-   "caught": 35,
-   "catch_rate": 100.0,
-   "false_alarms": 4,
-   "precision": 89.7,
+   "caught": 33,
+   "catch_rate": 94.3,
+   "false_alarms": 6,
+   "precision": 84.6,
    "clean_drafts": 10,
    "clean_passed": 9,
    "per_rule": [
@@ -129,7 +122,7 @@
     {
      "ref": "R-001",
      "planted": 2,
-     "caught": 2
+     "caught": 1
     },
     {
      "ref": "R-002",
@@ -164,7 +157,7 @@
     {
      "ref": "R-008",
      "planted": 2,
-     "caught": 2
+     "caught": 1
     },
     {
      "ref": "R-009",
@@ -177,15 +170,21 @@
      "caught": 8
     }
    ],
-   "misses": [],
-   "false_alarm_list": [
+   "misses": [
     {
-     "case": "L06",
-     "ref": "R-009",
-     "quote": "Payroll rules change every year.",
-     "source": "ai",
-     "body": "Payroll rules change every year. Read more."
+     "case": "L22",
+     "ref": "R-001",
+     "quote": "you will regret waiting",
+     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
     },
+    {
+     "case": "L27",
+     "ref": "R-008",
+     "quote": "Zoho Payroll",
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
+    }
+   ],
+   "false_alarm_list": [
     {
      "case": "L09",
      "ref": "R-004",
@@ -194,21 +193,42 @@
      "body": "Lumio Pay helps small businesses pay their employees on time."
     },
     {
-     "case": "L12",
+     "case": "L11",
      "ref": "R-001",
-     "quote": "e-mail",
+     "quote": "Lumio Payroll is cheap",
      "source": "ai",
-     "body": "Reply to this e-mail to book a walkthrough with our team."
+     "body": "Lumio Payroll is cheap and simple to set up."
     },
     {
-     "case": "L38",
+     "case": "L22",
      "ref": "R-009",
-     "quote": "हर महीने समय पर वेतन दें।",
+     "quote": "Prices go up tomorrow",
      "source": "ai",
-     "body": "छोटे व्यवसायों के लिए आसान पेरोल। Lumio Payroll के साथ हर महीने समय पर वेतन दें।"
+     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
+    },
+    {
+     "case": "L27",
+     "ref": "R-001",
+     "quote": "Switch from Zoho Payroll today.",
+     "source": "ai",
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
+    },
+    {
+     "case": "L27",
+     "ref": "R-008",
+     "quote": "Their support is terrible.",
+     "source": "ai",
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
+    },
+    {
+     "case": "L36",
+     "ref": "R-004",
+     "quote": "Lumio Payroll makes payday calm.",
+     "source": "ai",
+     "body": "Friday feeling: everyone paid, payslips sent. Lumio Payroll makes payday calm."
     }
    ],
-   "ai_skipped": 1
+   "ai_skipped": 0
   }
  ]
 }

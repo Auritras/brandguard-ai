@@ -218,5 +218,27 @@
   "false_alarms": 4,
   "planted": 35,
   "caught": 35
+ },
+ {
+  "date": "2026-11-26T03:41:13+00:00",
+  "commit": "332c7de",
+  "mode": "ai",
+  "brand": "fizzbox",
+  "catch_rate": 100.0,
+  "precision": 97.4,
+  "false_alarms": 1,
+  "planted": 37,
+  "caught": 37
+ },
+ {
+  "date": "2026-11-26T03:41:13+00:00",
+  "commit": "332c7de",
+  "mode": "ai",
+  "brand": "lumio",
+  "catch_rate": 94.3,
+  "precision": 84.6,
+  "false_alarms": 6,
+  "planted": 35,
+  "caught": 33
  }
 ]
