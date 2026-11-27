@@ -1,17 +1,17 @@
 {
  "mode": "ai",
- "date": "2026-11-26T03:41:13+00:00",
- "commit": "332c7de",
+ "date": "2026-11-27T03:41:40+00:00",
+ "commit": "7cc3a4a",
  "model": "openai/gpt-oss-120b",
  "brands": [
   {
    "brand": "fizzbox",
    "drafts": 40,
    "planted": 37,
-   "caught": 37,
-   "catch_rate": 100.0,
-   "false_alarms": 1,
-   "precision": 97.4,
+   "caught": 36,
+   "catch_rate": 97.3,
+   "false_alarms": 2,
+   "precision": 94.7,
    "clean_drafts": 10,
    "clean_passed": 9,
    "per_rule": [
@@ -48,7 +48,7 @@
     {
      "ref": "R-004",
      "planted": 2,
-     "caught": 2
+     "caught": 1
     },
     {
      "ref": "R-005",
@@ -76,8 +76,22 @@
      "caught": 7
     }
    ],
-   "misses": [],
+   "misses": [
+    {
+     "case": "F23",
+     "ref": "R-004",
+     "quote": "30%",
+     "body": "Made with 30% real mango juice!"
+    }
+   ],
    "false_alarm_list": [
+    {
+     "case": "F13",
+     "ref": "R-004",
+     "quote": "sugar-free",
+     "source": "ai",
+     "body": "Fizzbox Zero is sugar-free and full of fizz!"
+    },
     {
      "case": "F33",
      "ref": "R-001",
@@ -187,31 +201,31 @@
    "false_alarm_list": [
     {
      "case": "L09",
-     "ref": "R-004",
-     "quote": "Lumio Pay",
+     "ref": "R-009",
+     "quote": "pay their employees on time",
      "source": "ai",
      "body": "Lumio Pay helps small businesses pay their employees on time."
     },
     {
-     "case": "L11",
+     "case": "L12",
      "ref": "R-001",
-     "quote": "Lumio Payroll is cheap",
+     "quote": "e-mail",
      "source": "ai",
-     "body": "Lumio Payroll is cheap and simple to set up."
+     "body": "Reply to this e-mail to book a walkthrough with our team."
     },
     {
-     "case": "L22",
+     "case": "L13",
      "ref": "R-009",
-     "quote": "Prices go up tomorrow",
+     "quote": "should not take a whole afternoon",
      "source": "ai",
-     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
+     "body": "Paying your staff should not take a whole afternoon."
     },
     {
-     "case": "L27",
+     "case": "L23",
      "ref": "R-001",
-     "quote": "Switch from Zoho Payroll today.",
+     "quote": "Do not wait until your rivals leave you behind.",
      "source": "ai",
-     "body": "Switch from Zoho Payroll today. Their support is terrible."
+     "body": "Do not wait until your rivals leave you behind. Sign up today, before it is too late."
     },
     {
      "case": "L27",
@@ -221,11 +235,11 @@
      "body": "Switch from Zoho Payroll today. Their support is terrible."
     },
     {
-     "case": "L36",
-     "ref": "R-004",
-     "quote": "Lumio Payroll makes payday calm.",
+     "case": "L38",
+     "ref": "R-009",
+     "quote": "हर महीने समय पर वेतन दें।",
      "source": "ai",
-     "body": "Friday feeling: everyone paid, payslips sent. Lumio Payroll makes payday calm."
+     "body": "छोटे व्यवसायों के लिए आसान पेरोल। Lumio Payroll के साथ हर महीने समय पर वेतन दें।"
     }
    ],
    "ai_skipped": 0
