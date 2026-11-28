@@ -1,19 +1,19 @@
 {
  "mode": "ai",
- "date": "2026-11-27T03:41:40+00:00",
- "commit": "7cc3a4a",
+ "date": "2026-11-28T03:23:54+00:00",
+ "commit": "209d55a",
  "model": "openai/gpt-oss-120b",
  "brands": [
   {
    "brand": "fizzbox",
    "drafts": 40,
    "planted": 37,
-   "caught": 36,
-   "catch_rate": 97.3,
-   "false_alarms": 2,
-   "precision": 94.7,
+   "caught": 37,
+   "catch_rate": 100.0,
+   "false_alarms": 1,
+   "precision": 97.4,
    "clean_drafts": 10,
-   "clean_passed": 9,
+   "clean_passed": 10,
    "per_rule": [
     {
      "ref": "F-001",
@@ -48,7 +48,7 @@
     {
      "ref": "R-004",
      "planted": 2,
-     "caught": 1
+     "caught": 2
     },
     {
      "ref": "R-005",
@@ -76,14 +76,7 @@
      "caught": 7
     }
    ],
-   "misses": [
-    {
-     "case": "F23",
-     "ref": "R-004",
-     "quote": "30%",
-     "body": "Made with 30% real mango juice!"
-    }
-   ],
+   "misses": [],
    "false_alarm_list": [
     {
      "case": "F13",
@@ -91,13 +84,6 @@
      "quote": "sugar-free",
      "source": "ai",
      "body": "Fizzbox Zero is sugar-free and full of fizz!"
-    },
-    {
-     "case": "F33",
-     "ref": "R-001",
-     "quote": "Each 330 ml can of Fizzbox Classic has 45 calories.",
-     "source": "ai",
-     "body": "Each 330 ml can of Fizzbox Classic has 45 calories."
     }
    ],
    "ai_skipped": 0
@@ -106,12 +92,12 @@
    "brand": "lumio",
    "drafts": 40,
    "planted": 35,
-   "caught": 33,
-   "catch_rate": 94.3,
+   "caught": 34,
+   "catch_rate": 97.1,
    "false_alarms": 6,
-   "precision": 84.6,
+   "precision": 85.0,
    "clean_drafts": 10,
-   "clean_passed": 9,
+   "clean_passed": 10,
    "per_rule": [
     {
      "ref": "F-001",
@@ -171,7 +157,7 @@
     {
      "ref": "R-008",
      "planted": 2,
-     "caught": 1
+     "caught": 2
     },
     {
      "ref": "R-009",
@@ -190,42 +176,29 @@
      "ref": "R-001",
      "quote": "you will regret waiting",
      "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
-    },
-    {
-     "case": "L27",
-     "ref": "R-008",
-     "quote": "Zoho Payroll",
-     "body": "Switch from Zoho Payroll today. Their support is terrible."
     }
    ],
    "false_alarm_list": [
     {
      "case": "L09",
-     "ref": "R-009",
-     "quote": "pay their employees on time",
+     "ref": "R-004",
+     "quote": "Lumio Pay helps small businesses pay their employees on time.",
      "source": "ai",
      "body": "Lumio Pay helps small businesses pay their employees on time."
     },
     {
-     "case": "L12",
-     "ref": "R-001",
-     "quote": "e-mail",
-     "source": "ai",
-     "body": "Reply to this e-mail to book a walkthrough with our team."
-    },
-    {
      "case": "L13",
      "ref": "R-009",
-     "quote": "should not take a whole afternoon",
+     "quote": "Paying your staff should not take a whole afternoon.",
      "source": "ai",
      "body": "Paying your staff should not take a whole afternoon."
     },
     {
-     "case": "L23",
-     "ref": "R-001",
-     "quote": "Do not wait until your rivals leave you behind.",
+     "case": "L22",
+     "ref": "R-009",
+     "quote": "Prices go up tomorrow",
      "source": "ai",
-     "body": "Do not wait until your rivals leave you behind. Sign up today, before it is too late."
+     "body": "Hurry! Prices go up tomorrow and you will regret waiting! Book a demo."
     },
     {
      "case": "L27",
@@ -235,11 +208,18 @@
      "body": "Switch from Zoho Payroll today. Their support is terrible."
     },
     {
-     "case": "L38",
-     "ref": "R-009",
-     "quote": "हर महीने समय पर वेतन दें।",
+     "case": "L27",
+     "ref": "R-001",
+     "quote": "Their support is terrible.",
      "source": "ai",
-     "body": "छोटे व्यवसायों के लिए आसान पेरोल। Lumio Payroll के साथ हर महीने समय पर वेतन दें।"
+     "body": "Switch from Zoho Payroll today. Their support is terrible."
+    },
+    {
+     "case": "L30",
+     "ref": "R-001",
+     "quote": "🎉 नई सुविधा: Lumio Pay से वेतन अब आसान!",
+     "source": "ai",
+     "body": "🎉 नई सुविधा: Lumio Pay से वेतन अब आसान! Click here देखें।"
     }
    ],
    "ai_skipped": 0
